@@ -16,8 +16,15 @@ import pytest
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures/source_scopes"
 CASES = sorted(path.name for path in FIXTURES.iterdir() if path.is_dir())
-HEADER = struct.Struct("<8sHHI16sIIQ16x")
+HEADER = struct.Struct("<8sHHHH16sIIQQQQQ3QQQB40s95x")
+HEADER_FIELDS = ("magic", "version", "header_bytes", "record_bytes", "state",
+                 "capture", "pid", "flags", "capacity", "records", "dropped_full",
+                 "dropped_contended", "clock_errors", "bracket_0", "bracket_1",
+                 "bracket_2", "pidns_device", "pidns_inode", "build_id_bytes",
+                 "build_id")
 RECORD = struct.Struct("<QIHBB")
+SITE = struct.Struct("<4sHHI64s180s")
+FINALIZED = 2
 ENTRY, RETURN = 0, 1
 UNAVAILABLE_REASONS = {"observations_incomplete", "events_lost", "not_completed",
                        "unbalanced_scopes", "crossing_call"}
@@ -26,21 +33,30 @@ UNATTRIBUTED_REASONS = {"worker_thread", "outside_activations", "crossing_interv
                         "observations_incomplete"}
 
 
+def header(data):
+    raw = dict(zip(HEADER_FIELDS, HEADER.unpack_from(data)))
+    raw["capture_id"] = str(uuid.UUID(bytes=raw["capture"]))
+    raw["build_id"] = raw["build_id"][:raw["build_id_bytes"]].hex()
+    return raw
+
+
 def load(case):
     folder = FIXTURES / case
     observations = [json.loads(line) for line in
                     (folder / "observations.jsonl").read_text().splitlines()]
+    data = (folder / "events.bin").read_bytes()
     return {"map": json.loads((FIXTURES / "map.json").read_text()),
-            "raw": json.loads((folder / "events.json").read_text()),
-            "bytes": (folder / "events.bin").read_bytes(),
-            "observations": observations,
+            "raw": header(data), "bytes": data, "observations": observations,
             "expected": json.loads((folder / "expected.json").read_text())}
 
 
 def records(data):
-    body = data["bytes"][HEADER.size:]
-    return [RECORD.unpack_from(body, offset)
-            for offset in range(0, len(body), RECORD.size)]
+    return [RECORD.unpack_from(data["bytes"], HEADER.size + RECORD.size * index)
+            for index in range(data["raw"]["records"])]
+
+
+def text(field):
+    return field.rstrip(b"\0").decode()
 
 
 def test_every_kind_of_outcome_has_a_worked_example():
@@ -50,21 +66,34 @@ def test_every_kind_of_outcome_has_a_worked_example():
     assert any(result.get("status") == "partial" for result in outcomes.values())
 
 
+def test_scope_map_groups_the_section_sites_by_id():
+    section = (FIXTURES / "scope-section.bin").read_bytes()
+    assert SITE.size == 256 and len(section) % SITE.size == 0
+    sites = {}
+    for offset in range(0, len(section), SITE.size):
+        magic, version, scope, line, name, file = SITE.unpack_from(section, offset)
+        assert (magic, version) == (b"SSC1", 1)
+        entry = sites.setdefault(scope, {"id": scope, "name": text(name), "sites": set()})
+        assert entry["name"] == text(name)
+        entry["sites"].add((text(file), line))
+    expected = [{**entry, "sites": [{"file": f, "line": n} for f, n in sorted(entry["sites"])]}
+                for _, entry in sorted(sites.items())]
+    assert json.loads((FIXTURES / "map.json").read_text())["scopes"] == expected
+
+
 @pytest.mark.parametrize("case", CASES)
-def test_raw_file_matches_its_metadata(case):
+def test_raw_header_is_finalized_and_sized_by_capacity(case):
     data = load(case)
     raw = data["raw"]
-    magic, version, record_bytes, flags, capture, pid, _, capacity = \
-        HEADER.unpack_from(data["bytes"])
-    assert (magic, version, record_bytes, flags) == (b"SILSCOPE", 1, 16, 0)
-    assert uuid.UUID(bytes=capture) == uuid.UUID(raw["capture_id"])
-    assert (pid, capacity) == (raw["pid"], raw["capacity_records"])
-    assert raw["sil_source_scope_raw"] == 1
-    assert raw["write_status"] == "complete"
-    assert len(data["bytes"]) == raw["bytes_written"] == \
-        HEADER.size + RECORD.size * raw["records"]
-    assert raw["records"] <= capacity
-    assert raw["dropped_full"] == 0 or raw["records"] == capacity
+    assert (raw["magic"], raw["version"], raw["header_bytes"], raw["record_bytes"],
+            raw["flags"]) == (b"SILSCOPE", 1, HEADER.size, RECORD.size, 0)
+    assert raw["state"] == FINALIZED
+    assert len(data["bytes"]) == HEADER.size + RECORD.size * raw["capacity"]
+    assert raw["records"] <= raw["capacity"]
+    assert raw["dropped_full"] == 0 or raw["records"] == raw["capacity"]
+    assert raw["bracket_0"] <= raw["bracket_1"] <= raw["bracket_2"]
+    unused = data["bytes"][HEADER.size + RECORD.size * raw["records"]:]
+    assert unused == bytes(len(unused))
 
 
 @pytest.mark.parametrize("case", CASES)
@@ -81,7 +110,7 @@ def test_records_name_mapped_scopes_in_per_thread_time_order(case):
 @pytest.mark.parametrize("case", CASES)
 def test_build_id_mismatch_has_an_error_example(case):
     data = load(case)
-    matches = data["raw"]["library"]["build_id"] == data["map"]["library"]["build_id"]
+    matches = data["raw"]["build_id"] == data["map"]["library"]["build_id"]
     assert matches == ("error" not in data["expected"])
     if not matches:
         assert data["expected"] == {"error": "identity_mismatch"}

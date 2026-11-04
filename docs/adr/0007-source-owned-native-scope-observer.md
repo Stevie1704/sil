@@ -51,7 +51,7 @@ Compatibility:
   not `profile.json`.
 - **New and versioned:** the header's record layout (version 1), the
   observer ABI (soname `.so.1`, symbols `sil_source_scope_v1_*`), raw
-  `events.bin` version 1 and the JSON contracts `sil_source_scope_raw`,
+  `events.bin` version 1 and the JSON contracts
   `sil_source_scope_map`, `sil_source_scope_calls` and
   `sil_source_scope_report`, each version 1. An incompatible change makes a
   new version; a reader rejects a version it does not know.

@@ -63,7 +63,7 @@ static int confirms(const object *radar, const object *camera) {
 - `id` is a constant integer in [1, 65535]. 0 is reserved. The source owner
   chooses the IDs and keeps them stable across the builds that they compare.
 - `name` is a string literal of at most 63 bytes. `__FILE__` must be at
-  most 183 bytes. A longer value is a compile error.
+  most 179 bytes. A longer value is a compile error.
 - One scope ID can have more than one site, for example in two blocks or
   in a header that more than one translation unit includes. All sites of an
   ID must have the same name. Sites with the same ID and different names
@@ -76,8 +76,9 @@ With `SIL_SOURCE_SCOPES=1`, each use expands to:
 
 1. One 256-byte record in the ELF section `sil_source_scopes`:
    `{u32 magic "SSC1", u16 version 1, u16 id, u32 line, char name[64],
-   char file[184]}` (little-endian, zero-padded, no pointers and no
-   relocations). This is the **scope map**. It is in the bytes of the
+   char file[180]}`: 4 + 2 + 2 + 4 + 64 + 180 = 256 bytes, little-endian,
+   zero-padded, with no pointers and no relocations. This is the **scope
+   map**. It is in the bytes of the
    instrumented library, so it cannot belong to a different build.
 2. A local guard with the GCC `cleanup` attribute. Its initializer calls
    `sil_source_scope_v1_enter(id)`; its cleanup calls
@@ -92,18 +93,25 @@ incompatible observer uses a new soname and a new symbol prefix.
 | State | When | Cost in a scope |
 | --- | --- | --- |
 | dormant | No capture session, or the process is not the session's runner (for example, a Process participant that loads the library) | One relaxed atomic load and one branch. No clock read, no event, no file. |
-| active | `sil profile --collector scopes` started this runner | One direct `clock_gettime(CLOCK_MONOTONIC)` system call, one try-lock and one 16-byte store |
-| stopped | The buffer is full, or finalization began | One relaxed atomic load and a loss counter increment |
+| active | `sil profile --collector scopes` started this runner | One direct `clock_gettime(CLOCK_MONOTONIC)` system call, one try-lock and one 16-byte store into the mapped file |
+| stopped | The buffer is full, or the observer is finalized | One relaxed atomic load and a loss counter increment |
 
 The observer becomes active only when the environment variable
 `SIL_SOURCE_SCOPE_SESSION` is set and its `pid` value equals `getpid()`.
 `sil-diagnostics-launcher` adds its own PID to that value before it execs
 `sil-run-diagnostics`, so only the runner itself matches. A child process
-inherits the variable but has another PID and stays dormant. At the first
-enter, the active observer maps its buffer once (`mmap`). If that fails, it
-stops and records `observer_unavailable`.
+inherits the variable but has another PID and stays dormant.
 
-A scope never allocates, does I/O, retries or waits. A contended try-lock
+The session names an open descriptor of `scopes/events.bin`. The command
+made and preallocated that file before the Run. At the first enter, the
+active observer checks the file's size and header, sets `FD_CLOEXEC` on
+the descriptor and maps the whole file once, shared and prefaulted
+(`MAP_SHARED | MAP_POPULATE`). If a check or the mapping fails, it stays
+dormant and, when it can, sets the header state to `unavailable`. Records
+and counters are memory stores into this mapping. The kernel keeps them in
+the file also when the runner is killed.
+
+A scope never allocates, calls a file system function, retries or waits. A contended try-lock
 or a full buffer increments `dropped_contended` or `dropped_full`. There is
 no overwrite.
 
@@ -154,31 +162,32 @@ sil profile MANIFEST --out DIR --collector scopes --participant NAME
    `DIR`. After preflight, the command makes `DIR` and writes
    `DIR/scopes/map.json` first. A failure to write it exits 1 and leaves
    `DIR` as found, without a `scopes.json`.
-2. **Session.** The command makes a fresh capture ID (UUID version 4). It
-   sets `SIL_SOURCE_SCOPE_SESSION` with the capture ID, the capacity and the
-   two output paths. The launcher adds `pid`.
+2. **Raw file and session.** The command makes a fresh capture ID (UUID
+   version 4). It creates `scopes/events.bin` (`O_CREAT | O_EXCL |
+   O_NOFOLLOW`), allocates its full size with `posix_fallocate` and writes
+   the header in state `created`. A failure exits 1 before the Run. It sets
+   `SIL_SOURCE_SCOPE_SESSION` with the capture ID, the capacity and the
+   descriptor number, and keeps the descriptor open for the launcher. The
+   launcher adds `pid`.
 3. **Run.** It starts the launcher and `sil-run-diagnostics` with
    `--activation-observations`, as the CPU collector does with
    `--activations`. The Manifest bytes, Participant commands and working
    directory do not change. The environment of the runner, and of each
    process it starts, gets one more variable: `SIL_SOURCE_SCOPE_SESSION`.
    Only the runner's PID matches it.
-4. **Finalization.** The observer writes when the instrumented library is
-   unloaded, or at process exit if that is first. It writes
-   `scopes/events.bin` first and `scopes/events.json` last. Each is a fresh
-   file (`O_CREAT | O_EXCL | O_NOFOLLOW`), written with at most one
-   `write` call per buffer, never replaced.
-5. **Supervision.** When the observation stream has its `end` line and the
-   runner has not exited 30 s later, the command sends SIGTERM to the
-   session and SIGKILL 5 s later. The capture is then `failed` with
-   `finalization_timeout`.
-6. **Decode.** It checks identities, then writes `scopes/calls.json` and,
+4. **Finalization.** When the instrumented library is unloaded, or at
+   process exit if that is first, the observer stops and stores the state
+   `finalized` in the header. This is one memory store: finalization does
+   no file I/O and cannot block the runner's shutdown or Recording close.
+   The command adds no timeout to the Run.
+5. **Decode.** After the runner exits, the command reads the raw file. It checks identities, then writes `scopes/calls.json` and,
    last, `scopes.json` through a temporary sibling and a hard link. It
    prints the summary.
 
 SIGINT, SIGTERM and SIGHUP go to the whole session, as for the CPU
-collector. A runner that ends by signal or SIGKILL leaves no
-`events.json`. The capture is then `failed` with `raw_incomplete`.
+collector. A runner that ends by signal or SIGKILL leaves the header in
+state `active` or `created`, not `finalized`. The capture is then `failed`
+with `raw_incomplete`; the kept records stay in the file as evidence.
 
 ## Files
 
@@ -187,9 +196,8 @@ collector. A runner that ends by signal or SIGKILL leaves no
 | `scopes.json` | `sil_source_scope_report` v1. Written last. | command |
 | `run.diagnostics.json` | `sil_run_diagnostics` v1, unchanged | runner |
 | `activation/observations.jsonl` | `sil_activation_observations` 1, unchanged ([contract](../profile-report.md#observation-stream-activationobservationsjsonl)) | runner |
-| `scopes/map.json` | `sil_source_scope_map` v1 | command, preflight |
-| `scopes/events.bin` | raw records, version 1 | observer |
-| `scopes/events.json` | `sil_source_scope_raw` v1 | observer |
+| `scopes/map.json` | `sil_source_scope_map` v1 | command, after preflight |
+| `scopes/events.bin` | raw header and records, version 1 | command creates it; observer fills it |
 | `scopes/calls.json` | `sil_source_scope_calls` v1 | command |
 | `run.mcap` | the Recording, unchanged | runner |
 
@@ -201,38 +209,39 @@ the observation stream. `virtual_time_ns` is an integer.
 
 ### `scopes/events.bin`
 
-A 64-byte header, then `records` records. All integers are little-endian.
+A 256-byte header, then `capacity` records of 16 bytes. The file size is
+`256 + 16 × capacity` from creation. Records after `records` are zero. All
+integers are little-endian.
 
 | Offset | Size | Field |
 | ---: | ---: | --- |
 | 0 | 8 | magic `SILSCOPE` |
 | 8 | 2 | version, 1 |
-| 10 | 2 | record size, 16 |
-| 12 | 4 | flags, 0 |
+| 10 | 2 | header size, 256 |
+| 12 | 2 | record size, 16 |
+| 14 | 2 | state: 0 `created`, 1 `active`, 2 `finalized`, 3 `unavailable` |
 | 16 | 16 | capture ID (UUID bytes) |
-| 32 | 4 | PID |
-| 36 | 4 | reserved, 0 |
+| 32 | 4 | PID of the active runner (0 before activation) |
+| 36 | 4 | flags, 0 |
 | 40 | 8 | capacity in records |
-| 48 | 16 | reserved, 0 |
+| 48 | 8 | records: kept records |
+| 56 | 8 | `dropped_full` |
+| 64 | 8 | `dropped_contended` |
+| 72 | 8 | `clock_errors`: failed clock reads; their events are dropped |
+| 80 | 24 | clock bracket: a direct system call, libc `clock_gettime(CLOCK_MONOTONIC)`, a direct system call, read once at activation |
+| 104 | 16 | PID namespace `device`, `inode` (`/proc/self/ns/pid`) |
+| 120 | 1 | build ID length |
+| 121 | 40 | GNU build ID of the library that registered the scopes, read from its loaded program headers; zero-padded |
+| 161 | 95 | reserved, 0 |
+
+The command writes offsets 0–47 and the zero fields before the Run. The
+observer writes only the state, PID and offsets 48 and later. It writes a
+record, then increments `records` with release order, so `records` never
+counts a partial record. A state other than 0–3 is invalid.
 
 Record: `u64 monotonic_ns, u32 tid, u16 scope_id, u8 edge, u8 reserved`.
 Edge 0 is entry; edge 1 is return. Records are in append order. Times are
 in order per thread, not across threads.
-
-### `scopes/events.json`: `sil_source_scope_raw` v1
-
-| Member | Content |
-| --- | --- |
-| `sil_source_scope_raw` | 1 |
-| `observer` | `name` (`libsil_source_scope`), `version` (1) |
-| `capture_id`, `pid`, `pid_namespace` | The session and the runner. `pid_namespace` is `{device, inode}`. |
-| `clock` | `host_monotonic` |
-| `clock_bracket_ns` | Three times: a direct system call, libc `clock_gettime(CLOCK_MONOTONIC)`, a direct system call. Read once at activation. |
-| `clock_errors` | Failed clock reads; their events are dropped |
-| `library` | `build_id`, `path` of the library that registered the scopes (read from its loaded program headers) |
-| `capacity_records`, `records` | Buffer size and kept records |
-| `dropped_full`, `dropped_contended` | Lost events |
-| `bytes_written`, `write_status` | Size of `events.bin`; `complete` or `short_write` |
 
 ### `scopes/map.json`: `sil_source_scope_map` v1
 
@@ -281,7 +290,8 @@ return and `returns - paired_calls` rows have no entry.
 | `run` | As `sil_profile_report` v1 `run`: exit code, signal, first failure. Independent of the capture. |
 | `capture` | `status` (`complete`, `partial`, `failed`, `interrupted`), `reasons`, `capture_id`, loss counters, `records` |
 | `identities` | `instrumented` and `original` library identities, observer version, compiler identity from the library's `.comment` section |
-| `artifacts` | Path, size and SHA-256 of every file in the table above |
+| `artifacts` | `{role, path, bytes, sha256}` of each existing file in the table above except `scopes.json` itself; `path` relative to `DIR`. The Recording is an artifact only when it is in `DIR`, as in the [profile contract](../profile-report.md#no-recording-digest-handoff). |
+| `missing` | `{role, path, reason}` of each expected file that does not exist: `not_requested` (for example `--no-recording`) or `not_written` (for example `calls.json` after a failed decode) |
 | `summary` | Per Task: Activations, exact, unavailable by reason; per scope: total attributed calls, and min/median/max calls per exact Activation |
 | `limitations` | The fixed list in [Presentation](#presentation) |
 
@@ -300,8 +310,9 @@ A paired call belongs to Activation A when all of these are true:
 - Its thread is the runner thread: `runner_tid`, and A's `tid`.
 - A is an Activation of the selected participant, of kind `native_task`.
 - `begin_ns <= entry_ns < end_ns` and `begin_ns <= return_ns < end_ns`.
- Intervals are half open: an event at the
-next Activation's `begin_ns` belongs to that Activation.
+
+Intervals are half open: an event at the next Activation's `begin_ns`
+belongs to that Activation.
 
 | Call | Result |
 | --- | --- |
@@ -325,23 +336,27 @@ observation stream makes the capture `partial` with
 These checks fail the decode before any file is written. The capture is
 `failed` with the reason in parentheses.
 
-- `events.bin` header and `events.json` agree on version, capture ID, PID
-  and capacity; the file size is `64 + 16 × records`; every record has a
-  valid edge, reserved 0 and a scope ID in the map (`raw_invalid`).
-- `events.json` exists and `write_status` is `complete`
-  (`raw_incomplete`).
+- The header has the known magic, version, sizes and a valid state; the
+  file size is `256 + 16 × capacity`; `records <= capacity`; every kept
+  record has a valid edge, reserved 0 and a scope ID in the map
+  (`raw_invalid`).
+- The state is `finalized` or `created`. `created` means that no scope
+  ran in the runner, and gives zero records. `active` means that the
+  runner did not finalize (`raw_incomplete`). `unavailable` is
+  `observer_unavailable`.
 - The capture ID is the session's, and PID and PID namespace equal the
   observation header's `runner_pid` and `pid_namespace`
   (`capture_mismatch`).
-- `library.build_id` in `events.json` equals the map's build ID, and the
+- The header's build ID equals the map's build ID, and the
   library file at the map's path has the same SHA-256 after the Run as at
   preflight (`identity_mismatch`). A path alone never identifies a build.
-- `clock` is `host_monotonic` in both streams, the bracket is in
-  non-decreasing order and `clock_errors` is known (`clock_unverified`).
+- The observation stream's `clock` is `host_monotonic` and the bracket is
+  in non-decreasing order (`clock_unverified`).
 - The scope map has no conflicting duplicates and at most 4,096 sites
   (`map_invalid`; normally a preflight error).
 - In `sil profile render`: each file in `artifacts` has its recorded size
   and SHA-256, and a known contract version, before any output (exit 2).
+  A file in `missing` is not read; its view shows it as unavailable.
 
 ## Run and capture outcomes
 
@@ -355,6 +370,7 @@ replaces a Run failure.
 | `sil-run-diagnostics` or the launcher is not on `PATH` | 127 | not written |
 | The Run failed (exit code N) | N | written, capture status as found |
 | The runner ended by signal N | 128+N | written, capture `failed` (`raw_incomplete`) |
+| `events.bin` cannot be created or allocated | 1 | not written; the Run does not start |
 | The Run succeeded, capture `complete` | 0 | written |
 | The Run succeeded, capture `partial`, `failed` or `interrupted` | 1 | written |
 | The Run succeeded, `scopes.json` cannot be written | 1 | not written |
@@ -363,33 +379,30 @@ replaces a Run failure.
 Capture reasons: `events_lost`, `observations_incomplete`,
 `unbalanced_scopes` (`partial`); `observer_unavailable`, `raw_incomplete`,
 `raw_invalid`, `capture_mismatch`, `identity_mismatch`, `clock_unverified`,
-`map_invalid`, `normalized_limit`, `storage_reserve_reached`,
-`finalization_timeout` (`failed`); `interrupted`. A capture with zero
-scope events is `complete`. It does not prove that no scope ran in a
+`map_invalid`, `normalized_limit` (`failed`); `interrupted`. A capture
+with zero scope events is `complete`. It does not prove that no scope ran in a
 dormant process.
 
 ## Resource and failure budgets
 
 | Resource | Budget | At the limit |
 | --- | --- | --- |
-| Observer buffer | 64 B + 16 B × `--max-scope-records`; 1 MiB by default, 4 MiB at most; mapped once | `dropped_full`; the Run continues |
-| Work in a scope | Dormant: 1 atomic load. Active: 1 clock system call, 1 try-lock, 1 store. No allocation, I/O, retry or wait | `dropped_contended` on contention |
+| Raw file | 256 B + 16 B × `--max-scope-records`; 1 MiB by default, 4 MiB at most; allocated before the Run, never grows | `dropped_full`; the Run continues |
+| Work in a scope | Dormant: 1 atomic load. Active: 1 clock system call, 1 try-lock, 1 store into prefaulted memory. No allocation, file system call, retry or wait | `dropped_contended` on contention |
+| Finalization | One memory store; no file I/O and no timeout | — |
 | Scope map | At most 4,096 sites of 256 B (1 MiB section); `map.json` at most 2 MiB | preflight exit 2 |
-| `events.json` | At most 4 KiB | — |
-| Observation stream | `--max-activation-bytes`, 64 MiB by default, existing policy | `observations_incomplete` |
-| `calls.json` | At most 16 MiB (the per-file input limit of the offline commands) | capture `failed`, `normalized_limit`; raw files stay |
+| Observation stream | `--max-activation-bytes`, 64 MiB by default, existing policy; a full disk ends the stream | `observations_incomplete` |
+| `calls.json` | Bounded by the records: at most 131,072 calls; at most 256 MiB | capture `failed`, `normalized_limit`; raw files stay |
 | Unattributed rows | 1,000, then counts only | `rows_remainder` |
 | `scopes.json` | At most 1 MiB | — |
-| Free space | The existing 8 MiB reserve of `DIR`, checked every 100 ms | The command cannot stop the observer; it records `storage_reserve_reached` when the reserve is gone before finalization |
-| Finalization | Two regular-file writes after the observation `end` line; 30 s, then SIGTERM, 5 s, SIGKILL | `finalization_timeout` |
-| Offline inputs | 16 MiB per file, as all `sil profile` offline commands | exit 2 |
+| Free space | Before the Run, the command warns on stderr when the raw file, the observation limit and the existing 8 MiB reserve exceed the free space of `DIR`, as the CPU collector does | — |
+| Offline inputs | 256 MiB per file, the existing render limit of `sil profile` | exit 2 |
 
 Disk growth of `DIR` excluding the Recording and `run.diagnostics.json`
-is at most 4 MiB raw +
-the observation limit + 16 MiB normalized + 3 MiB maps and summaries.
-Regular-file I/O can wait on the file system. The observer makes no hard
-real-time or uninterruptible-I/O promise. No reader or pipe can apply
-backpressure to an Activation.
+is at most 4 MiB raw + the observation limit + `calls.json` + 3 MiB maps
+and summaries. A store into a mapped page can wait when the kernel writes
+dirty pages back; the observer makes no hard real-time promise. No reader
+or pipe can apply backpressure to an Activation.
 
 ## Presentation
 
@@ -460,24 +473,26 @@ the implementation: worked examples or a counted fixture.
 | Q7 | Scope on a worker thread | `worker_thread` rows; Activation exact | API/lifecycle |
 | Q8 | Failed and interrupted Activations | `not_completed`, calls withheld | API/lifecycle |
 | Q9 | Buffer of 7 records; forced contention | `events_lost`, `partial`, equal Recording | API/lifecycle |
-| Q10 | `mmap` failure | `observer_unavailable`; Run outcome unchanged | API/lifecycle |
+| Q10 | Wrong raw-file size or header; `mmap` failure | `observer_unavailable`; Run outcome unchanged | API/lifecycle |
 | Q11 | Rebuilt library at the same path; changed bytes after preflight | `identity_mismatch` before output | decoding |
 | Q12 | Duplicate ID with another name; missing section; missing `DT_NEEDED` | exit 2 before `DIR` | decoding |
-| Q13 | Output file exists; `events.json` missing; short write | `raw_incomplete` or `raw_invalid`; nothing replaced | API/lifecycle |
-| Q14 | SIGKILL of the runner; SIGINT of the command | 137 / `interrupted`; Run outcome retained | API/lifecycle |
-| Q15 | Finalization blocked beyond 30 s | `finalization_timeout`; Run outcome from the diagnostics report | API/lifecycle |
-| Q16 | Free-space reserve reached | `storage_reserve_reached`; Run continues | API/lifecycle |
+| Q13 | Output file exists; `posix_fallocate` fails; corrupt header | exit 2 / exit 1 before the Run / `raw_invalid`; nothing replaced | API/lifecycle |
+| Q14 | SIGKILL of the runner; SIGINT of the command | 137 and `raw_incomplete` with kept records / `interrupted`; Run outcome retained | API/lifecycle |
+| Q15 | Library unloaded before the observation `end` line and the Recording close | State `finalized` without file I/O; shutdown phase and Recording unchanged | API/lifecycle |
+| Q16 | Full file system during the Run | Raw records kept (preallocated); `observations_incomplete` if the stream is cut; Run continues | API/lifecycle |
 | Q17 | Instrumented library under `sil run`, `sil-run`, a CPU profile and as a Process participant | Dormant: no file; equal Recordings and exit codes | API/lifecycle |
 | Q18 | `sil-run` binary and kernel sources | No `sil_source_scope` symbol or include. The source check already runs offline in `tests/test_source_scope_contract.py`; the binary check is pending | API/lifecycle |
 | Q19 | Build without `SIL_SOURCE_SCOPES` | Same bytes as without the header calls; no `DT_NEEDED` | API/lifecycle |
 | Q20 | Original and instrumented builds | Both identities retained; inline decisions of both builds retained | API/lifecycle |
 | Q21 | Ordinary versus capture Runs, generous Response deadlines, 3 repeats | Byte-identical Recordings and equal outcomes; elapsed and storage retained without a threshold | API/lifecycle |
-| Q22 | Fixtures in `tests/fixtures/source_scopes/` (offline) | The decoder output equals each `expected.json` | decoding |
+| Q22 | Fixtures in `tests/fixtures/source_scopes/` (offline) | The map extractor reproduces `map.json` from `scope-section.bin`; the decoder output equals each `expected.json` | decoding |
 | Q23 | Malicious names, large integers, 1,000+ unattributed rows, maximum `calls.json` (offline) | Escaped, bounded, remainder shown | decoding, presentation |
 | Q24 | Render and HTML of all fixture cases (offline) | Exact and unavailable Activations, limitations shown | presentation |
 
 The fixtures in [`tests/fixtures/source_scopes/`](../../tests/fixtures/source_scopes/)
-are worked examples of the decoder's input and output. They cover nesting,
+are worked examples of the decoder's input and output. `scope-section.bin`
+pins the 256-byte site record, with one duplicate site and one ID with two
+sites. They cover nesting,
 an early return, the half-open boundary, recursion, every unattributed
 reason except `missing_entry` and `observations_incomplete`, the
 `not_completed`, `unbalanced_scopes`, `crossing_call` and `events_lost`
@@ -496,7 +511,7 @@ durations only.
 The work is split into three tickets against this contract:
 
 - [#372](https://github.com/Stevie1704/sil/issues/372) API and capture lifecycle: header, observer, launcher session,
-  `--collector scopes`, raw files, supervision and Q1–Q10, Q13–Q21.
+  `--collector scopes`, the preallocated raw file and Q1–Q10, Q13–Q21.
 - [#371](https://github.com/Stevie1704/sil/issues/371) Decoding: map extraction, identity checks, pairing, join,
   `calls.json`, `scopes.json` and Q2, Q11, Q12, Q22, Q23.
 - [#373](https://github.com/Stevie1704/sil/issues/373) Presentation: `sil profile render` for `scopes.json` and Q23, Q24.
