@@ -1,0 +1,592 @@
+{
+  "source_revision": "88231d293b42dc2eaecc71bd2e6017da66dea4f7",
+  "machine": {
+    "system": "Linux",
+    "node": "runnervm7aw5e",
+    "release": "7.0.0-1017-azure",
+    "version": "#17~24.04.1-Ubuntu SMP PREEMPT Thu Sep 24 18:46:57 UTC 2026",
+    "machine": "x86_64",
+    "processor": "x86_64"
+  },
+  "glibc": "2.39",
+  "gcc": "gcc-12 (Ubuntu 12.4.0-2ubuntu1~24.04.1) 12.4.0",
+  "builds": {
+    "original": {
+      "command": [
+        "gcc-12",
+        "-std=c11",
+        "-O2",
+        "-g",
+        "-fPIC",
+        "-ffp-contract=off",
+        "-Wl,--build-id=sha1",
+        "-I",
+        "/home/runner/work/sil/sil/include",
+        "-I",
+        "/home/runner/work/sil/sil/build/source-scopes-evidence/adas/sources",
+        "-fopt-info-inline-optimized=/home/runner/work/sil/sil/build/source-scopes-evidence/adas/original.inline.txt",
+        "-shared",
+        "/home/runner/work/sil/sil/build/source-scopes-evidence/adas/sources/adas_reference.c",
+        "/home/runner/work/sil/sil/build/source-scopes-evidence/adas/sources/sil_adapter.c",
+        "-lm",
+        "-o",
+        "/home/runner/work/sil/sil/build/source-scopes-evidence/adas/original.so"
+      ],
+      "sha256": "a5f212850d89d5db3e53c388aa03ebe2494e05ef0ee41030cfef46ec81df6cfe",
+      "build_id": "ca19ee0402ab17db047ebd4dfef7f369b76b6b93",
+      "needed": [
+        "libm.so.6",
+        "libc.so.6"
+      ],
+      "inlined_subroutines": {
+        "check_object": 1,
+        "confirmed": 1,
+        "confirms": 1,
+        "select_lead": 1
+      },
+      "inline_remarks": "original.inline.txt"
+    },
+    "instrumented": {
+      "command": [
+        "gcc-12",
+        "-std=c11",
+        "-O2",
+        "-g",
+        "-fPIC",
+        "-ffp-contract=off",
+        "-Wl,--build-id=sha1",
+        "-I",
+        "/home/runner/work/sil/sil/include",
+        "-I",
+        "/home/runner/work/sil/sil/build/source-scopes-evidence/adas/sources",
+        "-DSIL_SOURCE_SCOPES=1",
+        "-fopt-info-inline-optimized=/home/runner/work/sil/sil/build/source-scopes-evidence/adas/instrumented.inline.txt",
+        "-shared",
+        "/home/runner/work/sil/sil/build/source-scopes-evidence/adas/sources/instrumented.c",
+        "/home/runner/work/sil/sil/build/source-scopes-evidence/adas/sources/sil_adapter.c",
+        "-L/home/runner/work/sil/sil/build",
+        "-lsil_source_scope",
+        "-Wl,-rpath,/home/runner/work/sil/sil/build",
+        "-lm",
+        "-o",
+        "/home/runner/work/sil/sil/build/source-scopes-evidence/adas/instrumented.so"
+      ],
+      "sha256": "4c4595ef33dc322e37f94752e583f58cab679d890594ac5075ce8a9a2b7fa00f",
+      "build_id": "45e218a54bc39170978af1523206bb6de7909b23",
+      "needed": [
+        "libsil_source_scope.so.1",
+        "libm.so.6",
+        "libc.so.6"
+      ],
+      "inlined_subroutines": {
+        "check_object": 1,
+        "confirmed": 1,
+        "confirms": 1,
+        "select_lead": 1
+      },
+      "inline_remarks": "instrumented.inline.txt"
+    }
+  },
+  "runner_sha256": {
+    "sil-run": "8eac35278c93e38c4b86905f79753207cc76dbbe939a7bb14aa93b3563cc13bb",
+    "sil-run-diagnostics": "ce3b21097b246dd3e2784c5383cd130febd7de51bcfbda058c9f43652b485b72",
+    "sil-diagnostics-launcher": "2fd05c04fb4a451c072a49a64f459d5b316e65af73917cd6e0d4d58a6974799d",
+    "libsil_source_scope.so.1": "b21f4b0a370d16deb04f859d586e753eea41da19b05750063753d378b7963eea"
+  },
+  "manifest_sha256": "60a83cc2b093873382220632c50334b3fe9f1e2f7662d80e13e47b40bd2f3caa",
+  "runs": [
+    {
+      "mode": "ordinary-original",
+      "repeat": 0,
+      "exit_code": 0,
+      "elapsed_host_ns": 7369870,
+      "library_sha256": "a5f212850d89d5db3e53c388aa03ebe2494e05ef0ee41030cfef46ec81df6cfe",
+      "recording_sha256": "2c9532406de00e2d9cffb2207ce6798659b688a9f00b877e2c62e772f4c11334",
+      "storage_bytes": 30133
+    },
+    {
+      "mode": "ordinary-instrumented",
+      "repeat": 0,
+      "exit_code": 0,
+      "elapsed_host_ns": 7078920,
+      "library_sha256": "4c4595ef33dc322e37f94752e583f58cab679d890594ac5075ce8a9a2b7fa00f",
+      "recording_sha256": "2c9532406de00e2d9cffb2207ce6798659b688a9f00b877e2c62e772f4c11334",
+      "storage_bytes": 30133
+    },
+    {
+      "mode": "capture-one",
+      "repeat": 0,
+      "exit_code": 0,
+      "elapsed_host_ns": 154404544,
+      "library_sha256": "4c4595ef33dc322e37f94752e583f58cab679d890594ac5075ce8a9a2b7fa00f",
+      "recording_sha256": "2c9532406de00e2d9cffb2207ce6798659b688a9f00b877e2c62e772f4c11334",
+      "storage_bytes": 1319521,
+      "capture": {
+        "status": "complete",
+        "reasons": [],
+        "capture_id": "5ec9e041-c3f2-4e3a-bd7f-9f65f56d4ac9",
+        "loss": {
+          "dropped_full": 0,
+          "dropped_contended": 0,
+          "clock_errors": 0
+        },
+        "records": 2640
+      },
+      "summary": {
+        "tasks": [
+          {
+            "participant": "one",
+            "task": "control",
+            "activations": 20,
+            "exact": 20,
+            "unavailable": {}
+          }
+        ],
+        "scopes": [
+          {
+            "id": 1,
+            "name": "check_object",
+            "attributed_calls": 40,
+            "per_exact_activation": {
+              "min": 2,
+              "median": 2,
+              "max": 2
+            }
+          },
+          {
+            "id": 2,
+            "name": "confirmed",
+            "attributed_calls": 20,
+            "per_exact_activation": {
+              "min": 1,
+              "median": 1,
+              "max": 1
+            }
+          },
+          {
+            "id": 3,
+            "name": "confirms",
+            "attributed_calls": 20,
+            "per_exact_activation": {
+              "min": 1,
+              "median": 1,
+              "max": 1
+            }
+          },
+          {
+            "id": 4,
+            "name": "select_lead",
+            "attributed_calls": 20,
+            "per_exact_activation": {
+              "min": 1,
+              "median": 1,
+              "max": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "mode": "capture-eight",
+      "repeat": 0,
+      "exit_code": 0,
+      "elapsed_host_ns": 115195973,
+      "library_sha256": "4c4595ef33dc322e37f94752e583f58cab679d890594ac5075ce8a9a2b7fa00f",
+      "recording_sha256": "2c9532406de00e2d9cffb2207ce6798659b688a9f00b877e2c62e772f4c11334",
+      "storage_bytes": 1387805,
+      "capture": {
+        "status": "complete",
+        "reasons": [],
+        "capture_id": "b29aa44b-7b43-404d-a31f-2e8aab74bc0a",
+        "loss": {
+          "dropped_full": 0,
+          "dropped_contended": 0,
+          "clock_errors": 0
+        },
+        "records": 2640
+      },
+      "summary": {
+        "tasks": [
+          {
+            "participant": "eight",
+            "task": "control",
+            "activations": 20,
+            "exact": 20,
+            "unavailable": {}
+          }
+        ],
+        "scopes": [
+          {
+            "id": 1,
+            "name": "check_object",
+            "attributed_calls": 320,
+            "per_exact_activation": {
+              "min": 16,
+              "median": 16,
+              "max": 16
+            }
+          },
+          {
+            "id": 2,
+            "name": "confirmed",
+            "attributed_calls": 160,
+            "per_exact_activation": {
+              "min": 8,
+              "median": 8,
+              "max": 8
+            }
+          },
+          {
+            "id": 3,
+            "name": "confirms",
+            "attributed_calls": 720,
+            "per_exact_activation": {
+              "min": 36,
+              "median": 36,
+              "max": 36
+            }
+          },
+          {
+            "id": 4,
+            "name": "select_lead",
+            "attributed_calls": 20,
+            "per_exact_activation": {
+              "min": 1,
+              "median": 1,
+              "max": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "mode": "ordinary-original",
+      "repeat": 1,
+      "exit_code": 0,
+      "elapsed_host_ns": 7034680,
+      "library_sha256": "a5f212850d89d5db3e53c388aa03ebe2494e05ef0ee41030cfef46ec81df6cfe",
+      "recording_sha256": "2c9532406de00e2d9cffb2207ce6798659b688a9f00b877e2c62e772f4c11334",
+      "storage_bytes": 30133
+    },
+    {
+      "mode": "ordinary-instrumented",
+      "repeat": 1,
+      "exit_code": 0,
+      "elapsed_host_ns": 7063737,
+      "library_sha256": "4c4595ef33dc322e37f94752e583f58cab679d890594ac5075ce8a9a2b7fa00f",
+      "recording_sha256": "2c9532406de00e2d9cffb2207ce6798659b688a9f00b877e2c62e772f4c11334",
+      "storage_bytes": 30133
+    },
+    {
+      "mode": "capture-one",
+      "repeat": 1,
+      "exit_code": 0,
+      "elapsed_host_ns": 114281215,
+      "library_sha256": "4c4595ef33dc322e37f94752e583f58cab679d890594ac5075ce8a9a2b7fa00f",
+      "recording_sha256": "2c9532406de00e2d9cffb2207ce6798659b688a9f00b877e2c62e772f4c11334",
+      "storage_bytes": 1319519,
+      "capture": {
+        "status": "complete",
+        "reasons": [],
+        "capture_id": "9c08b8c1-b06d-4a26-a844-9ede904736f9",
+        "loss": {
+          "dropped_full": 0,
+          "dropped_contended": 0,
+          "clock_errors": 0
+        },
+        "records": 2640
+      },
+      "summary": {
+        "tasks": [
+          {
+            "participant": "one",
+            "task": "control",
+            "activations": 20,
+            "exact": 20,
+            "unavailable": {}
+          }
+        ],
+        "scopes": [
+          {
+            "id": 1,
+            "name": "check_object",
+            "attributed_calls": 40,
+            "per_exact_activation": {
+              "min": 2,
+              "median": 2,
+              "max": 2
+            }
+          },
+          {
+            "id": 2,
+            "name": "confirmed",
+            "attributed_calls": 20,
+            "per_exact_activation": {
+              "min": 1,
+              "median": 1,
+              "max": 1
+            }
+          },
+          {
+            "id": 3,
+            "name": "confirms",
+            "attributed_calls": 20,
+            "per_exact_activation": {
+              "min": 1,
+              "median": 1,
+              "max": 1
+            }
+          },
+          {
+            "id": 4,
+            "name": "select_lead",
+            "attributed_calls": 20,
+            "per_exact_activation": {
+              "min": 1,
+              "median": 1,
+              "max": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "mode": "capture-eight",
+      "repeat": 1,
+      "exit_code": 0,
+      "elapsed_host_ns": 113550578,
+      "library_sha256": "4c4595ef33dc322e37f94752e583f58cab679d890594ac5075ce8a9a2b7fa00f",
+      "recording_sha256": "2c9532406de00e2d9cffb2207ce6798659b688a9f00b877e2c62e772f4c11334",
+      "storage_bytes": 1387793,
+      "capture": {
+        "status": "complete",
+        "reasons": [],
+        "capture_id": "a9045a1d-73df-4ba0-bc1a-7e2972fa0627",
+        "loss": {
+          "dropped_full": 0,
+          "dropped_contended": 0,
+          "clock_errors": 0
+        },
+        "records": 2640
+      },
+      "summary": {
+        "tasks": [
+          {
+            "participant": "eight",
+            "task": "control",
+            "activations": 20,
+            "exact": 20,
+            "unavailable": {}
+          }
+        ],
+        "scopes": [
+          {
+            "id": 1,
+            "name": "check_object",
+            "attributed_calls": 320,
+            "per_exact_activation": {
+              "min": 16,
+              "median": 16,
+              "max": 16
+            }
+          },
+          {
+            "id": 2,
+            "name": "confirmed",
+            "attributed_calls": 160,
+            "per_exact_activation": {
+              "min": 8,
+              "median": 8,
+              "max": 8
+            }
+          },
+          {
+            "id": 3,
+            "name": "confirms",
+            "attributed_calls": 720,
+            "per_exact_activation": {
+              "min": 36,
+              "median": 36,
+              "max": 36
+            }
+          },
+          {
+            "id": 4,
+            "name": "select_lead",
+            "attributed_calls": 20,
+            "per_exact_activation": {
+              "min": 1,
+              "median": 1,
+              "max": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "mode": "ordinary-original",
+      "repeat": 2,
+      "exit_code": 0,
+      "elapsed_host_ns": 7057082,
+      "library_sha256": "a5f212850d89d5db3e53c388aa03ebe2494e05ef0ee41030cfef46ec81df6cfe",
+      "recording_sha256": "2c9532406de00e2d9cffb2207ce6798659b688a9f00b877e2c62e772f4c11334",
+      "storage_bytes": 30133
+    },
+    {
+      "mode": "ordinary-instrumented",
+      "repeat": 2,
+      "exit_code": 0,
+      "elapsed_host_ns": 7135943,
+      "library_sha256": "4c4595ef33dc322e37f94752e583f58cab679d890594ac5075ce8a9a2b7fa00f",
+      "recording_sha256": "2c9532406de00e2d9cffb2207ce6798659b688a9f00b877e2c62e772f4c11334",
+      "storage_bytes": 30133
+    },
+    {
+      "mode": "capture-one",
+      "repeat": 2,
+      "exit_code": 0,
+      "elapsed_host_ns": 112317390,
+      "library_sha256": "4c4595ef33dc322e37f94752e583f58cab679d890594ac5075ce8a9a2b7fa00f",
+      "recording_sha256": "2c9532406de00e2d9cffb2207ce6798659b688a9f00b877e2c62e772f4c11334",
+      "storage_bytes": 1319507,
+      "capture": {
+        "status": "complete",
+        "reasons": [],
+        "capture_id": "90f738d8-d7a4-425a-9594-77117a1ba326",
+        "loss": {
+          "dropped_full": 0,
+          "dropped_contended": 0,
+          "clock_errors": 0
+        },
+        "records": 2640
+      },
+      "summary": {
+        "tasks": [
+          {
+            "participant": "one",
+            "task": "control",
+            "activations": 20,
+            "exact": 20,
+            "unavailable": {}
+          }
+        ],
+        "scopes": [
+          {
+            "id": 1,
+            "name": "check_object",
+            "attributed_calls": 40,
+            "per_exact_activation": {
+              "min": 2,
+              "median": 2,
+              "max": 2
+            }
+          },
+          {
+            "id": 2,
+            "name": "confirmed",
+            "attributed_calls": 20,
+            "per_exact_activation": {
+              "min": 1,
+              "median": 1,
+              "max": 1
+            }
+          },
+          {
+            "id": 3,
+            "name": "confirms",
+            "attributed_calls": 20,
+            "per_exact_activation": {
+              "min": 1,
+              "median": 1,
+              "max": 1
+            }
+          },
+          {
+            "id": 4,
+            "name": "select_lead",
+            "attributed_calls": 20,
+            "per_exact_activation": {
+              "min": 1,
+              "median": 1,
+              "max": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "mode": "capture-eight",
+      "repeat": 2,
+      "exit_code": 0,
+      "elapsed_host_ns": 117441246,
+      "library_sha256": "4c4595ef33dc322e37f94752e583f58cab679d890594ac5075ce8a9a2b7fa00f",
+      "recording_sha256": "2c9532406de00e2d9cffb2207ce6798659b688a9f00b877e2c62e772f4c11334",
+      "storage_bytes": 1387779,
+      "capture": {
+        "status": "complete",
+        "reasons": [],
+        "capture_id": "a014aad6-a4de-4e33-9ef3-b916bfe65882",
+        "loss": {
+          "dropped_full": 0,
+          "dropped_contended": 0,
+          "clock_errors": 0
+        },
+        "records": 2640
+      },
+      "summary": {
+        "tasks": [
+          {
+            "participant": "eight",
+            "task": "control",
+            "activations": 20,
+            "exact": 20,
+            "unavailable": {}
+          }
+        ],
+        "scopes": [
+          {
+            "id": 1,
+            "name": "check_object",
+            "attributed_calls": 320,
+            "per_exact_activation": {
+              "min": 16,
+              "median": 16,
+              "max": 16
+            }
+          },
+          {
+            "id": 2,
+            "name": "confirmed",
+            "attributed_calls": 160,
+            "per_exact_activation": {
+              "min": 8,
+              "median": 8,
+              "max": 8
+            }
+          },
+          {
+            "id": 3,
+            "name": "confirms",
+            "attributed_calls": 720,
+            "per_exact_activation": {
+              "min": 36,
+              "median": 36,
+              "max": 36
+            }
+          },
+          {
+            "id": 4,
+            "name": "select_lead",
+            "attributed_calls": 20,
+            "per_exact_activation": {
+              "min": 1,
+              "median": 1,
+              "max": 1
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "recording_sha256": "2c9532406de00e2d9cffb2207ce6798659b688a9f00b877e2c62e772f4c11334"
+}
