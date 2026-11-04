@@ -206,6 +206,23 @@ for explicit probes. Exact package versions and binary/source digests are
 retained with the experiment. These are development/qualification tools,
 not new dependencies of the installed SiL runtime.
 
+## Host scheduler proof environment (#362)
+
+[proofs/host-scheduling/](proofs/host-scheduling/) invokes the distribution's
+Linux perf executable as an external proof tool. The upstream
+[record command](https://github.com/torvalds/linux/blob/v7.0/tools/perf/builtin-record.c)
+uses GPL-2.0; perf and its linked libraries also contain separately licensed
+components. Exact tool/package identities and installed `linux-tools*`
+copyright notices are retained with each new qualification.
+
+The committed proof Dockerfile uses Canonical's `ubuntu:24.04` container
+image. Ubuntu is a collection of individually licensed packages, subject to
+their notices and [Canonical's intellectual property policy](https://canonical.com/legal/intellectual-property-policy),
+not one uniformly licensed library. The qualification retains the base and
+derived image identities and installed package inventory; package notices
+remain in the image. Neither perf nor the proof image is vendored, linked
+into SiL, or added to its published runtime artifacts.
+
 ## Heap profiling proof tools (#314, #319, #330, #359)
 
 [Heaptrack](https://invent.kde.org/sdk/heaptrack) is installed from distribution

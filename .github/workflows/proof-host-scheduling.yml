@@ -1,0 +1,99 @@
+name: proof-host-scheduling
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      SIL_SOURCE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install collector and retain original policy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libssl-dev \
+            "linux-tools-$(uname -r)" linux-tools-common build-essential \
+            cmake binutils python3-venv
+          uv venv --python /usr/bin/python3 .venv
+          uv pip install -p .venv/bin/python -e python/
+          mkdir -p build/scheduler-evidence
+          cat /proc/sys/kernel/perf_event_paranoid > build/scheduler-evidence/paranoid-before.txt
+          sudo stat -Lc '%d:%i' /proc/1/ns/pid > build/scheduler-evidence/initial-pid-namespace.txt
+          dpkg-query -W > build/scheduler-evidence/packages.txt
+      - name: Build unmodified runners and independent fixture
+        run: .venv/bin/python proofs/host-scheduling/qualify.py build "$PWD/build/scheduler-work"
+      - name: Observe native unprivileged and existing sudo-root availability
+        run: |
+          initial_ns=$(cat build/scheduler-evidence/initial-pid-namespace.txt)
+          .venv/bin/python proofs/host-scheduling/qualify.py run "$PWD/build/scheduler-work" \
+            --out "$PWD/build/scheduler-evidence/native-unprivileged" \
+            --environment native-unprivileged --initial-pid-namespace "$initial_ns"
+          sudo env SIL_SOURCE_REVISION="$SIL_SOURCE_REVISION" \
+            "$PWD/.venv/bin/python" proofs/host-scheduling/qualify.py run "$PWD/build/scheduler-work" \
+            --out "$PWD/build/scheduler-evidence/native-root-existing" \
+            --environment native-root-existing --initial-pid-namespace "$initial_ns"
+      - name: Build a container with the exact host perf package
+        run: |
+          perf_package="linux-tools-$(uname -r)"
+          perf_version=$(dpkg-query -W -f='${Version}' "$perf_package")
+          docker pull ubuntu:24.04
+          docker image inspect ubuntu:24.04 > build/scheduler-evidence/base-image.json
+          ubuntu_digest=$(docker image inspect --format '{{index .RepoDigests 0}}' ubuntu:24.04)
+          docker build --build-arg "UBUNTU_IMAGE=$ubuntu_digest" \
+            --build-arg "PERF_PACKAGE=$perf_package=$perf_version" \
+            -f proofs/host-scheduling/Dockerfile -t sil-scheduler-proof .
+          docker image inspect sil-scheduler-proof > build/scheduler-evidence/container-image.json
+      - name: Observe default-container availability without policy changes
+        run: |
+          initial_ns=$(cat build/scheduler-evidence/initial-pid-namespace.txt)
+          docker run --rm -e SIL_SOURCE_REVISION -v "$PWD:$PWD" -w "$PWD" \
+            sil-scheduler-proof .venv/bin/python proofs/host-scheduling/qualify.py run \
+            "$PWD/build/scheduler-work" --out "$PWD/build/scheduler-evidence/container-default" \
+            --environment container-default --initial-pid-namespace "$initial_ns"
+      - name: Documented PERFMON, host-PID and read-only tracefs container experiment
+        # Original-policy failures above stay unavailable. This explicitly
+        # grants only the experiment container access to existing host tracefs.
+        run: |
+          initial_ns=$(cat build/scheduler-evidence/initial-pid-namespace.txt)
+          docker run --rm --pid=host --cap-add PERFMON --security-opt seccomp=unconfined \
+            -e SIL_SOURCE_REVISION -v "$PWD:$PWD" -w "$PWD" \
+            --mount type=bind,src=/sys/kernel/tracing,dst=/sys/kernel/tracing,readonly \
+            sil-scheduler-proof .venv/bin/python proofs/host-scheduling/qualify.py run \
+            "$PWD/build/scheduler-work" --out "$PWD/build/scheduler-evidence/container-perfmon-hostpid" \
+            --environment container-perfmon-hostpid-tracefs --initial-pid-namespace "$initial_ns"
+      - name: Replay saved evidence and validate actual phase interpretations
+        run: |
+          for environment in build/scheduler-evidence/*/; do
+            if [ -f "$environment/results.json" ]; then
+              sudo .venv/bin/python proofs/host-scheduling/validate.py "$environment"
+            fi
+          done
+      - name: Verify policy unchanged and retain exact experiment sources
+        if: always()
+        run: |
+          cat /proc/sys/kernel/perf_event_paranoid > build/scheduler-evidence/paranoid-after.txt
+          cmp build/scheduler-evidence/paranoid-before.txt build/scheduler-evidence/paranoid-after.txt
+          mkdir -p build/scheduler-evidence/proof-sources
+          cp proofs/host-scheduling/*.py proofs/host-scheduling/*.c \
+            proofs/host-scheduling/README.md proofs/host-scheduling/Dockerfile \
+            build/scheduler-evidence/proof-sources/
+          sudo chown -R "$(id -u):$(id -g)" build/scheduler-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: host-scheduling-evidence
+          retention-days: 30
+          path: |
+            build/scheduler-evidence/
+            build/scheduler-work/commands.json
+            build/scheduler-work/build-*.txt
+            build/scheduler-work/*.json
+            build/scheduler-work/workload.so
+            build/scheduler-work/exec-helper

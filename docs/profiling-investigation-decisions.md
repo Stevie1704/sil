@@ -159,28 +159,46 @@ loss, failure and metadata behavior again. No production CLI, ordinary-run
 hook, scheduler wait, deadline relaxation, trigger language, ring buffer or
 heap windowing is authorized by this experiment.
 
-## Scheduler/blocking evidence — #362: defer
+## Scheduler/blocking evidence — #362: defer production after qualification
 
-A long inclusive host interval with little sampled CPU establishes no
-off-CPU duration or blocking cause. In particular, subtracting sampled weight
-from elapsed wall time is invalid. The #330 permission/container findings are
-useful feasibility inputs; its allocator probe is not scheduler evidence.
-No sleeping/runnable classification has been newly qualified here.
+The [bounded scheduler experiment](../proofs/host-scheduling/README.md) adds
+independent fixed CPU, sleep, synchronized pipe-wait and same-CPU competitor
+phases to two Process participants at equal Virtual times. It uses direct
+perf scheduler events, actual diagnostics-runner intervals and direct-syscall
+host-clock markers. The [retained evidence](../proofs/host-scheduling/evidence/README.md)
+pins native/container observations, privilege contexts, build/tool identities,
+file growth, observer cost and outcome/Recording equality. The #330 negative
+permission and stack evidence is reused, without treating its allocator
+probe as scheduler qualification or adding another eBPF dependency.
 
-Defer until a named slow Process Step cannot be explained with existing
-sampling/diagnostics and a permitted scheduler-event capture environment is
-available. Reopen with independently controlled CPU-bound, sleep,
-synchronized-wait and competing-worker phases, deterministic publications and
-verified host-clock markers. Assess pinned perf scheduler events and/or eBPF
-availability before capture, without silently changing security policy.
-Qualify PID/TID/process lifetimes, namespaces, exec/exit, wakeup/switch and
-initial/final states, child/background activity, missing transitions, finite
-storage/loss, interruption and failed/unclosed Steps. Separate runnable delay,
-sleep and unobserved time; process-window association is not exclusive Step
-work, and sleeping does not identify a lock or IPC cause. Retain native and
-container permission failures, output growth/observer observations and
-Recording equivalence. A build decision needs a separate state/coverage
-schema and implementation tickets, never a guest RTOS/ECU timing claim.
+Switch/wakeup events distinguish observed running, runnable and sleeping
+intervals for the named fixture. Initial/final unknown states, missing
+transitions, loss, truncation and absent failed/unclosed Step intervals remain
+explicit. Thread/child overlaps are process-window associations, never
+exclusive Step work. Sleeping alone proves no lock or IPC cause. Elapsed
+time minus sampled CPU weight is still invalid; this experiment collects no
+CPU samples. Normal generous-deadline equality does not establish inertness
+at a deadline edge; the separate 180 ms cases retain their own observations.
+No sysctl or host mount changes follow permission failures.
+
+**Defer production.** System-wide events, initial-PID-namespace mapping,
+environment-specific privileges/tracefs access, finite capture with incomplete
+edges and conservative loss handling are a narrow feasibility result. A
+source owner still needs a named slow-Step question that justifies those
+costs over existing diagnostics/sampling. Namespace-changing/detached workers
+and nonleader exec remain unqualified. Scheduler states alone cannot supply a
+general blocking-cause diagnosis.
+
+Reopen with that adopter workload, a permitted native/container deployment,
+measured capture/storage and perturbation budgets, and an accepted mapping
+and privacy scope. Before a build decision, review a **separate versioned
+state/coverage schema**: clock and process/TID lifetimes, namespace lineage,
+exec replacement, actual half-open Step intervals, thread/child association,
+initial/final unknown states, loss boundaries, storage limits, interruption,
+collector-vs-Run outcomes and failed/unclosed observations. Create separate
+implementation tickets after that contract. Do not reinterpret portable v1
+profile/correlation fields or add ordinary-run hooks, live control, a
+wall-minus-sample estimate, target RTOS/ECU scheduling or WCET claims.
 
 ## Internal state — #321: retain the existing GDB investigation
 
