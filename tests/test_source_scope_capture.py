@@ -481,6 +481,13 @@ def test_a_killed_runner_keeps_its_records(tools, scenarios, tmp_path):
     # Three Activations of one call, then one entry before the kill.
     assert (raw["state"], raw["records"]) == (ACTIVE, 7)
     assert report["capture"]["records"] == 7 and calls is None
+    assert {"role": "diagnostics_report", "path": "run.diagnostics.json",
+            "reason": "not_written"} in report["missing"]
+    # A Recording without the MCAP magic is not listed as one.
+    recording = out / "run.mcap"
+    if recording.read_bytes()[:8] != b"\x89MCAP0\r\n":
+        assert {"role": "recording", "path": "run.mcap",
+                "reason": "not_written"} in report["missing"]
 
 
 @needs_capture

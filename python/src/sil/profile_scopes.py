@@ -53,6 +53,7 @@ from sil.source_scope_report import (
 SESSION_VARIABLE = "SIL_SOURCE_SCOPE_SESSION"
 MAX_SCOPE_RECORDS = 65536
 MAX_ACTIVATION_BYTES = 64 << 20
+MCAP_MAGIC = b"\x89MCAP0\r\n"
 # The observer ABI that wrote the raw file: soname, symbol version and raw
 # file version.
 OBSERVER_VERSION = f"{OBSERVER_SONAME} sil_source_scope_v1 raw {VERSION}"
@@ -322,10 +323,28 @@ def _missing(request: ScopesRequest, layout: ScopesLayout,
             relative = Path(os.path.realpath(path)).relative_to(layout.out)
         except ValueError:
             continue  # outside the directory: not one of its files
-        if not path.is_file():
+        if not path.is_file() or (role == "recording"
+                                  and not _is_recording(path)):
             rows.append({"role": role, "path": relative.as_posix(),
                          "reason": "not_written"})
     return rows
+
+
+def _is_recording(path: Path) -> bool:
+    """A runner that was killed can leave a Recording file without even
+    the MCAP magic: it is not a Recording, so it is `not_written`."""
+    try:
+        with path.open("rb") as stream:
+            return stream.read(len(MCAP_MAGIC)) == MCAP_MAGIC
+    except OSError:
+        return False
+
+
+def _artifacts(request: ScopesRequest, layout: ScopesLayout,
+               cwd: Path) -> list[dict]:
+    return [row for row in artifact_rows(request.target, cwd, _files(layout))
+            if row["role"] != "recording"
+            or _is_recording(layout.out / row["path"])]
 
 
 def build_report(request: ScopesRequest, layout: ScopesLayout, cwd: Path,
@@ -342,7 +361,7 @@ def build_report(request: ScopesRequest, layout: ScopesLayout, cwd: Path,
                     "original": found.original,
                     "observer_version": OBSERVER_VERSION,
                     "compiler": found.scan.compiler},
-        artifacts=artifact_rows(request.target, cwd, _files(layout)),
+        artifacts=_artifacts(request, layout, cwd),
         missing=_missing(request, layout, cwd),
         scope_map=found.scope_map, calls=decoded.calls)
 
