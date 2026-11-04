@@ -17,5 +17,7 @@ set_target_properties(sil_source_scope PROPERTIES
   SOVERSION 1)
 target_link_options(sil_source_scope PRIVATE -Wl,--build-id=sha1)
 
+# OPTIONAL: the observer is not part of the runner, so a build of only the
+# runner targets still installs (tests/test_staged_install.py).
 install(TARGETS sil_source_scope
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} OPTIONAL)
