@@ -115,6 +115,31 @@ def test_render_prints_statuses_identities_counts_and_limitations(
         assert limitation in out
 
 
+def test_a_failed_capture_shows_its_reason_and_unavailable_files(
+        tmp_path, capsys, monkeypatch):
+    scopes = capture_dir(tmp_path, "identity-mismatch")
+
+    code, out, err = render([scopes], capsys, tmp_path, monkeypatch)
+
+    assert code == 0, err
+    assert "capture: failed (identity_mismatch)" in out
+    assert "scopes/calls.json: unavailable (not_written)" in out
+    assert "run.mcap: unavailable (not_requested)" in out
+    for limitation in LIMITATIONS:
+        assert limitation in out
+
+
+def test_unattributed_calls_are_counted_by_reason(tmp_path, capsys,
+                                                  monkeypatch):
+    scopes = capture_dir(tmp_path, "unattributed")
+
+    code, out, err = render([scopes], capsys, tmp_path, monkeypatch)
+
+    assert code == 0, err
+    assert ("unattributed: 4 (outside_activations 1, worker_thread 1, "
+            "crossing_interval 1, other_participant 1)") in out
+
+
 def _relist(scopes: Path, name: str, data: bytes) -> None:
     """Replace one artifact and record its new size and SHA-256, so only
     its content is wrong."""
@@ -198,3 +223,92 @@ def test_calls_of_another_capture_fail(tmp_path, capsys, monkeypatch):
 
     assert (code, out) == (2, "")
     assert "capture" in err
+
+
+SELECT_0 = ["--participant", "adas", "--task", "control",
+            "--activation-index", "0"]
+
+
+def test_a_selected_exact_activation_lists_its_calls_by_depth(
+        tmp_path, capsys, monkeypatch):
+    scopes = capture_dir(tmp_path, "complete")
+
+    code, out, err = render([scopes, *SELECT_0], capsys, tmp_path, monkeypatch)
+
+    assert code == 0, err
+    assert "Participant adas, Task control, Activation index 0" in out
+    assert "adas/control index 0, Virtual time 0 ns: exact, 3 calls" in out
+    lines = out.splitlines()
+    start = lines.index("  calls in entry order (depth, scope, elapsed host ns):")
+    assert lines[start + 1:start + 4] == [
+        "    0 select_lead (4) 90",
+        "      1 confirmed (2) 30",
+        "        2 confirms (3) 10"]
+
+
+def test_a_selected_unavailable_activation_shows_reason_not_counts(
+        tmp_path, capsys, monkeypatch):
+    scopes = capture_dir(tmp_path, "unbalanced")
+
+    code, out, err = render([scopes, *SELECT_0], capsys, tmp_path, monkeypatch)
+
+    assert code == 0, err
+    assert ("adas/control index 0, Virtual time 0 ns: unavailable "
+            "(unbalanced_scopes), 1 withheld call") in out
+    assert "calls in entry order" not in out
+
+
+def test_the_call_order_shows_at_most_500_rows_and_a_remainder(
+        tmp_path, capsys, monkeypatch):
+    def many(calls):
+        first = calls["activations"][0]
+        call = {**first["calls"][0], "depth": 0, "parent": None}
+        first.update(calls=[call] * 600, counts={"4": 600})
+        return calls
+    scopes = capture_dir(tmp_path, "complete", calls_hook=many)
+
+    code, out, err = render([scopes, *SELECT_0], capsys, tmp_path, monkeypatch)
+
+    assert code == 0, err
+    assert out.count("    0 select_lead (4) 90") == 500
+    assert "  100 more calls not shown" in out
+
+
+def test_a_time_range_lists_the_selected_activations(
+        tmp_path, capsys, monkeypatch):
+    scopes = capture_dir(tmp_path, "complete")
+
+    code, out, err = render([scopes, "--from", "0", "--to", "20000000"],
+                            capsys, tmp_path, monkeypatch)
+
+    assert code == 0, err
+    assert "selected Activations: 2" in out
+    assert "adas/control index 1, Virtual time 10000000 ns: exact, 2 calls" in out
+    assert "calls in entry order" not in out
+
+
+@pytest.mark.parametrize("argv", [
+    ["--task", "control"],
+    ["--participant", "adas", "--activation-index", "0"],
+    ["--participant", "other"],
+    ["--participant", "adas", "--task", "control", "--activation-index", "0",
+     "--from", "0"],
+    ["--from", "5", "--to", "5"],
+    ["--diagnostics", "run.diagnostics.json"],
+], ids=["task-alone", "index-without-task", "absent", "index-and-range",
+        "empty-range", "diagnostics"])
+def test_invalid_selections_exit_2(tmp_path, capsys, monkeypatch, argv):
+    scopes = capture_dir(tmp_path, "complete")
+
+    code, out, _ = render([scopes, *argv], capsys, tmp_path, monkeypatch)
+
+    assert (code, out) == (2, "")
+
+
+def test_selection_needs_decoded_calls(tmp_path, capsys, monkeypatch):
+    scopes = capture_dir(tmp_path, "identity-mismatch")
+
+    code, out, err = render([scopes, *SELECT_0], capsys, tmp_path, monkeypatch)
+
+    assert (code, out) == (2, "")
+    assert "calls" in err

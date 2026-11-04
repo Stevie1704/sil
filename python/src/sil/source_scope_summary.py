@@ -14,6 +14,9 @@ from sil.profile_summary import _clean
 from sil.source_scope_report import LIMITATIONS
 from sil.source_scope_set import ScopeSet
 
+# The bound of each listed view (calls, selected Activations).
+ROW_LIMIT = 500
+
 
 def format_scope_summary(scope_set: ScopeSet, path: Path) -> str:
     report = scope_set.report
@@ -22,6 +25,9 @@ def format_scope_summary(scope_set: ScopeSet, path: Path) -> str:
              *_identity_lines(report["identities"]),
              *_task_lines(report["summary"]["tasks"]),
              *_scope_lines(report["summary"]["scopes"]),
+             *_unattributed_lines(scope_set.calls),
+             *_missing_lines(report["missing"]),
+             *_selection_lines(scope_set),
              "limitations:",
              *(f"  - {item}" for item in LIMITATIONS)]
     return "\n".join(lines) + "\n"
@@ -95,4 +101,66 @@ def _scope_lines(scopes: list) -> list[str]:
             + " / ".join(_known(per[k]) for k in ("min", "median", "max")))
     if not scopes:
         lines.append("  no scope count (no decoded calls)")
+    return lines
+
+
+def _unattributed_lines(calls: dict | None) -> list[str]:
+    if calls is None:
+        return []
+    reasons = calls["unattributed"]["reasons"]
+    detail = ", ".join(f"{_clean(r)} {n}" for r, n in reasons.items())
+    return [f"unattributed: {calls['totals']['unattributed']}"
+            + (f" ({detail})" if detail else "")]
+
+
+def _missing_lines(missing: list) -> list[str]:
+    return [f"{_clean(m['path'])}: unavailable ({_clean(m['reason'])})"
+            for m in missing]
+
+
+def _plural(count: int, noun: str) -> str:
+    return f"{count} {noun}" + ("" if count == 1 else "s")
+
+
+def activation_title(activation: dict) -> str:
+    """One Activation's identity and status; an unavailable one shows its
+    reason and withheld count, never counts."""
+    status = (f"exact, {_plural(len(activation['calls']), 'call')}"
+              if activation["status"] == "exact" else
+              f"unavailable ({_clean(activation['reason'])}), "
+              f"{_plural(activation['withheld_calls'], 'withheld call')}")
+    return (f"{_clean(activation['participant'])}/"
+            f"{_clean(activation['task'])} index {activation['index']}, "
+            f"Virtual time {activation['virtual_time_ns']} ns: {status}")
+
+
+def _selection_lines(scope_set: ScopeSet) -> list[str]:
+    if scope_set.selection is None:
+        return []
+    activations = [scope_set.calls["activations"][i]
+                   for i in scope_set.selection]
+    lines = [f"selection: {_clean(scope_set.selection_label)}",
+             f"selected Activations: {len(activations)}"]
+    lines += [f"  {activation_title(a)}" for a in activations[:ROW_LIMIT]]
+    if len(activations) > ROW_LIMIT:
+        lines.append(f"  {len(activations) - ROW_LIMIT} more Activations "
+                     "not shown")
+    if len(activations) == 1 and activations[0]["status"] == "exact":
+        lines += _call_lines(activations[0], scope_names(scope_set))
+    return lines
+
+
+def scope_names(scope_set: ScopeSet) -> dict[int, str]:
+    return {s["id"]: s["name"] for s in scope_set.report["summary"]["scopes"]}
+
+
+def _call_lines(activation: dict, names: dict[int, str]) -> list[str]:
+    calls = activation["calls"]
+    lines = ["  calls in entry order (depth, scope, elapsed host ns):"]
+    for call in calls[:ROW_LIMIT]:
+        name = _clean(names.get(call["scope"], "[unnamed scope]"))
+        lines.append(f"    {'  ' * call['depth']}{call['depth']} {name} "
+                     f"({call['scope']}) {call['elapsed_ns']}")
+    if len(calls) > ROW_LIMIT:
+        lines.append(f"  {len(calls) - ROW_LIMIT} more calls not shown")
     return lines

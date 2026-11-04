@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -21,6 +21,7 @@ from sil.diagnostics_shape import (
     COUNT, INTEGER, NUMBER, TEXT, Shape, items, maybe, members, one_of,
     shape_errors,
 )
+from sil.profile_navigation import check_selection, selected, selection_label
 from sil.profile_set import ProfileSetError, _decimal, _read_bounded
 from sil.source_scope_decode import (
     ACTIVATION_REASONS, CALLS_KEY, MAGIC, MAP_KEY, OBSERVATIONS_KEY,
@@ -165,6 +166,30 @@ def load_scope_set(path: Path) -> ScopeSet:
                               f"({calls['capture_id']})")
     return ScopeSet(report, data.decode("utf-8"), documents.get(MAP_PATH),
                     calls)
+
+
+def select_scope_activations(scope_set: ScopeSet, *, participant=None,
+                             task=None, index=None, start=None,
+                             end=None) -> ScopeSet:
+    """Select Activations of `calls.json` with the rules of `profile.json`
+    (docs/profile-report.md, "Activation outliers and offline selection")."""
+    options = {"participant": participant, "task": task, "index": index,
+               "start": start, "end": end}
+    if not check_selection(**options):
+        return scope_set
+    if scope_set.calls is None:
+        raise ProfileSetError("offline Activation selection requires the "
+                              "decoded calls file, which this capture lacks")
+    candidates = [(i, a) for i, a in enumerate(scope_set.calls["activations"])
+                  if (participant is None or a["participant"] == participant)
+                  and (task is None or a["task"] == task)]
+    if participant is not None and not candidates:
+        raise ProfileSetError("Participant / Task is not present in the "
+                              "retained evidence")
+    refs = tuple(i for i, a in candidates
+                 if selected(a, index=index, start=start, end=end))
+    return replace(scope_set, selection=refs,
+                   selection_label=selection_label(**options))
 
 
 def _inside(directory: Path, name: str) -> Path:
