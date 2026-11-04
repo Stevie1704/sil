@@ -154,6 +154,128 @@ def test_diff_rejects_a_scope_report(tmp_path, capsys, side):
     assert "source-scope" in captured.err
 
 
+def html_page(tmp_path, capsys, monkeypatch, scopes: Path, *argv) -> Page:
+    code, out, err = render([scopes, "--html", "out.html", *argv], capsys,
+                            tmp_path, monkeypatch)
+    assert code == 0, err
+    assert "HTML report: out.html" in out
+    return Page((tmp_path / "out.html").read_text())
+
+
+EXPECTED_STATUS = {"complete": "complete", "crossing": "complete",
+                   "identity-mismatch": "failed", "loss": "partial",
+                   "recursion": "complete", "unattributed": "complete",
+                   "unbalanced": "partial"}
+
+
+@pytest.mark.parametrize("case", CASES)
+def test_every_fixture_case_renders_offline_with_its_limitations(
+        tmp_path, capsys, monkeypatch, case):
+    page = html_page(tmp_path, capsys, monkeypatch, capture_dir(tmp_path, case))
+
+    assert f"Capture {EXPECTED_STATUS[case]}" in page.text
+    for limitation in LIMITATIONS:
+        assert limitation in page.text
+    policy = page.find("meta", **{"http-equiv": "Content-Security-Policy"})
+    assert policy and "default-src 'none'" in policy[0]["content"]
+    for _, attrs in page.elements:
+        for key in ("src", "href"):
+            assert "//" not in attrs.get(key, "").split(",")[0][:12]
+    assert page.find("button", id="theme")
+    assert all(a.get("tabindex") == "0"
+               for a in page.find("div", **{"class": "table-wrap"}))
+
+
+def test_html_lists_exact_and_unavailable_activations(tmp_path, capsys,
+                                                      monkeypatch):
+    page = html_page(tmp_path, capsys, monkeypatch,
+                     capture_dir(tmp_path, "unbalanced"))
+
+    assert "unavailable (unbalanced_scopes)" in page.text
+    assert "1 withheld call" in page.text
+    assert "exact, 1 call" in page.text
+    assert "Instrumented build" in page.text and ORIGINAL["sha256"] in page.text
+
+
+def test_html_call_order_of_a_selected_exact_activation(tmp_path, capsys,
+                                                        monkeypatch):
+    page = html_page(tmp_path, capsys, monkeypatch,
+                     capture_dir(tmp_path, "complete"), *SELECT_0)
+
+    assert page.find("table", id="calls")
+    assert "Participant adas, Task control, Activation index 0" in page.text
+    text = page.text[page.text.index("Calls in entry order"):]
+    assert text.index("select_lead") < text.index("confirmed") \
+        < text.index("confirms")
+
+
+def test_html_of_a_selected_unavailable_activation_has_no_counts(
+        tmp_path, capsys, monkeypatch):
+    page = html_page(tmp_path, capsys, monkeypatch,
+                     capture_dir(tmp_path, "unbalanced"), *SELECT_0)
+
+    assert not page.find("table", id="calls")
+    assert "unavailable (unbalanced_scopes), 1 withheld call" in page.text
+
+
+def test_malicious_names_are_text(tmp_path, capsys, monkeypatch):
+    name = '</script><img src=x onerror=alert(1)>\x1b[31m'
+    scope_map = {**MAP, "scopes": [{**MAP["scopes"][3], "name": name}]}
+    scopes = capture_dir(tmp_path, "complete", scope_map=scope_map,
+                         events=_only_scope_4())
+
+    page = html_page(tmp_path, capsys, monkeypatch, scopes, *SELECT_0)
+    code, out, _ = render([scopes, *SELECT_0], capsys, tmp_path, monkeypatch)
+
+    assert not page.find("img")
+    assert '</script><img src=x onerror=alert(1)>' in page.text
+    assert code == 0 and "\x1b" not in out and "\\x1b[31m" in out
+
+
+def _only_scope_4() -> bytes:
+    """The complete case's raw file with only its scope-4 records kept."""
+    import struct
+    data = bytearray((FIXTURES / "complete/events.bin").read_bytes())
+    record = struct.Struct("<QIHBB")
+    kept = [record.unpack_from(data, 256 + 16 * i)
+            for i in range(struct.unpack_from("<Q", data, 48)[0])]
+    kept = [r for r in kept if r[2] == 4]
+    body = b"".join(record.pack(*r) for r in kept)
+    capacity = struct.unpack_from("<Q", data, 40)[0]
+    struct.pack_into("<Q", data, 48, len(kept))
+    return bytes(data[:256]) + body + bytes(16 * capacity - len(body))
+
+
+def test_unattributed_rows_are_bounded_with_a_remainder(tmp_path, capsys,
+                                                        monkeypatch):
+    def crowded(calls):
+        row = {"scope": 1, "tid": 43, "entry_ns": "1", "return_ns": "2",
+               "reason": "worker_thread"}
+        calls["unattributed"] = {"reasons": {"worker_thread": 1100},
+                                 "rows": [row] * 1000, "rows_remainder": 100}
+        calls["totals"]["unattributed"] = 1100
+        return calls
+    scopes = capture_dir(tmp_path, "complete", calls_hook=crowded)
+
+    page = html_page(tmp_path, capsys, monkeypatch, scopes)
+
+    rows = [a for t, a in page.elements if t == "tr"]
+    assert "600 more rows not shown" in page.text
+    assert len(rows) < 600
+
+
+def test_a_large_integer_keeps_every_digit(tmp_path, capsys, monkeypatch):
+    def large(calls):
+        call = calls["activations"][0]["calls"][0]
+        call["elapsed_ns"] = str(2 ** 64 - 1)
+        return calls
+    scopes = capture_dir(tmp_path, "complete", calls_hook=large)
+
+    page = html_page(tmp_path, capsys, monkeypatch, scopes, *SELECT_0)
+
+    assert str(2 ** 64 - 1) in page.text
+
+
 def _relist(scopes: Path, name: str, data: bytes) -> None:
     """Replace one artifact and record its new size and SHA-256, so only
     its content is wrong."""

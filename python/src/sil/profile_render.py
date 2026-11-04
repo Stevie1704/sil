@@ -26,6 +26,7 @@ from sil.profile_html import render_profile
 from sil.profile_set import ProfileSetError, load_profile_set
 from sil.profile_summary import format_summary
 from sil.profile_navigation import select_activations, with_diagnostics
+from sil.source_scope_html import render_scopes
 from sil.source_scope_set import (
     is_scope_report, load_scope_set, select_scope_activations,
 )
@@ -81,15 +82,7 @@ def main(argv: list[str] | None = None) -> int:
         # The download is the validated bytes, not a second read.
         page = render_profile(profile, profile.source)
     sys.stdout.write(format_summary(profile.report, args.profile))
-    if page is not None:
-        try:
-            write_new_file(args.html, page)
-        except OSError as error:
-            sys.stderr.write(f"{PROG}: cannot write the HTML report "
-                             f"'{args.html}': {error}\n")
-            return EXIT_FAILURE
-        sys.stdout.write(f"HTML report: {args.html}\n")
-    return EXIT_OK
+    return _write_page(args.html, page)
 
 
 def _render_scopes(args: argparse.Namespace) -> int:
@@ -109,7 +102,21 @@ def _render_scopes(args: argparse.Namespace) -> int:
             index=args.activation_index, start=args.start, end=args.end)
     except ProfileSetError as error:
         return command_error(PROG, str(error), EXIT_USAGE)
+    page = render_scopes(scope_set) if args.html is not None else None
     sys.stdout.write(format_scope_summary(scope_set, args.profile))
+    return _write_page(args.html, page)
+
+
+def _write_page(path: Path | None, page: str | None) -> int:
+    if page is None:
+        return EXIT_OK
+    try:
+        write_new_file(path, page)
+    except OSError as error:
+        sys.stderr.write(f"{PROG}: cannot write the HTML report "
+                         f"'{path}': {error}\n")
+        return EXIT_FAILURE
+    sys.stdout.write(f"HTML report: {path}\n")
     return EXIT_OK
 
 
