@@ -8,7 +8,7 @@ import re
 
 from evidence import PidNamespace, read_json, read_text
 from report import analyze
-from scope import matches_spawn, scope_lifetimes
+from scope import spawn_lifetime_verified, scope_lifetimes
 
 LINE = re.compile(r"\[(\d+)\]\s+(\d+)\.(\d{9}):\s+sched:(sched_\w+):\s+(.*)")
 
@@ -139,8 +139,8 @@ class CaptureBinding:
     def spawn_verified(self, marker):
         spawns = [r for r in self.observations if r.get("kind") == "spawn"
                   and r["participant"] == marker["participant"] and r["pid"] == marker["pid"]]
-        return len(spawns) == 1 and any(matches_spawn(event, marker, self.header.get("runner_pid"),
-                                                    int(spawns[0]["at_ns"])) for event in self.events)
+        return len(spawns) == 1 and spawn_lifetime_verified(self.events, marker, self.header.get("runner_pid"),
+                                                           int(spawns[0]["at_ns"]))
 
     def fixture_windows(self, steps):
         windows = []

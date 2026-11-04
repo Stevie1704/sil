@@ -44,8 +44,11 @@ def close_lifetime(active, tid, at):
         active.pop(tid)["lifetime_end_ns"] = at
 
 
-def matches_spawn(event, marker, runner_pid, spawn_ns):
-    return (event["event"] == "fork" and event.get("in_scope")
-            and event["child_pid"] == marker["tid"] and event["parent_pid"] == runner_pid
-            and spawn_ns <= event["time_ns"] <= marker["host_ns"]
-            and (event["lifetime_end_ns"] is None or marker["host_ns"] < event["lifetime_end_ns"]))
+def spawn_lifetime_verified(events, marker, runner_pid, spawn_ns):
+    # A spawn observation owns its first matching birth, never a later reuse.
+    birth = next((event for event in events if event["event"] == "fork"
+                  and event["child_pid"] == marker["tid"] and event["parent_pid"] == runner_pid
+                  and spawn_ns <= event["time_ns"]), None)
+    return (birth is not None and birth.get("in_scope")
+            and birth["time_ns"] <= marker["host_ns"]
+            and (birth["lifetime_end_ns"] is None or marker["host_ns"] < birth["lifetime_end_ns"]))

@@ -61,12 +61,13 @@ def test_begin_marker_at_exclusive_activation_end_does_not_verify_clock(tmp_path
     assert bound["analysis"]["clock_verified"] is False
 
 
-def test_unrelated_fork_reusing_descendant_tid_cannot_join_step(tmp_path):
+@pytest.mark.parametrize("parent", [88, 1])
+def test_reused_descendant_tid_cannot_inherit_old_spawn(tmp_path, parent):
     events = ROOT_AND_CHILD + "\n".join([
         "[000] 0.000000010: sched:sched_switch: idle:0 [120] R ==> child:7 [120]",
         "[000] 0.000000020: sched:sched_switch: child:7 [120] S ==> idle:0 [120]",
         "[000] 0.000000025: sched:sched_process_exit: comm=child pid=7 prio=120",
-        "[000] 0.000000035: sched:sched_process_fork: comm=other pid=88 child_comm=unrelated child_pid=7",
+        f"[000] 0.000000035: sched:sched_process_fork: comm=other pid={parent} child_comm=replacement child_pid=7",
         "[000] 0.000000036: sched:sched_wakeup: unrelated:7 [120] CPU:000",
         "[000] 0.000000040: sched:sched_switch: idle:0 [120] R ==> unrelated:7 [120]",
         "[000] 0.000000060: sched:sched_switch: unrelated:7 [120] S ==> idle:0 [120]",
@@ -74,15 +75,21 @@ def test_unrelated_fork_reusing_descendant_tid_cannot_join_step(tmp_path):
     bound = capture_report(tmp_path, events, marker_begin=40, activation_begin=40)
     assert bound["analysis"]["namespace_verified"] is False
     assert bound["analysis"]["windows"][0]["states_ns"]["unknown"] == 20
-    assert len([life for life in bound["analysis"]["lifetimes"] if life["tid"] == 7]) == 1
+    assert len([life for life in bound["analysis"]["lifetimes"] if life["tid"] == 7]) == (2 if parent == 1 else 1)
 
 
 @pytest.mark.parametrize("stop_reason, code", [("interrupted", "collector_interrupted"),
                                              ("size_guard", "collector_size_limit")])
 def test_collector_stop_reason_survives_capture_binding(tmp_path, stop_reason, code):
-    bound = capture_report(tmp_path, ROOT_AND_CHILD, stop_reason=stop_reason)
+    events = ROOT_AND_CHILD + "\n".join([
+        "[000] 0.000000010: sched:sched_switch: idle:0 [120] R ==> child:7 [120]",
+        "[000] 0.000000055: sched:sched_switch: child:7 [120] S ==> idle:0 [120]",
+    ])
+    bound = capture_report(tmp_path, events, stop_reason=stop_reason)
     assert code in bound["analysis"]["reasons"]
     assert bound["analysis"]["collector_stop_reason"] == stop_reason
+    assert bound["analysis"]["windows"][0]["states_ns"] == {
+        "running": 45, "runnable": 0, "sleeping": 0, "unknown": 5}
 
 
 def test_exclusive_fixture_end_may_coincide_with_activation_end(tmp_path):
@@ -261,12 +268,14 @@ def test_unrelated_host_exec_does_not_contaminate_participant_coverage(tmp_path)
     assert result["windows"][0]["states_ns"]["running"] == 50
 
 
-def test_retained_qualification_replays_offline(tmp_path):
+@pytest.mark.parametrize("archive_name", ["portable-evidence.tar.xz", "review-fixes.tar.xz"])
+def test_retained_qualification_replays_offline(tmp_path, archive_name):
     evidence = REPORT.parent / "evidence"
-    archive = evidence / "portable-evidence.tar.xz"
+    archive = evidence / archive_name
+    checksums = {name: digest for digest, name in (
+        line.split() for line in (evidence / "archive.sha256").read_text().splitlines())}
     with archive.open("rb") as stream:
-        assert hashlib.file_digest(stream, "sha256").hexdigest() == (
-            evidence / "archive.sha256").read_text().split()[0]
+        assert hashlib.file_digest(stream, "sha256").hexdigest() == checksums[archive_name]
     with tarfile.open(archive) as saved:
         members = saved.getmembers()
         assert len(members) < 2000
