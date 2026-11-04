@@ -25,7 +25,10 @@
  * large Python supervisor reports at least the supervisor's resident size as
  * its own peak. This launcher is small when it forks, so the runner's peak
  * RSS is its own (#301, after proofs/adas-cost/run_measured.c). It sets no
- * LD_PRELOAD and changes nothing else in the runner's environment.
+ * LD_PRELOAD and changes nothing else in the runner's environment, except:
+ *
+ * When RUNNER's environment has SIL_SOURCE_SCOPE_SESSION (a source-scope
+ * capture, #372), RUNNER gets it with ",pid=P" added, P being RUNNER's PID.
  */
 #define _DEFAULT_SOURCE
 #define _DARWIN_C_SOURCE
@@ -110,6 +113,29 @@ fail:
   return NULL;
 }
 
+/* The source-scope session of a `sil profile --collector scopes` capture
+ * (docs/proposals/native-source-scopes.md). The child adds its own PID, which
+ * the runner keeps through exec, so only the runner matches the session and
+ * a process that the runner starts stays dormant. NULL on allocation failure;
+ * `environment` unchanged when it has no session. */
+static const char kSession[] = "SIL_SOURCE_SCOPE_SESSION=";
+
+static char **with_session_pid(char **environment) {
+  size_t count = 0, at = (size_t)-1;
+  for (; environment[count] != NULL; count++)
+    if (strncmp(environment[count], kSession, sizeof kSession - 1) == 0)
+      at = count;
+  if (at == (size_t)-1) return environment;
+  char **entries = calloc(count + 1, sizeof *entries);
+  const size_t size = strlen(environment[at]) + 32;
+  char *session = malloc(size);
+  if (entries == NULL || session == NULL) return NULL;
+  snprintf(session, size, "%s,pid=%ld", environment[at], (long)getpid());
+  memcpy(entries, environment, count * sizeof *entries);
+  entries[at] = session;
+  return entries;
+}
+
 /* Ends this process the way the runner ended. */
 static int end_like(int status) {
   if (WIFEXITED(status)) return WEXITSTATUS(status);
@@ -175,7 +201,12 @@ int main(int argc, char **argv) {
   if (pid == 0) {
     /* exec resets the handlers; the runner gets the supervisor's mask. */
     sigprocmask(SIG_SETMASK, &previous, NULL);
-    environ = runner_environment;
+    environ = with_session_pid(runner_environment);
+    if (environ == NULL) {
+      dprintf(status_fd, "sil-diagnostics-launcher: cannot add the runner "
+              "PID to the source-scope session\n");
+      _exit(1);
+    }
     execvp(argv[first], argv + first);
     dprintf(status_fd, "sil-diagnostics-launcher: cannot run '%s': %s\n",
             argv[first], strerror(errno));

@@ -212,3 +212,11 @@ def test_ordinary_runner_sources_have_no_scope_observer():
     assert sources
     assert not [path for path in sources
                 if "sil_source_scope" in path.read_text(errors="replace")]
+
+
+def test_ordinary_runner_binary_has_no_scope_observer(sil_run):
+    """Q18: no symbol, string or link of the observer in sil-run."""
+    binary = sil_run.read_bytes()
+    for name in (b"sil_source_scope", b"SIL_SOURCE_SCOPE",
+                 b"libsil_source_scope"):
+        assert name not in binary

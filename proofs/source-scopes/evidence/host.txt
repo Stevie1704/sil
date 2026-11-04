@@ -1,0 +1,10 @@
+Linux runnervm7aw5e 7.0.0-1017-azure #17~24.04.1-Ubuntu SMP PREEMPT Thu Sep 24 18:46:57 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+ldd (Ubuntu GLIBC 2.39-0ubuntu8.9) 2.39
+gcc-12 (Ubuntu 12.4.0-2ubuntu1~24.04.1) 12.4.0
+g++-12 (Ubuntu 12.4.0-2ubuntu1~24.04.1) 12.4.0
+GNU readelf (GNU Binutils for Ubuntu) 2.42
+perf version 7.0.14
+binutils	2.42-4ubuntu2.10
+g++-12	12.4.0-2ubuntu1~24.04.1
+gcc-12	12.4.0-2ubuntu1~24.04.1
+libc6:amd64	2.39-0ubuntu8.9

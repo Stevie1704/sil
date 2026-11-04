@@ -54,6 +54,10 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 add_subdirectory(kernel)
 add_subdirectory(shim)
+# Selective Docker build stages copy only the directories they need.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/source_scope/CMakeLists.txt")
+  add_subdirectory(source_scope)
+endif()
 add_subdirectory(tests)
 # The runtime Docker build deliberately omits consumer examples.
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/examples/CMakeLists.txt")

@@ -207,7 +207,7 @@ def test_participants_get_the_environment_of_an_ordinary_run(
 
 
 @pytest.mark.parametrize("argv, message", [
-    (["--collector", "gpu"], "unknown collector 'gpu'; use cpu or heap"),
+    (["--collector", "gpu"], "unknown collector 'gpu'; use cpu, heap or scopes"),
     (["--collector", "cpu", "--runner"], "--runner selects a heap scope"),
     (["--collector", "cpu", "--participant", "x"],
      "--participant selects a heap scope"),

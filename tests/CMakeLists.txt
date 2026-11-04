@@ -289,6 +289,25 @@ foreach(toy toy_producer toy_accumulator toy_thrower toy_multitask)
   set_target_properties(${toy} PROPERTIES PREFIX "" SUFFIX ".silp")
 endforeach()
 
+# --- source-scope participants (#372) ---
+# Instrumented with SIL_SOURCE_SCOPES=1; the observer exists on Linux only.
+if(TARGET sil_source_scope)
+  add_library(scope_scenarios MODULE fixtures/participants/scope_scenarios.c)
+  set_target_properties(scope_scenarios PROPERTIES C_STANDARD 11)
+  # C without -fexceptions: an exception passes its frame without cleanup.
+  add_library(scope_exception MODULE
+    fixtures/participants/scope_exception.cpp
+    fixtures/participants/scope_callee.c)
+  foreach(scoped scope_scenarios scope_exception)
+    add_dependencies(${scoped} toy_messages)
+    target_include_directories(${scoped} PRIVATE ${PROJECT_SOURCE_DIR}/include ${SIL_GEN_DIR})
+    target_compile_definitions(${scoped} PRIVATE SIL_SOURCE_SCOPES=1)
+    target_link_libraries(${scoped} PRIVATE sil_source_scope pthread)
+    target_link_options(${scoped} PRIVATE -Wl,--build-id=sha1 -Wl,--no-as-needed)
+    set_target_properties(${scoped} PROPERTIES PREFIX "" SUFFIX ".silp")
+  endforeach()
+endif()
+
 # The Activation observation writer (#316) bounds its storage and drops
 # records on a write failure; both are pinned on a pipe, without a Run.
 add_executable(sil_observation_log_test

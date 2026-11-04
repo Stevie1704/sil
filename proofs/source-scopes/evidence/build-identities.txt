@@ -1,0 +1,10 @@
+8eac35278c93e38c4b86905f79753207cc76dbbe939a7bb14aa93b3563cc13bb  build/sil-run
+ce3b21097b246dd3e2784c5383cd130febd7de51bcfbda058c9f43652b485b72  build/sil-run-diagnostics
+2fd05c04fb4a451c072a49a64f459d5b316e65af73917cd6e0d4d58a6974799d  build/sil-diagnostics-launcher
+b21f4b0a370d16deb04f859d586e753eea41da19b05750063753d378b7963eea  build/libsil_source_scope.so.1
+4b883faaab74cc14c2ed8e3460c53274029a089c62781f057afc02a0e721ff15  build/scope_scenarios.silp
+854a98f035234248df68bbb5ec95b347118a63a8a7f171ac6b215a611bfcfdc6  build/scope_exception.silp
+    Build ID: 680843d0f244047b6b8e82fefa6f0c0f5eb86fea
+    Build ID: e18a8b5acc7be9722fa9877df061575f7172401b
+    26: 0000000000001ac0   503 FUNC    GLOBAL DEFAULT   14 sil_source_scope_v1_enter
+    27: 0000000000001cc0   487 FUNC    GLOBAL DEFAULT   14 sil_source_scope_v1_return

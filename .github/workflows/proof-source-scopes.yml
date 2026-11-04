@@ -1,0 +1,106 @@
+name: proof-source-scopes
+
+# Qualification of source scopes (#372, docs/proposals/native-source-scopes.md)
+# on the contract's machine class: Linux x86-64/glibc, GitHub Actions
+# ubuntu-24.04, pinned GCC 12. The test suite covers Q2-Q10 and Q13-Q19 with
+# tests/fixtures/participants/scope_*.{c,cpp}; proofs/source-scopes covers
+# Q1, Q20 and Q21 with the ADAS reference. No check uses a time threshold.
+# The job needs apt, sysctl and a small tmpfs, so it is outside the general
+# push gate.
+
+on:
+  push:
+    branches: ['feat/372-scope-capture']
+  pull_request:
+    paths:
+      - 'include/sil/source_scope.h'
+      - 'source_scope/**'
+      - 'python/src/sil/profile_scopes.py'
+      - 'python/src/sil/profile_run.py'
+      - 'python/src/sil/source_scope_*.py'
+      - 'kernel/src/diagnostics_launcher.c'
+      - 'tests/test_source_scope_*.py'
+      - 'tests/fixtures/participants/scope_*'
+      - 'tests/participants/scope_process.py'
+      - 'proofs/source-scopes/**'
+      - '.github/workflows/proof-source-scopes.yml'
+  workflow_dispatch:
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      EVIDENCE: ${{ github.workspace }}/build/source-scopes-evidence
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install pinned GCC 12, perf and the build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            'gcc-12=12.4.0-2ubuntu1~24.04.1' 'g++-12=12.4.0-2ubuntu1~24.04.1' \
+            "linux-tools-$(uname -r)" linux-tools-common \
+            binutils cmake libssl-dev
+          mkdir -p "$EVIDENCE"
+          { uname -a; ldd --version | head -1; gcc-12 --version | head -1;
+            g++-12 --version | head -1; readelf --version | head -1;
+            perf --version; dpkg-query -W gcc-12 g++-12 libc6 binutils; } \
+            | tee "$EVIDENCE/host.txt"
+
+      - name: Set up Python environment
+        run: |
+          uv venv .venv
+          uv pip install -p .venv/bin/python -e "python/[dev]"
+
+      - name: Build SiL with GCC 12
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12
+          cmake --build build -j
+          { sha256sum build/sil-run build/sil-run-diagnostics \
+              build/sil-diagnostics-launcher build/libsil_source_scope.so.1 \
+              build/scope_scenarios.silp build/scope_exception.silp;
+            readelf -n build/libsil_source_scope.so.1 | grep 'Build ID';
+            readelf -n build/scope_scenarios.silp | grep 'Build ID';
+            readelf --dyn-syms -W build/libsil_source_scope.so.1 \
+              | grep -E 'FUNC +GLOBAL +DEFAULT +[0-9]+ '; } \
+            | tee "$EVIDENCE/build-identities.txt"
+
+      # Disclosed host setup: perf for the CPU profile of Q17, and a small
+      # tmpfs that a participant fills for Q16.
+      - name: Host setup for Q16 and Q17
+        run: |
+          sudo sysctl -w kernel.perf_event_paranoid=2
+          sudo mkdir -p /mnt/sil-small
+          sudo mount -t tmpfs -o size=8m,mode=1777 tmpfs /mnt/sil-small
+
+      - name: Source-scope tests (Q2-Q10, Q13-Q19)
+        env:
+          CC: gcc-12
+          SIL_SKIP_BUILD: '1'
+          SIL_SCOPE_SMALL_FS: /mnt/sil-small
+          SIL_PROFILE_PERF: available
+        run: |
+          set -o pipefail
+          .venv/bin/python -m pytest tests/test_source_scope_capture.py \
+            tests/test_source_scope_header.py \
+            tests/test_source_scope_contract.py \
+            tests/test_source_scope_decoding.py \
+            tests/test_source_scope_render.py \
+            tests/test_diagnostics_launcher.py tests/test_profile_run.py \
+            -v -rs --junitxml "$EVIDENCE/tests.xml" | tee "$EVIDENCE/tests.txt"
+
+      - name: ADAS qualification (Q1, Q20, Q21)
+        run: |
+          .venv/bin/python proofs/source-scopes/proof.py \
+            "$EVIDENCE/adas" --build "$PWD/build"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: source-scopes-evidence
+          path: build/source-scopes-evidence/
+          retention-days: 30

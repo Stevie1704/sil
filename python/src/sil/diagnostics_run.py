@@ -235,7 +235,9 @@ def execute(request: RunRequest, tools: NativeTools, *,
             stdout: BinaryIO | int | None = None,
             stderr: BinaryIO | None = None,
             launch_prefix: tuple[str, ...] = (),
-            extra_arguments: tuple[str, ...] = ()) -> RunOutcome:
+            extra_arguments: tuple[str, ...] = (),
+            environment: dict[str, str] | None = None,
+            pass_fds: tuple[int, ...] = ()) -> RunOutcome:
     """Run one diagnostics Run to its end and read its report.
 
     The runner's stdout goes to `stdout` (inherited when None). Its stderr is
@@ -247,6 +249,8 @@ def execute(request: RunRequest, tools: NativeTools, *,
     through its own cleanup. `launch_prefix` is an exec-preserving adapter
     that the launcher starts instead of the runner, with the runner command
     as its arguments; `extra_arguments` go to the runner (`sil profile`).
+    `environment` replaces this process's environment for the launcher, and
+    the descriptors in `pass_fds` stay open in it and in the runner.
     """
     sink = stderr if stderr is not None else sys.stderr.buffer
     status_read, status_write = os.pipe()
@@ -264,7 +268,8 @@ def execute(request: RunRequest, tools: NativeTools, *,
         try:
             process = subprocess.Popen(command, cwd=cwd, stdout=stdout,
                                        stderr=subprocess.PIPE,
-                                       pass_fds=(status_write,),
+                                       pass_fds=(status_write, *pass_fds),
+                                       env=environment,
                                        start_new_session=True)
         except BaseException:
             os.close(status_read)
