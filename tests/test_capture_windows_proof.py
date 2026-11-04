@@ -14,7 +14,7 @@ def write(path, value):
 
 
 def report(tmp_path, *, overrides=None, samples=None, controls=None,
-           work_markers=None, expect_error=False):
+           work_markers=None, perf_stats=None, expect_error=False):
     row = {"variant": "native", "mode": "window", "requested": {
         "from_ns": 610_000_000, "to_ns": 611_000_000, "task": None},
         "exit_code": 0, "run_exit_code": 0, "elapsed_ns": 1000,
@@ -36,6 +36,8 @@ def report(tmp_path, *, overrides=None, samples=None, controls=None,
         [110, 1, 610, 610_000_000, 0], [120, 1, 610, 610_000_000, 1],
         [120, 0, 611, 611_000_000, 0], [130, 0, 611, 611_000_000, 1]]})
     write(run / "perf-sample-host-times.json", samples or [])
+    if perf_stats is not None:
+        (run / "stats.txt").write_text(perf_stats)
     rows = [{"kind": "activation", "outcome": "completed"},
             {"kind": "end", "dropped": 0, "truncated": False, "write_failed": False}]
     (run / "activations.jsonl").write_text("".join(json.dumps(r)+"\n" for r in rows))
@@ -143,3 +145,11 @@ def test_experiment_validator_rejects_exhaustion_without_storage_fault(tmp_path)
     error = experiment_rejection(tmp_path, "exhaustion", {
         "storage_fault_injected": False, "storage_fault_errno": None})
     assert "storage exhaustion was not actually injected" in error
+
+
+def test_lost_samples_counter_remains_loss_without_a_lost_event_record(tmp_path):
+    result = report(tmp_path, overrides={"mode": "perf-loss", "metadata": {"lost_records": 0}},
+        perf_stats="  LOST_SAMPLES events: 2 (2.7%)\n  LOST_SAMPLES events: 142\n")
+    assert "perf_sample_loss" in result["reasons"]
+    assert result["perf_loss_sources"] == ["perf_report_LOST_SAMPLES"]
+    assert result["effective_transition_times"] == "not_observed"

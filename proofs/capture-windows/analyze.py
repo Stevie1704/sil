@@ -1,6 +1,7 @@
 """File-input/report-output analysis; validate.py is the single CLI entry point."""
 from dataclasses import dataclass
 import json
+import re
 import statistics
 
 from model import CASES, MAX_INPUT_BYTES, CaptureWindow, Notice, WorkInterval, perf_sample_host_ns
@@ -83,6 +84,17 @@ def capture_reasons(row, case, work, observation_reasons):
     if row["run_exit_code"] not in (None, 0):
         reasons.append("run_failed")
     return reasons
+
+
+def perf_loss_sources(directory, row):
+    sources = ["PERF_RECORD_LOST"] if row.get("metadata", {}).get("lost_records") else []
+    path = directory / "stats.txt"
+    if path.exists() and row.get("exports", {}).get("stats.txt", 0) == 0:
+        if any(re.match(r"^\s*LOST_SAMPLES events:\s*[1-9][0-9]*\b", line) for line in lines(path)):
+            # Stats may contain record counts and an aggregated counter. Both
+            # establish loss; neither is silently substituted for the other.
+            sources.append("perf_report_LOST_SAMPLES")
+    return sources
 
 
 def requested_end(row, notices):
@@ -203,11 +215,15 @@ def per_run(directory, row):
     excluded = next((i for i in work.intervals if i.virtual_ns >= selection.to_ns), None)
     activations, observation_reasons = activation_evidence(directory, case)
     reasons = capture_reasons(row, case, activations, [*work.reasons, *observation_reasons])
+    loss_sources = perf_loss_sources(directory, row)
+    if loss_sources:
+        reasons.append("perf_sample_loss")
     end_state, end_notice = requested_end(row, notices)
     return {"selection_state": selection_state(row, selection, notices, selected, end_state),
             "requested_end_state": end_state, "requested_end_notice": end_notice,
             "disabled_regions": disabled_regions(row, host_times), "reasons": reasons,
             "first_excluded_work": excluded.json() if excluded else None,
+            "perf_loss_sources": loss_sources,
             "effective_transition_times": "not_observed",
             "perf_sample_host_times_do_not_establish_continuous_coverage": True,
             "unclosed_workload_entries": work.unclosed_entries,

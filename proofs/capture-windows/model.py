@@ -92,7 +92,7 @@ CASES = {
     "unclosed": Case(outcome="killed", fault="kill", window=CaptureWindow(to_ns=615_000_000),
                      required_reason="unclosed_run_work"),
     "loss": Case(fault="notice_loss", window=CaptureWindow(0, RUN_DURATION_NS), required_reason="notification_loss"),
-    "perf-loss": Case(fault="perf_loss", required_reason="perf_lost_records"),
+    "perf-loss": Case(fault="perf_loss", required_reason="perf_sample_loss"),
     "limit": Case(gated=False, fault="capture_limit", required_reason="capture_limit"),
     "reserve": Case(gated=False, required_reason="storage_reserve", storage=True),
     "exhaustion": Case(gated=False, outcome="storage_fault", fault="exhaustion", storage=True),
