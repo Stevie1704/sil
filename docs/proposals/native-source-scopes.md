@@ -69,8 +69,12 @@ static int confirms(const object *radar, const object *camera) {
   ID must have the same name. Sites with the same ID and different names
   are a conflicting duplicate.
 - Without the macro `SIL_SOURCE_SCOPES` defined to 1, the macro expands to
-  nothing: no code, no data and no link dependency. This is the **opt-out**
-  and the default.
+  compile-time checks only: no code, no data, no symbol and no link
+  dependency. This is the **opt-out** and the default. Debug-line caveat:
+  with `-g`, GCC writes a line-table statement marker for each scope line,
+  so `.debug_line`, and with it the build ID, can differ from a build
+  without the scope lines. An empty expansion does not prevent this. With
+  `-gno-statement-frontiers` or without `-g`, the bytes are the same.
 
 With `SIL_SOURCE_SCOPES=1`, each use expands to:
 
@@ -483,7 +487,7 @@ the implementation: worked examples or a counted fixture.
 | Q16 | Full file system during the Run | Raw records kept (preallocated); `observations_incomplete` if the stream is cut; Run continues | API/lifecycle |
 | Q17 | Instrumented library under `sil run`, `sil-run`, a CPU profile and as a Process participant | Dormant: no file; equal Recordings and exit codes | API/lifecycle |
 | Q18 | `sil-run` binary and kernel sources | No `sil_source_scope` symbol or include. The source check already runs offline in `tests/test_source_scope_contract.py`; the binary check is pending | API/lifecycle |
-| Q19 | Build without `SIL_SOURCE_SCOPES` | Same bytes as without the header calls; no `DT_NEEDED` | API/lifecycle |
+| Q19 | Build without `SIL_SOURCE_SCOPES` | Same code, data, symbols and dynamic section as without the header calls; no `DT_NEEDED`. With `-g`, only `.debug_line` and the build ID can differ (debug-line caveat in [Source API](#source-api)) | API/lifecycle |
 | Q20 | Original and instrumented builds | Both identities retained; inline decisions of both builds retained | API/lifecycle |
 | Q21 | Ordinary versus capture Runs, generous Response deadlines, 3 repeats | Byte-identical Recordings and equal outcomes; elapsed and storage retained without a threshold | API/lifecycle |
 | Q22 | Fixtures in `tests/fixtures/source_scopes/` (offline) | The map extractor reproduces `map.json` from `scope-section.bin`; the decoder output equals each `expected.json` | decoding |
