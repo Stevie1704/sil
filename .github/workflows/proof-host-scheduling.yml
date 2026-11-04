@@ -36,7 +36,7 @@ jobs:
           uv pip install -p .venv/bin/python -e python/
           mkdir -p build/scheduler-evidence
           cat /proc/sys/kernel/perf_event_paranoid > build/scheduler-evidence/paranoid-before.txt
-          stat -Lc '%d:%i' /proc/1/ns/pid > build/scheduler-evidence/initial-pid-namespace.txt
+          sudo stat -Lc '%d:%i' /proc/1/ns/pid > build/scheduler-evidence/initial-pid-namespace.txt
           dpkg-query -W > build/scheduler-evidence/packages.txt
       - name: Build unmodified runners and independent fixture
         run: .venv/bin/python proofs/host-scheduling/qualify.py build "$PWD/build/scheduler-work"
