@@ -20,6 +20,11 @@ def validate(root: Path):
             assert hashlib.file_digest(stream, "sha256").hexdigest() == expected, name
     rows = read(root / "results.json")
     output = []
+    # Independently worked affine recurrence modulo 2^64, composed by
+    # exponentiation, yields this literal for work(15M) XOR work(30M).
+    expected_messages = [{"channel": channel, "virtual_ns": i * 1_000_000,
+                          "index": i, "value": 3776395645756024896}
+                         for i in range(3) for channel in ("peer", "slow")]
     for row in rows:
         directory = root / row["name"]
         assert read(directory / "result.json") == row
@@ -27,6 +32,9 @@ def validate(root: Path):
             assert not row["collector"]["ready"] and "run" not in row
             output.append({"name": row["name"], "availability": "unavailable"})
             continue
+        assert row["run"]["stopped"] is None, row["name"]
+        if row["mode"] == "unclosed":
+            assert row["run"]["exit_code"] == -9
         if row["observed"]:
             document, analysis = prepare(directory, row, identity["pid_namespace"])
             assert document == read(directory / "input.json")
@@ -64,18 +72,15 @@ def validate(root: Path):
             baseline = next(r for r in rows if not r["observed"] and r["mode"] == row["mode"])
             assert row["run"]["exit_code"] == baseline["run"]["exit_code"] == (1 if row["mode"] == "failure" else 0)
             assert row["recording_sha256"] == baseline["recording_sha256"]
-            # Independently worked affine recurrence modulo 2^64, composed by
-            # exponentiation, yields this literal for work(15M) XOR work(30M).
-            expected = [{"channel": channel, "virtual_ns": i * 1_000_000,
-                         "index": i, "value": 3776395645756024896}
-                        for i in range(3) for channel in ("peer", "slow")]
-            assert row["messages"] == (expected[:3] if row["mode"] == "failure" else expected)
+            assert row["messages"] == (expected_messages[:3] if row["mode"] == "failure" else expected_messages)
         if row["mode"] == "edge":
             assert row["run"]["exit_code"] in (0, 1)
+            assert row["messages"] == expected_messages[:len(row["messages"])]
         recording = directory / "run.mcap"
         with recording.open("rb") as stream:
             assert hashlib.file_digest(stream, "sha256").hexdigest() == row["recording_sha256"]
-    return {"decision": "defer", "environment": identity["environment"], "runs": output}
+    return {"decision": "defer", "environment": identity["environment"],
+            "captures": output, "validated_runs": sum("run" in row for row in rows)}
 
 
 if __name__ == "__main__":
@@ -84,4 +89,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     result = validate(args.evidence)
     print(json.dumps({"decision": result["decision"], "environment": result["environment"],
-                      "validated_runs": len(result["runs"])}, indent=2))
+                      "validated_runs": result["validated_runs"],
+                      "capture_attempts": len(result["captures"])}, indent=2))

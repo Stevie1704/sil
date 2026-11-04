@@ -1,8 +1,10 @@
 """Independent examples at the #362 proof's offline report boundary."""
 import json
+import hashlib
 from pathlib import Path
 import subprocess
 import sys
+import tarfile
 
 import pytest
 
@@ -145,3 +147,34 @@ def test_nonleader_exec_does_not_retain_old_tid_state(tmp_path):
         switch(60, 7, 0)])
     assert "nonleader_exec_unqualified" in result["reasons"]
     assert result["windows"][0]["states_ns"]["unknown"] == 50
+
+
+def test_unrelated_host_exec_does_not_contaminate_participant_coverage(tmp_path):
+    result = report(tmp_path, [fork(5), switch(10, 0, 7),
+        {"time_ns": 30, "cpu": 1, "event": "exec", "pid": 90, "old_pid": 91},
+        switch(60, 7, 0)])
+    assert result["reasons"] == []
+    assert result["windows"][0]["states_ns"]["running"] == 50
+
+
+def test_retained_qualification_replays_offline(tmp_path):
+    evidence = REPORT.parent / "evidence"
+    archive = evidence / "portable-evidence.tar.xz"
+    with archive.open("rb") as stream:
+        assert hashlib.file_digest(stream, "sha256").hexdigest() == (
+            evidence / "archive.sha256").read_text().split()[0]
+    with tarfile.open(archive) as saved:
+        members = saved.getmembers()
+        assert len(members) < 2000
+        assert sum(m.size for m in members) <= 512 << 20
+        saved.extractall(tmp_path, filter="data")
+    root = tmp_path / "scheduler-evidence"
+    validator = root / "proof-sources/validate.py"
+    environments = {"native-unprivileged": (1, 1), "container-default": (1, 1),
+                    "native-root-existing": (20, 12), "container-perfmon-hostpid": (20, 12)}
+    for name, (runs, attempts) in environments.items():
+        result = subprocess.run([sys.executable, str(validator), str(root / name)],
+                                 capture_output=True, text=True)
+        assert result.returncode == 0, result.stderr
+        assert json.loads(result.stdout)["validated_runs"] == runs
+        assert json.loads(result.stdout)["capture_attempts"] == attempts

@@ -84,7 +84,7 @@ def analyze(document: dict) -> dict:
             # A redundant wakeup need not dequeue a currently executing Task.
             if life["state"] != "running":
                 change(life, at, "runnable")
-        elif kind == "exec":
+        elif kind == "exec" and (e["pid"] in live or e["old_pid"] in live):
             if e["old_pid"] != e["pid"]:
                 reasons.add("nonleader_exec_unqualified")
                 for tid in (e["old_pid"], e["pid"]):

@@ -73,14 +73,15 @@ The reducer uses only directly closed, consistent transitions:
 
 | Observation | Interpretation after that event |
 | --- | --- |
-| Switch in | Running |
+| Switch in | Running (scheduled on a host CPU) |
 | Switch out with `R` or `R+` | Runnable, including preemption |
 | Switch out with `S`, `D` or `I` | Sleeping; no particular IPC/lock cause |
 | Successful wakeup or new-task wakeup | Runnable, unless already running |
 | Stopped/traced/exiting/unsupported state | Unknown for this four-state view |
 | Missing expected switch/wakeup | Previous uncertain interval becomes unknown |
 
-Fork starts a distinct TID lifetime. Exit closes it; later reuse needs a new
+Running intervals do not subtract interrupts or hypervisor steal time and are
+not exact function CPU durations. Fork starts a distinct TID lifetime. Exit closes it; later reuse needs a new
 fork and cannot inherit the old state. Leader exec preserves the lifetime;
 nonleader exec/TID replacement is explicitly unqualified. Initial state and
 the tail after the last transition stay unknown. The proof follows all

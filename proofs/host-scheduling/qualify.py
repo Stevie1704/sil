@@ -220,20 +220,13 @@ def run(work, out, environment, initial_namespace):
             if result["availability"] == "unavailable":
                 seal(out)
                 return
-    for row in rows:
-        if row["mode"] == "edge":
-            assert row["run"]["exit_code"] in (0, 1), row
-        elif row["mode"] == "unclosed":
-            assert row["run"]["exit_code"] == -9, row
-        else:
-            baseline = next(r for r in rows if not r["observed"] and r["mode"] == row["mode"])
-            assert row["run"]["exit_code"] == baseline["run"]["exit_code"] == (1 if row["mode"] == "failure" else 0)
-            assert row["recording_sha256"] == baseline["recording_sha256"]
     seal(out)
 
 
 def seal(out):
     write(out / "integrity.json", {str(p.relative_to(out)): digest(p) for p in sorted(out.rglob("*")) if p.is_file()})
+    from validate import validate
+    validate(out)
 
 
 if __name__ == "__main__":
