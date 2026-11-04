@@ -21,8 +21,8 @@
  *   kill          scope 1, then SIGKILL inside scope 1 in Activation 3 (Q14)
  *   slow          scope 1 and a 1 ms host sleep per Activation (Q14)
  *   corrupt       scope 1; in Activation 1, flags 1 in the raw header (Q13)
- *   fill          scope 1; "path" fills its file system at init and is
- *                 removed in the last Activation (Q16)
+ *   fill          scope 1; "path" fills its file system in Activation
+ *                 "fill_at" and is removed in Activation "last" (Q16)
  *
  * scope_scenarios_probe(depth) runs scope 2 recursively outside any Run:
  * a Process participant loads this library to call it (Q17).
@@ -52,7 +52,8 @@ static struct {
   char scenario[32];
   char path[512];
   uint64_t activations;  /* of "tick" */
-  uint64_t last;         /* index of the last "tick" Activation */
+  uint64_t fill_at;      /* "fill": the Activation that fills */
+  uint64_t last;         /* "fill": the Activation that frees */
   jmp_buf jump;
 } g;
 
@@ -204,6 +205,7 @@ static void tick(void *user, uint64_t now_ns) {
     plain();
   }
   if (is("corrupt") && index == 1) corrupt_header();
+  if (is("fill") && index == g.fill_at) fill(g.path);
   if (is("fill") && index == g.last) unlink(g.path);
   publish();
   g.activations++;
@@ -226,7 +228,8 @@ int sil_participant_init(const sil_api_v1 *api, const char *name,
   char last[32];
   config_string(config_json, "last", last, sizeof last);
   g.last = strtoull(last, NULL, 10);
-  if (is("fill")) fill(g.path);
+  config_string(config_json, "fill_at", last, sizeof last);
+  g.fill_at = strtoull(last, NULL, 10);
   const uint64_t period = 1000000;
   if (api->register_task(api->ctx, "tick", period, 0, 0, tick, NULL) != SIL_OK)
     return SIL_ERR;

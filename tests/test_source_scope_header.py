@@ -82,10 +82,25 @@ def test_without_the_opt_in_the_library_has_the_same_bytes(tmp_path):
     built = compile_library(SOURCE, tmp_path, "-Wl,--build-id=sha1")
     assert built.returncode == 0, built.stderr
     with_macro = (tmp_path / "libscoped.so").read_bytes()
+    (tmp_path / "with.so").write_bytes(with_macro)
     built = compile_library(without_scopes(SOURCE), tmp_path,
                             "-Wl,--build-id=sha1")
     assert built.returncode == 0, built.stderr
-    assert (tmp_path / "libscoped.so").read_bytes() == with_macro
+    assert (tmp_path / "libscoped.so").read_bytes() == with_macro, \
+        differing_sections(tmp_path / "with.so", tmp_path / "libscoped.so")
+
+
+def differing_sections(a: Path, b: Path) -> list[str]:
+    """The names of the ELF sections whose bytes differ."""
+    names = re.findall(r"\]\s+(\S+)", subprocess.run(
+        ["readelf", "-SW", str(a)], capture_output=True, text=True).stdout)
+    differing = []
+    for name in names:
+        dumps = [subprocess.run(["readelf", "-x", name, str(f)],
+                                capture_output=True).stdout for f in (a, b)]
+        if dumps[0] != dumps[1]:
+            differing.append(name)
+    return differing
 
 
 @needs_elf

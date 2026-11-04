@@ -546,16 +546,17 @@ def test_the_library_is_finalized_before_the_run_ends(tools, scenarios,
 @pytest.mark.skipif(not os.environ.get("SIL_SCOPE_SMALL_FS"),
                     reason="needs SIL_SCOPE_SMALL_FS: a small file system")
 def test_a_full_file_system_keeps_the_raw_records(tools, scenarios, tmp_path):
-    """The participant fills the small file system at its init and frees it
-    in its last Activation. The observation stream fails on the full file
-    system; the preallocated raw file keeps every record."""
+    """The participant fills the small file system after the runner wrote
+    the first 64 KiB of observations, and frees it in its last Activation.
+    The observation stream fails on the full file system; the preallocated
+    raw file keeps every record."""
     small = Path(os.environ["SIL_SCOPE_SMALL_FS"])
     work = small / f"capture-{uuid.uuid4().hex}"
     work.mkdir()
     activations = 2000
     manifest = scenario_manifest(
         tmp_path, "fill", duration_ms=activations,
-        path=str(work / "filler"), last=str(activations - 1))
+        path=str(work / "filler"), fill_at="600", last=str(activations - 1))
     proc = capture(manifest, tools, work, "-o", tmp_path / "run.mcap")
     assert proc.returncode == 1, proc.stderr
     report, calls = saved(work / "scopes")
