@@ -21,6 +21,7 @@ import hashlib
 import json
 import os
 import platform
+import shutil
 import sys
 import uuid
 from dataclasses import dataclass
@@ -29,8 +30,8 @@ from pathlib import Path
 from sil.build_info import __version__ as SIL_VERSION
 from sil.diagnostics_report import write_new_file
 from sil.diagnostics_run import (
-    EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_USAGE, ToolMissing, command_error,
-    execute, find_native_tools,
+    EXIT_FAILURE, EXIT_NOT_FOUND, EXIT_USAGE, NativeTools, ToolMissing,
+    command_error, execute, find_native_tools,
 )
 from sil.profile_common import (
     PROG, CaptureRun, RunTarget, artifact_rows, report_launcher_error,
@@ -116,8 +117,12 @@ class ScopesLayout:
         return self.out / "scopes.json"
 
 
-class Usage(ValueError):
-    """A preflight problem of the selected participant: exit 2."""
+class Refusal(Exception):
+    """The command stops before the Run, with this message and exit code."""
+
+    def __init__(self, message: str, exit_code: int):
+        super().__init__(message)
+        self.exit_code = exit_code
 
 
 @dataclass(frozen=True)
@@ -136,23 +141,24 @@ class Preflight:
 
 
 def preflight(request: ScopesRequest, cwd: Path) -> Preflight:
-    """The scope map and identities, or Usage."""
+    """The scope map and identities; Refusal with exit 2 otherwise."""
     manifest_path = cwd / request.target.manifest
     try:
         manifest_bytes = manifest_path.read_bytes()
         participant = json.loads(manifest_bytes)["participants"].get(
             request.participant)
     except (OSError, ValueError, KeyError, AttributeError, TypeError) as error:
-        raise Usage(f"cannot read the Manifest '{request.target.manifest}' "
-                    f"to check --participant: {error}") from None
+        raise Refusal(f"cannot read the Manifest '{request.target.manifest}' "
+                      f"to check --participant: {error}", EXIT_USAGE) from None
     if not isinstance(participant, dict):
-        raise Usage(f"the Manifest has no participant '{request.participant}'")
+        raise Refusal(f"the Manifest has no participant "
+                      f"'{request.participant}'", EXIT_USAGE)
     if participant.get("type") != "native" or \
             not isinstance(participant.get("library"), str):
-        raise Usage(f"'{request.participant}' is a "
-                    f"{participant.get('type')} participant, not a Native "
-                    "participant: source scopes are captured in the Native "
-                    "library of the runner")
+        raise Refusal(f"'{request.participant}' is a "
+                      f"{participant.get('type')} participant, not a Native "
+                      "participant: source scopes are captured in the Native "
+                      "library of the runner", EXIT_USAGE)
     # The runner resolves a relative library path against the Manifest's
     # directory.
     library = Path(os.path.realpath(
@@ -164,19 +170,24 @@ def preflight(request: ScopesRequest, cwd: Path) -> Preflight:
         scope_map = map_document(scan, original)
         map_bytes = encode_map(scope_map)
     except MapError as error:
-        raise Usage(str(error)) from None
+        raise Refusal(str(error), EXIT_USAGE) from None
     return Preflight(library, scan, original, scope_map, map_bytes,
                      hashlib.sha256(manifest_bytes).hexdigest())
 
 
-def host_problem() -> str | None:
-    """Why this host cannot capture source scopes, or None."""
+def host_tools() -> NativeTools:
+    """The runner and launcher on a host that can capture source scopes;
+    Refusal otherwise."""
     system, machine = platform.system(), platform.machine()
     libc = platform.libc_ver()[0]
     if (system, machine, libc) != ("Linux", "x86_64", "glibc"):
-        return (f"source scopes need Linux x86-64/glibc; this host is "
-                f"{system} {machine} {libc or 'without glibc'}")
-    return None
+        raise Refusal(f"source scopes need Linux x86-64/glibc; this host is "
+                      f"{system} {machine} {libc or 'without glibc'}",
+                      EXIT_FAILURE)
+    try:
+        return find_native_tools()
+    except ToolMissing as error:
+        raise Refusal(str(error), EXIT_NOT_FOUND) from None
 
 
 # --- the raw file and the session -------------------------------------------
@@ -211,23 +222,67 @@ def session_value(capture_id: uuid.UUID, capacity: int,
     return f"capture={capture_id.hex},capacity={capacity},fd={descriptor}"
 
 
-def _space_warning(layout: ScopesLayout,
-                   request: ScopesRequest) -> str | None:
-    needed = raw_size(request.max_scope_records) + \
-        request.max_activation_bytes + RESERVE_BYTES
-    free = free_bytes(layout.out)
+def _space_warning(out: Path, raw_bytes: int,
+                   observation_limit: int) -> str | None:
+    """Before the raw file is allocated: its size, the observation limit and
+    the reserve against the free space of DIR."""
+    needed = raw_bytes + observation_limit + RESERVE_BYTES
+    free = free_bytes(out)
     if free is None or free >= needed:
         return None
-    return (f"'{layout.out}' has {free} bytes free, less than the raw file, "
-            f"the observation limit of {request.max_activation_bytes} bytes "
-            f"and the reserve of {RESERVE_BYTES} bytes")
+    return (f"'{out}' has {free} bytes free, less than the raw file of "
+            f"{raw_bytes} bytes, the observation limit of {observation_limit} "
+            f"bytes and the reserve of {RESERVE_BYTES} bytes")
+
+
+def create_capture_files(layout: ScopesLayout, map_bytes: bytes,
+                         capture_id: uuid.UUID, capacity: int,
+                         observation_limit: int) -> int:
+    """Make DIR with `scopes/map.json` and the allocated raw file; the raw
+    file's open descriptor. Refusal (exit 1) when a file cannot be written.
+    A failed `map.json` leaves DIR as found: the command removes it."""
+    try:
+        layout.out.mkdir()
+    except OSError as error:
+        raise Refusal(f"cannot make '{layout.out}': {error}",
+                      EXIT_FAILURE) from None
+    try:
+        layout.scopes.mkdir()
+        write_new_file(layout.map, map_bytes.decode("ascii"))
+    except OSError as error:
+        shutil.rmtree(layout.out, ignore_errors=True)
+        raise Refusal(f"cannot write '{layout.map}': {error}",
+                      EXIT_FAILURE) from None
+    warning = _space_warning(layout.out, raw_size(capacity),
+                             observation_limit)
+    if warning is not None:
+        sys.stderr.write(f"{PROG}: warning: {warning}\n")
+    try:
+        return create_raw_file(layout.events, capture_id, capacity)
+    except OSError as error:
+        raise Refusal(f"cannot create '{layout.events}': {error}; the Run "
+                      "did not start", EXIT_FAILURE) from None
 
 
 # --- the Run ----------------------------------------------------------------
 
 
-def _execute(request: ScopesRequest, layout: ScopesLayout, native,
-             cwd: Path, session: str, descriptor: int) -> CaptureRun:
+def run_with_session(request: ScopesRequest, layout: ScopesLayout,
+                     native: NativeTools, cwd: Path, capture_id: uuid.UUID,
+                     descriptor: int) -> CaptureRun:
+    """The Run with the session of the open raw file; closes `descriptor`."""
+    try:
+        layout.activation.mkdir()
+        session = session_value(capture_id, request.max_scope_records,
+                                descriptor)
+        return _execute(request, layout, native, cwd, session, descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def _execute(request: ScopesRequest, layout: ScopesLayout,
+             native: NativeTools, cwd: Path, session: str,
+             descriptor: int) -> CaptureRun:
     run = request.target.run_request(layout.diagnostics)
     extra = ("--activation-observations", str(layout.observations),
              "--activation-observations-limit-bytes",
@@ -418,43 +473,18 @@ def format_summary(report: dict, path: Path) -> str:
 
 def run_scopes(request: ScopesRequest, cwd: Path) -> int:
     """The scopes collector after the option checks."""
-    try:
-        found = preflight(request, cwd)
-    except Usage as error:
-        return command_error(PROG, str(error), EXIT_USAGE)
-    problem = host_problem()
-    if problem is not None:
-        return command_error(PROG, problem, EXIT_FAILURE)
-    try:
-        native = find_native_tools()
-    except ToolMissing as error:
-        return command_error(PROG, str(error), EXIT_NOT_FOUND)
     layout = ScopesLayout(Path(os.path.realpath(cwd / request.target.out)))
     capture_id = uuid.uuid4()
     try:
-        layout.scopes.mkdir(parents=True)
-        write_new_file(layout.map, found.map_bytes.decode("ascii"))
-    except OSError as error:
-        return command_error(PROG, f"cannot write '{layout.map}': {error}",
-                             EXIT_FAILURE)
-    try:
-        descriptor = create_raw_file(layout.events, capture_id,
-                                     request.max_scope_records)
-    except OSError as error:
-        return command_error(
-            PROG, f"cannot create '{layout.events}': {error}; the Run did "
-            "not start", EXIT_FAILURE)
-    try:
-        warning = _space_warning(layout, request)
-        if warning is not None:
-            sys.stderr.write(f"{PROG}: warning: {warning}\n")
-        layout.activation.mkdir()
-        session = session_value(capture_id, request.max_scope_records,
-                                descriptor)
-        capture_run = _execute(request, layout, native, cwd, session,
-                               descriptor)
-    finally:
-        os.close(descriptor)
+        found = preflight(request, cwd)
+        native = host_tools()
+        descriptor = create_capture_files(
+            layout, found.map_bytes, capture_id, request.max_scope_records,
+            request.max_activation_bytes)
+    except Refusal as refusal:
+        return command_error(PROG, str(refusal), refusal.exit_code)
+    capture_run = run_with_session(request, layout, native, cwd, capture_id,
+                                   descriptor)
     decoded = decode_capture(request, layout, found, capture_id)
     report = publish(request, layout, cwd, found, capture_run, decoded)
     if report is not None:

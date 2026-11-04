@@ -14,6 +14,7 @@ every host.
 
 from __future__ import annotations
 
+import errno
 import json
 import os
 import platform
@@ -28,7 +29,9 @@ from pathlib import Path
 import pytest
 
 from conftest import BUILD_DIR, ROOT, file_sha256
+from sil import profile_scopes
 from sil.profile_scopes import create_raw_file, session_value
+from sil.profile_storage import RESERVE_BYTES
 from sil.source_scope_decode import CaptureFailed, decode
 from sil.source_scope_map import read_library
 from sil.source_scope_report import map_document
@@ -196,6 +199,60 @@ def test_another_host_is_a_host_preflight_failure(tmp_path):
     assert proc.returncode == 1, proc.stderr
     assert "Linux x86-64/glibc" in proc.stderr
     assert not (tmp_path / "scopes").exists()
+
+
+# --- the capture files before the Run: every host ----------------------------
+
+CAPACITY, OBSERVATION_LIMIT = 7, 1 << 20
+RAW_BYTES = 256 + 16 * CAPACITY  # the contract's raw file size
+
+
+@pytest.fixture
+def allocation(monkeypatch):
+    """posix_fallocate, also where the host has none (macOS)."""
+    monkeypatch.setattr(os, "posix_fallocate",
+                        lambda fd, offset, size: os.ftruncate(fd, size),
+                        raising=False)
+
+
+def create_files(out: Path) -> int:
+    return profile_scopes.create_capture_files(
+        profile_scopes.ScopesLayout(out), b"{}", uuid.uuid4(), CAPACITY,
+        OBSERVATION_LIMIT)
+
+
+def test_the_space_warning_does_not_count_the_allocated_raw_file_twice(
+        tmp_path, monkeypatch, allocation, capsys):
+    """The free space is exactly what the capture needs before the raw file
+    is allocated: the raw file, the observation limit and the reserve."""
+    out = tmp_path / "scopes"
+    before = RAW_BYTES + OBSERVATION_LIMIT + RESERVE_BYTES
+
+    def free(directory):  # the disk: the allocated raw file uses space
+        events = out / "scopes" / "events.bin"
+        return before - (events.stat().st_size if events.exists() else 0)
+
+    monkeypatch.setattr(profile_scopes, "free_bytes", free)
+    os.close(create_files(out))
+    assert "warning" not in capsys.readouterr().err
+    monkeypatch.setattr(profile_scopes, "free_bytes",
+                        lambda directory: free(directory) - 1)
+    os.close(create_files(tmp_path / "second"))
+    assert "warning" in capsys.readouterr().err
+
+
+def test_a_failed_map_write_leaves_no_directory(tmp_path, monkeypatch,
+                                                allocation):
+    def full_disk(path, text):
+        Path(path).write_text(text[:1])
+        raise OSError(errno.ENOSPC, "No space left on device")
+
+    monkeypatch.setattr(profile_scopes, "write_new_file", full_disk)
+    with pytest.raises(profile_scopes.Refusal) as refusal:
+        create_files(tmp_path / "scopes")
+    assert refusal.value.exit_code == 1
+    assert "map.json" in str(refusal.value)
+    assert list(tmp_path.iterdir()) == []
 
 
 # --- the capture: Linux x86-64/glibc -------------------------------------------
