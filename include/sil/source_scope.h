@@ -17,8 +17,9 @@
  * integer in [1, 65535]; `name` is a string literal of at most 63 bytes.
  * All sites of one ID must have the same name.
  *
- * Opt-out (the default): without SIL_SOURCE_SCOPES defined to 1, a scope is
- * a compile-time check only: no code, no data and no link dependency.
+ * Opt-out (the default): without SIL_SOURCE_SCOPES defined to 1, a scope
+ * expands to nothing: no code, no data and no link dependency. An invalid ID
+ * or name is a compile error in opt-in builds only.
  *
  * Opt-in (SIL_SOURCE_SCOPES=1, GCC on an ELF target, qualified for Linux
  * x86-64/glibc with GCC 12): each use is one 256-byte site record in the
@@ -97,7 +98,10 @@ void sil_source_scope_v1_return(const sil_source_scope_v1_guard *guard);
 
 #else
 
-#define SIL_SOURCE_SCOPE(id, name) SIL_SOURCE_SCOPE_CHECK_(id, name)
+/* Nothing, so that an opt-out build has the bytes of a build without the
+ * scope lines, its line table included. The checks of `id` and `name` apply
+ * in opt-in builds only. */
+#define SIL_SOURCE_SCOPE(id, name)
 
 #endif
 
