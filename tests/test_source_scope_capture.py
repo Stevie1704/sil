@@ -428,7 +428,7 @@ def run_with_session(runner: Path, manifest: Path, tmp_path: Path,
                      events: Path, descriptor_flags: int = os.O_RDWR, *,
                      session_pid: str = "$$", capacity: int = 7,
                      capture_id: uuid.UUID | None = None,
-                     preload: Path | None = None
+                     environment: dict[str, str] | None = None
                      ) -> subprocess.CompletedProcess:
     """The diagnostics runner with a session of `events`, as the command
     and the launcher make it; `$$` is the runner's PID after exec."""
@@ -446,8 +446,7 @@ def run_with_session(runner: Path, manifest: Path, tmp_path: Path,
              str(tmp_path / "observations.jsonl")],
             capture_output=True, text=True, cwd=tmp_path,
             pass_fds=(descriptor,),
-            env={**os.environ, **({"LD_PRELOAD": str(preload)}
-                                  if preload else {})})
+            env={**os.environ, **(environment or {})})
     finally:
         os.close(descriptor)
 
@@ -504,8 +503,8 @@ def test_an_observer_that_cannot_activate_is_unavailable(
         # A shared writable mapping needs a descriptor open for reading.
         "mmap": {"descriptor_flags": os.O_WRONLY},
         # The clock bracket cannot be read, so it cannot be verified.
-        "clock": {"preload": failing_clock(tmp_path)
-                  if damage == "clock" else None}}[damage]
+        "clock": {"environment": {"LD_PRELOAD": str(failing_clock(tmp_path))}
+                  if damage == "clock" else {}}}[damage]
     done = run_with_session(sil_run_diagnostics, manifest, tmp_path, events,
                             **options)
     code, recording = ordinary(sil_run, manifest, tmp_path, "plain")
@@ -641,6 +640,27 @@ def test_the_library_is_finalized_before_the_run_ends(tools, scenarios,
     assert not lines[-1]["write_failed"] and not lines[-1]["truncated"]
     code, recording = ordinary(sil_run, manifest, tmp_path)
     assert code == 0 and recording == (out / "run.mcap").read_bytes()
+
+
+@needs_capture
+def test_the_runner_unloads_the_library_before_it_exits(
+        scenarios, tmp_path, sil_run_diagnostics):
+    """Q15: the Engine owns the Native participant, whose destructor closes
+    the library (dlclose). main.cpp destroys the Engine before it closes the
+    Recording and before end_run writes the observation `end` line. The
+    loader destroys the observer's link map only at a dlclose, never at
+    process exit, so the unload, and with it the finalization, is
+    dlclose's."""
+    manifest = scenario_manifest(tmp_path, "plain")
+    events = new_raw_file(tmp_path / "events.bin", capacity=64)
+    done = run_with_session(sil_run_diagnostics, manifest, tmp_path, events,
+                            capacity=64, environment={"LD_DEBUG": "files"})
+    assert done.returncode == 0, done.stderr
+    assert header(events.read_bytes())["state"] == FINALIZED
+    unloaded = [line for line in done.stderr.splitlines()
+                if "destroying link map" in line]
+    assert any("libsil_source_scope.so.1" in line for line in unloaded), \
+        done.stderr[-2000:]
 
 
 @needs_capture

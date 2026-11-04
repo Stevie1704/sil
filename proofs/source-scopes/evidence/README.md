@@ -35,7 +35,7 @@ libraries of every Run.
 | Q10 | `test_an_observer_that_cannot_activate_is_unavailable` | Size, header (capture ID) and `mmap` failure: state `unavailable`, decode `observer_unavailable`, exit code and Recording equal to `sil-run` |
 | Q13 | `test_an_existing_output_directory_is_never_replaced`, `test_output_problems_and_raw_failures` | Exit 2, nothing replaced; `posix_fallocate` failure (EFBIG): exit 1 before the Run; corrupt header: `raw_invalid` |
 | Q14 | `test_a_killed_runner_keeps_its_records`, `test_an_interrupted_command_keeps_the_run_outcome` | Exit 137, `raw_incomplete`, 7 kept records in state `active`; SIGINT: `interrupted`, Run outcome `interrupted` kept |
-| Q15 | `test_finalization_is_one_store`, `test_the_library_is_finalized_before_the_run_ends` | The observer's `finalize` has no call, jump out or system call; state `finalized`; shutdown phases and the end line written; Recording equal |
+| Q15 | `test_finalization_is_one_store`, `test_the_library_is_finalized_before_the_run_ends`, `test_the_runner_unloads_the_library_before_it_exits` | The observer's `finalize` has no call, jump out or system call; state `finalized`; shutdown phases and the end line written; Recording equal; the observer is unloaded by `dlclose` (order: see below) |
 | Q16 | `test_a_full_file_system_keeps_the_raw_records` | All 4,000 raw records kept on a full tmpfs; `observations_incomplete`; Run succeeded |
 | Q17 | `test_the_library_is_dormant_outside_a_scopes_capture`, `test_the_library_is_dormant_in_a_cpu_profile`, `test_a_process_that_is_not_the_runner_stays_dormant` | `sil-run`, `sil run`, the diagnostics runner, a CPU profile and a Process participant: equal Recordings and exit codes; a dormant observer leaves the raw file byte-identical |
 | Q18 | `test_ordinary_runner_sources_have_no_scope_observer`, `test_ordinary_runner_binary_has_no_scope_observer` | No `sil_source_scope` in the kernel sources or the `sil-run` binary |
@@ -48,6 +48,17 @@ every statement, also for a scope line that declares nothing. The opt-out
 build then differs from a build without the scope lines in `.debug_line`
 only (and in the build ID, which hashes the file). Code, data, symbols and
 dynamic section are the same.
+
+Q15 order (code trace, `kernel/src/main.cpp` `run`): the `sil::Engine` is
+a local of the inner `try` block. It owns each Native participant
+(`Engine::natives_`), and `~NativeParticipant` calls `dlclose`
+(`kernel/src/native_participant.cpp`). The block ends, so the library is
+unloaded and the observer's destructor stores `finalized`, before
+`recorder->close()` (phase `recording_finalization`) and before
+`sil::diagnostics::end_run()`, which writes the observation `end` line
+(`ObservationLog::close`). The test shows with `LD_DEBUG=files` that the
+loader destroys the observer's link map, which it does only at a
+`dlclose`.
 
 Observed elapsed host time per Run (no threshold): `sil-run` about 7 ms; a
 capture about 115 ms including the Python command, preflight and decode.
