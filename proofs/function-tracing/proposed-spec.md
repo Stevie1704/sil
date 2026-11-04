@@ -1,9 +1,10 @@
 # Proposed follow-up: opt-in Native C source scopes
 
-Status: proposal for a separate specification and tickets, not a supported
-interface or part of Phase 1. The #320 proof must establish feasibility
-before this proposal is accepted. No implementation is authorized by this
-document alone.
+Status: superseded by the accepted
+[source-scope contract](../../docs/proposals/native-source-scopes.md) (#360)
+and [ADR 0007](../../docs/adr/0007-source-owned-native-scope-observer.md).
+This text is kept as the proof's original follow-up proposal. Where the two
+differ, the contract applies.
 
 ## Intended behavior
 

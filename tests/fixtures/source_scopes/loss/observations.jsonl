@@ -1,0 +1,3 @@
+{"sil_activation_observations": 1, "clock": "host_monotonic", "runner_pid": 42, "runner_tid": 42, "limit_bytes": 67108864, "pid_namespace": {"device": 4, "inode": 4026531836}}
+{"kind": "activation", "participant": "adas", "task": "control", "task_kind": "native_task", "index": 0, "virtual_time_ns": 0, "begin_ns": "5000", "end_ns": "5100", "outcome": "completed", "tid": 42}
+{"kind": "end", "records": 1, "dropped": 0, "truncated": false, "write_failed": false, "bytes": 200}

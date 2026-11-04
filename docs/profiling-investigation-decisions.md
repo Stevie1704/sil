@@ -4,7 +4,8 @@ Delivery A uses retained evidence. Its delivery does not qualify another
 collector. The decisions below explicitly defer the Delivery B work tracked
 by [#354](https://github.com/Stevie1704/sil/issues/354); the original deferrals
 were not failed experiments or evidence that a candidate cannot work. The #361 entry below
-was subsequently revisited with a Linux capture-window experiment; the other
+was subsequently revisited with a Linux capture-window experiment, and the
+#360 entry now records a gated build decision with its contract; the other
 entries retain their original evidence and scope.
 
 The existing [#321](https://github.com/Stevie1704/sil/issues/321) and
@@ -45,10 +46,10 @@ separately qualified bounded lifetime tracker. Retain actual allocator/build
 coverage, buffers, loss, overhead and byte-identical ordinary/observed
 Recordings. Child allocations require their own observation mechanism.
 
-## Source scopes — #360: defer production contract adoption
+## Source scopes — #360: build, gated by the accepted contract
 
-The [#320 proof](../proofs/function-tracing/README.md) already established
-the narrow benefit: counts and entry order of source-owned logical Native C
+The [#320 proof](../proofs/function-tracing/README.md) established the
+narrow benefit: exact counts and entry order of source-owned logical Native C
 calls, including inlined bodies. Its explicit captures each retained 2,640
 events with 40 completed Activation joins. The first paired Native
 Activation medians were 1,951.5/5,645.5 ns and 7,160.5/50,795.5 ns for
@@ -56,50 +57,21 @@ diagnostics/explicit scopes on the one/eight-object cases. Those observations
 show substantial local perturbation; no constant overhead can be subtracted.
 The loaded-library XRay 18 approach remains deferred.
 
-Defer adopting a supported source-scope API in this delivery. Reuse the
-[existing proposal](../proofs/function-tracing/proposed-spec.md) rather than
-repeating its successful proof. Neither the proof nor this decision installs
-an API, changes a schema, or authorizes transparent rewriting of user code.
-The following concrete design boundary is the starting point for reopening,
-not a promised interface:
+**Build, gated.** The [source-scope contract](proposals/native-source-scopes.md)
+and [ADR 0007](adr/0007-source-owned-native-scope-observer.md) replace the
+earlier deferral. They freeze the source API, the opt-in `sil profile
+--collector scopes` lifecycle, separately versioned raw/normalized files with
+[worked fixtures](../tests/fixtures/source_scopes/), the join, the
+Run/capture outcomes and the resource budgets. The contract records the
+named benefit and the constraints of this decision.
 
-- One source-owned Native C DSO, synchronous runner-thread work, ordinary C
-  returns, Linux x86-64/glibc. An optional, separately installed observer
-  header would expose a source-owner-maintained scope guard with a stable
-  numeric scope ID. Disabled scopes compile away; enabled scopes call a
-  separate observer library. No function is added to `sil_api_v1`.
-- An explicitly requested diagnostics capture owns one fresh Run UUID and
-  one observer instance. Ordinary `sil-run` neither loads nor starts it.
-  Unsupported longjmp, cancellation and C++ unwinding cannot synthesize an
-  exit. Recursive entries use per-thread nesting; worker events remain
-  unattributed.
-- A separate version-1 event envelope would bind Run UUID, process lifetime,
-  PID/TID, verified `CLOCK_MONOTONIC`, original/instrumented binary digests,
-  build IDs and a digest-bound scope/source map. Entry/return records carry
-  sequence, monotonic nanoseconds and scope ID. No v1 profile field changes
-  meaning. A map mismatch fails decoding before any output is written.
-- Join only uniquely contained complete calls to completed Native intervals
-  in `[begin,end)`. Missing exits, failed/unclosed intervals, crossing calls,
-  ambiguous joins, lifecycle and unsupported threads retain explicit reasons.
-  Count/order completeness is unavailable after loss. Elapsed scope duration
-  includes waiting, preemption and observer work; nested durations overlap.
-- Begin with the proof's fixed 65,536-record/1 MiB preallocated event budget,
-  bounded metadata and a nonblocking append attempt. Exhaustion/contention
-  increments loss counters; there is no overwrite, allocation, I/O or retry
-  in a scope. Finalization uses fresh exclusive paths, preserves the Run
-  outcome independently, and records short writes/missing footer as partial.
-  A supervisor bounds shutdown; regular-file I/O has no hard latency promise.
-
-Reopen when a source owner identifies a concrete call-count/order question
-that sampled stacks cannot answer and accepts maintaining instrumented build
-variants. Before a build decision, review an ownership/compatibility ADR,
-freeze API/CLI spelling and raw/normalized schemas with independent fixtures,
-then qualify recursion, early/nonlocal exits, lifecycle, identity mismatch,
-overflow, observer failure, storage/deadline behavior and ordinary-run hook
-absence. Retain original/instrumented optimization evidence and generous-
-deadline Recording equivalence. Only then create separate API/lifecycle,
-decoder and presentation tickets. Process/FMU/prebuilt-library/XRay coverage
-and CPU-duration/target/WCET claims remain excluded.
+No supported interface ships with this decision. Separate tickets implement
+the contract: decoding [#371](https://github.com/Stevie1704/sil/issues/371),
+API/lifecycle [#372](https://github.com/Stevie1704/sil/issues/372) and
+presentation [#373](https://github.com/Stevie1704/sil/issues/373); each ships only
+after its rows of the contract's qualification matrix pass. Process/FMU/
+prebuilt-library/XRay coverage and CPU-duration/target/WCET claims remain
+excluded.
 
 ## Late capture windows — #361: defer production after qualification
 

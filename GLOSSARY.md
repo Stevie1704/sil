@@ -44,6 +44,13 @@ The evidence of one `sil profile` capture of one fresh Run: CPU samples
 `sil_profile_report`. It describes the host build that ran, not a target ECU.
 _Avoid_: trace, benchmark
 
+**Source scope**:
+A logical C call region that a source owner marks with `SIL_SOURCE_SCOPE` in
+an instrumented Native library. Its entry and return events give exact call
+counts, order and inclusive elapsed host time per Activation for that build
+only.
+_Avoid_: function trace, instruction trace, probe
+
 **CPU capture window**:
 A requested region of a Run, identified by Virtual time and optionally a Task
 or Activation, in which CPU sampling is requested. Its observed host collection

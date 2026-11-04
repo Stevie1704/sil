@@ -1,0 +1,33 @@
+{
+  "sil_source_scope_calls": 1,
+  "capture_id": "6c1f8e0a-2b7d-4f3e-9a51-0d2c4b6e8f10",
+  "participant": "adas",
+  "status": "complete",
+  "problems": [],
+  "totals": {"entries": 6, "returns": 6, "paired_calls": 6, "attributed_calls": 1,
+             "withheld_calls": 1, "unattributed": 4},
+  "activations": [
+    {"participant": "adas", "task": "control", "index": 0, "virtual_time_ns": 0,
+     "begin_ns": "3000", "end_ns": "3100", "outcome": "completed",
+     "status": "exact", "reason": null, "withheld_calls": 0,
+     "calls": [
+       {"scope": 1, "depth": 0, "parent": null, "entry_ns": "3050", "return_ns": "3060", "elapsed_ns": "10"}
+     ],
+     "counts": {"1": 1}},
+    {"participant": "adas", "task": "control", "index": 1, "virtual_time_ns": 10000000,
+     "begin_ns": "3100", "end_ns": "3200", "outcome": "failed",
+     "status": "unavailable", "reason": "not_completed", "withheld_calls": 1,
+     "calls": [], "counts": null}
+  ],
+  "unattributed": {
+    "reasons": {"outside_activations": 1, "worker_thread": 1, "crossing_interval": 1,
+                "other_participant": 1},
+    "rows": [
+      {"scope": 1, "tid": 42, "entry_ns": "2900", "return_ns": "2950", "reason": "outside_activations"},
+      {"scope": 1, "tid": 43, "entry_ns": "3010", "return_ns": "3020", "reason": "worker_thread"},
+      {"scope": 2, "tid": 42, "entry_ns": "3190", "return_ns": "3210", "reason": "crossing_interval"},
+      {"scope": 1, "tid": 42, "entry_ns": "3250", "return_ns": "3260", "reason": "other_participant"}
+    ],
+    "rows_remainder": 0
+  }
+}
