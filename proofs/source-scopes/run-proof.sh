@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # GitHub Actions ubuntu-24.04; package installation is in
-# .github/workflows/source-scopes.yml. Builds SiL with the pinned GCC 12,
+# .github/workflows/proof-source-scopes.yml. Builds SiL with the pinned GCC 12,
 # then runs the ADAS qualification (Q1, Q20, Q21).
 set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)

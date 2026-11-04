@@ -1,4 +1,4 @@
-name: source-scopes
+name: proof-source-scopes
 
 # Qualification of source scopes (#372, docs/proposals/native-source-scopes.md)
 # on the contract's machine class: Linux x86-64/glibc, GitHub Actions
@@ -23,7 +23,7 @@ on:
       - 'tests/fixtures/participants/scope_*'
       - 'tests/participants/scope_process.py'
       - 'proofs/source-scopes/**'
-      - '.github/workflows/source-scopes.yml'
+      - '.github/workflows/proof-source-scopes.yml'
   workflow_dispatch:
 
 jobs:
