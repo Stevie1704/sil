@@ -427,7 +427,8 @@ def test_lost_events_make_the_capture_partial(tools, scenarios, tmp_path,
 def run_with_session(runner: Path, manifest: Path, tmp_path: Path,
                      events: Path, descriptor_flags: int = os.O_RDWR, *,
                      session_pid: str = "$$", capacity: int = 7,
-                     capture_id: uuid.UUID | None = None
+                     capture_id: uuid.UUID | None = None,
+                     preload: Path | None = None
                      ) -> subprocess.CompletedProcess:
     """The diagnostics runner with a session of `events`, as the command
     and the launcher make it; `$$` is the runner's PID after exec."""
@@ -444,7 +445,9 @@ def run_with_session(runner: Path, manifest: Path, tmp_path: Path,
              str(tmp_path / "run.json"), "--activation-observations",
              str(tmp_path / "observations.jsonl")],
             capture_output=True, text=True, cwd=tmp_path,
-            pass_fds=(descriptor,))
+            pass_fds=(descriptor,),
+            env={**os.environ, **({"LD_PRELOAD": str(preload)}
+                                  if preload else {})})
     finally:
         os.close(descriptor)
 
@@ -454,12 +457,43 @@ def new_raw_file(path: Path, capacity=7) -> Path:
     return path
 
 
+# libc clock_gettime fails when the observer calls it, and only then.
+FAILING_CLOCK = r"""
+#define _GNU_SOURCE
+#include <dlfcn.h>
+#include <errno.h>
+#include <string.h>
+#include <time.h>
+int clock_gettime(clockid_t id, struct timespec *now) {
+  int (*real)(clockid_t, struct timespec *) =
+      (int (*)(clockid_t, struct timespec *))dlsym(RTLD_NEXT,
+                                                   "clock_gettime");
+  Dl_info caller;
+  if (dladdr(__builtin_return_address(0), &caller) && caller.dli_fname &&
+      strstr(caller.dli_fname, "libsil_source_scope")) {
+    errno = EINVAL;
+    return -1;
+  }
+  return real(id, now);
+}
+"""
+
+
+def failing_clock(tmp_path: Path) -> Path:
+    (tmp_path / "failing_clock.c").write_text(FAILING_CLOCK)
+    subprocess.run([os.environ.get("CC", "cc"), "-shared", "-fPIC", "-O2",
+                    "failing_clock.c", "-o", "failing_clock.so", "-ldl"],
+                   cwd=tmp_path, check=True)
+    return tmp_path / "failing_clock.so"
+
+
 @needs_capture
-@pytest.mark.parametrize("damage", ["size", "header", "mmap"])
+@pytest.mark.parametrize("damage", ["size", "header", "mmap", "clock"])
 def test_an_observer_that_cannot_activate_is_unavailable(
         scenarios, tmp_path, sil_run_diagnostics, sil_run, damage):
-    """The session and the file disagree, so a check of the observer fails;
-    the file itself stays a valid raw file for the decoder."""
+    """A check of the observer fails: the session and the file disagree, or
+    the clock bracket cannot be read. The file itself stays a valid raw
+    file for the decoder."""
     manifest = scenario_manifest(tmp_path, "plain")
     events = new_raw_file(tmp_path / "events.bin")
     options = {
@@ -468,7 +502,10 @@ def test_an_observer_that_cannot_activate_is_unavailable(
         # The header's capture ID is not the session's.
         "header": {"capture_id": uuid.uuid4()},
         # A shared writable mapping needs a descriptor open for reading.
-        "mmap": {"descriptor_flags": os.O_WRONLY}}[damage]
+        "mmap": {"descriptor_flags": os.O_WRONLY},
+        # The clock bracket cannot be read, so it cannot be verified.
+        "clock": {"preload": failing_clock(tmp_path)
+                  if damage == "clock" else None}}[damage]
     done = run_with_session(sil_run_diagnostics, manifest, tmp_path, events,
                             **options)
     code, recording = ordinary(sil_run, manifest, tmp_path, "plain")

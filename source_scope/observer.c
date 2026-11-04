@@ -192,10 +192,33 @@ static int find_build_id(struct dl_phdr_info *info, size_t size, void *data) {
   return 1;
 }
 
-static void mark_unavailable(void) {
-  const uint16_t state = kUnavailable;
-  (void)pwrite(session.fd, &state, sizeof state,
-               offsetof(struct header, state));
+/* A failed activation check: store the header state `unavailable` when
+ * the observer can (through the mapping `h` or, without one, the
+ * descriptor) and stay dormant for the life of the process. */
+static void refuse_activation(struct header *h, size_t size) {
+  if (h == NULL) {
+    const uint16_t state = kUnavailable;
+    (void)pwrite(session.fd, &state, sizeof state,
+                 offsetof(struct header, state));
+  } else {
+    __atomic_store_n(&h->state, (uint16_t)kUnavailable, __ATOMIC_RELEASE);
+    munmap(h, size);
+  }
+  atomic_store_explicit(&mode, kDormant, memory_order_release);
+}
+
+/* The clock bracket: a direct system call, libc clock_gettime and a direct
+ * system call. Returns 0 when a read failed: such a bracket verifies
+ * nothing, so the activation fails. */
+static int read_bracket(uint64_t bracket[3]) {
+  int failed = 0;
+  struct timespec libc_now = {0, 0};
+  bracket[0] = direct_clock(&failed);
+  if (clock_gettime(CLOCK_MONOTONIC, &libc_now) != 0) failed = 1;
+  bracket[1] =
+      (uint64_t)libc_now.tv_sec * 1000000000u + (uint64_t)libc_now.tv_nsec;
+  bracket[2] = direct_clock(&failed);
+  return !failed;
 }
 
 static int header_matches(const struct header *h) {
@@ -212,25 +235,23 @@ static void activate(uintptr_t caller) {
   struct stat file;
   if (fstat(session.fd, &file) != 0 || !S_ISREG(file.st_mode) ||
       (uint64_t)file.st_size != size) {
-    mark_unavailable();
-    atomic_store_explicit(&mode, kDormant, memory_order_release);
+    refuse_activation(NULL, size);
     return;
   }
   (void)fcntl(session.fd, F_SETFD, FD_CLOEXEC);
   void *memory = mmap(NULL, size, PROT_READ | PROT_WRITE,
                       MAP_SHARED | MAP_POPULATE, session.fd, 0);
   if (memory == MAP_FAILED) {
-    mark_unavailable();
-    atomic_store_explicit(&mode, kDormant, memory_order_release);
+    refuse_activation(NULL, size);
     return;
   }
   struct header *h = memory;
-  if (!header_matches(h)) {
-    __atomic_store_n(&h->state, (uint16_t)kUnavailable, __ATOMIC_RELEASE);
-    munmap(memory, size);
-    atomic_store_explicit(&mode, kDormant, memory_order_release);
+  uint64_t bracket[3];
+  if (!header_matches(h) || !read_bracket(bracket)) {
+    refuse_activation(h, size);
     return;
   }
+  memcpy(h->bracket, bracket, sizeof bracket);
   struct build_id_search search = {caller, 0, {0}};
   dl_iterate_phdr(find_build_id, &search);
   struct stat pidns;
@@ -238,13 +259,6 @@ static void activate(uintptr_t caller) {
     h->pidns_device = pidns.st_dev;
     h->pidns_inode = pidns.st_ino;
   }
-  int failed = 0;
-  struct timespec libc_now;
-  h->bracket[0] = direct_clock(&failed);
-  clock_gettime(CLOCK_MONOTONIC, &libc_now);
-  h->bracket[1] =
-      (uint64_t)libc_now.tv_sec * 1000000000u + (uint64_t)libc_now.tv_nsec;
-  h->bracket[2] = direct_clock(&failed);
   h->build_id_bytes = search.bytes;
   memcpy(h->build_id, search.id, sizeof h->build_id);
   h->pid = (uint32_t)getpid();

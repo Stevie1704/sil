@@ -106,8 +106,9 @@ The session names an open descriptor of `scopes/events.bin`. The command
 made and preallocated that file before the Run. At the first enter, the
 active observer checks the file's size and header, sets `FD_CLOEXEC` on
 the descriptor and maps the whole file once, shared and prefaulted
-(`MAP_SHARED | MAP_POPULATE`). If a check or the mapping fails, it stays
-dormant and, when it can, sets the header state to `unavailable`. Records
+(`MAP_SHARED | MAP_POPULATE`), then reads the clock bracket. If a check,
+the mapping or a clock read of the bracket fails, it stays dormant and,
+when it can, sets the header state to `unavailable`. Records
 and counters are memory stores into this mapping. The kernel keeps them in
 the file also when the runner is killed.
 
