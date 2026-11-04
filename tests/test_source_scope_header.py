@@ -1,7 +1,7 @@
 """`include/sil/source_scope.h`: the source API of source scopes (#372).
 
 docs/proposals/native-source-scopes.md, "Source API", is the contract. The
-header expands to nothing without SIL_SOURCE_SCOPES=1 (Q19). With it, each
+header compiles to nothing without SIL_SOURCE_SCOPES=1 (Q19). With it, each
 use is one 256-byte site record in the ELF section `sil_source_scopes` and
 a link to the observer. The tests compile real sources with the host's cc.
 """
@@ -91,10 +91,19 @@ def two_builds(tmp_path: Path, *flags: str) -> tuple[Path, Path]:
 
 @needs_elf
 def test_without_the_opt_in_the_library_has_the_same_bytes(tmp_path):
-    # At -O2 -g, GCC marks the start of each statement in the line table.
-    with_scopes, without = two_builds(tmp_path)
+    # GCC marks the start of each statement in the line table at -O2 -g, and
+    # a scope line is a statement even when it declares nothing.
+    with_scopes, without = two_builds(tmp_path, "-gno-statement-frontiers")
     assert with_scopes.read_bytes() == without.read_bytes(), \
         differing_sections(with_scopes, without)
+
+
+@needs_elf
+def test_with_statement_markers_only_the_line_table_differs(tmp_path):
+    with_scopes, without = two_builds(tmp_path)
+    # The build ID hashes the whole file, the line table included.
+    assert set(differing_sections(with_scopes, without)) <= {
+        ".debug_line", ".note.gnu.build-id"}
 
 
 def differing_sections(a: Path, b: Path) -> list[str]:
@@ -131,11 +140,17 @@ INVALID = {
 }
 
 
-@needs_elf
+@needs_cc
+@pytest.mark.parametrize("opt_in", [False, True], ids=["opt-out", "opt-in"])
 @pytest.mark.parametrize("body", INVALID.values(), ids=INVALID.keys())
-def test_an_invalid_scope_is_a_compile_error(tmp_path, body):
+def test_an_invalid_scope_is_a_compile_error(tmp_path, body, opt_in):
+    if opt_in and not ELF_HOST:
+        pytest.skip("source scopes need an ELF target")
+    if body == INVALID["twice-in-a-block"] and not opt_in:
+        pytest.skip("without the opt-in a scope declares nothing")
     source = f"#include <sil/source_scope.h>\nvoid f(void) {{ {body} }}\n"
-    built = compile_library(source, tmp_path, "-DSIL_SOURCE_SCOPES=1")
+    flags = ("-DSIL_SOURCE_SCOPES=1",) if opt_in else ()
+    built = compile_library(source, tmp_path, *flags)
     assert built.returncode != 0
 
 
