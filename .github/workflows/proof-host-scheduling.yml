@@ -1,11 +1,6 @@
 name: proof-host-scheduling
 
 on:
-  pull_request:
-    paths:
-      - 'proofs/host-scheduling/**'
-      - 'tests/test_host_scheduling_proof.py'
-      - '.github/workflows/proof-host-scheduling.yml'
   workflow_dispatch:
 
 permissions:
@@ -48,15 +43,12 @@ jobs:
         run: |
           perf_package="linux-tools-$(uname -r)"
           perf_version=$(dpkg-query -W -f='${Version}' "$perf_package")
-          cat > build/scheduler-container.Dockerfile <<'EOF'
-          FROM ubuntu:24.04
-          ARG PERF_PACKAGE
-          RUN apt-get update && apt-get install -y --no-install-recommends \
-              "$PERF_PACKAGE" linux-tools-common python3 gcc libc6-dev binutils libssl3t64 \
-              && rm -rf /var/lib/apt/lists/*
-          EOF
-          docker build --build-arg "PERF_PACKAGE=$perf_package=$perf_version" \
-            -f build/scheduler-container.Dockerfile -t sil-scheduler-proof .
+          docker pull ubuntu:24.04
+          docker image inspect ubuntu:24.04 > build/scheduler-evidence/base-image.json
+          ubuntu_digest=$(docker image inspect --format '{{index .RepoDigests 0}}' ubuntu:24.04)
+          docker build --build-arg "UBUNTU_IMAGE=$ubuntu_digest" \
+            --build-arg "PERF_PACKAGE=$perf_package=$perf_version" \
+            -f proofs/host-scheduling/Dockerfile -t sil-scheduler-proof .
           docker image inspect sil-scheduler-proof > build/scheduler-evidence/container-image.json
       - name: Observe default-container availability without policy changes
         run: |
@@ -88,7 +80,10 @@ jobs:
         run: |
           cat /proc/sys/kernel/perf_event_paranoid > build/scheduler-evidence/paranoid-after.txt
           cmp build/scheduler-evidence/paranoid-before.txt build/scheduler-evidence/paranoid-after.txt
-          cp -R proofs/host-scheduling build/scheduler-evidence/proof-sources
+          mkdir -p build/scheduler-evidence/proof-sources
+          cp proofs/host-scheduling/*.py proofs/host-scheduling/*.c \
+            proofs/host-scheduling/README.md proofs/host-scheduling/Dockerfile \
+            build/scheduler-evidence/proof-sources/
           sudo chown -R "$(id -u):$(id -g)" build/scheduler-evidence
       - uses: actions/upload-artifact@v4
         if: always()

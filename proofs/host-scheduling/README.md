@@ -11,7 +11,7 @@ ordinary-run measurement hook, Manifest field, ABI or Step-protocol change.
 Participants, `peer` and `slow`, share Virtual times 0, 1,000,000 and 2,000,000
 ns. Every successful Step publishes its index and a fixed integer result.
 Neither scheduler events, host clocks, wait durations nor the background
-worker influence those Messages. No Clock shim is requested. A background
+thread influence those Messages. No Clock shim is requested. A background
 thread deliberately runs outside and during Steps; child processes exercise
 pipe wakeups, CPU contention and exec/exit. The exec helper is a separately
 identified executable built from the same source.
@@ -48,7 +48,7 @@ does not start a measured Run. Its ordinary baseline, exact command, error,
 policy and identities remain evidence. Nothing remounts tracefs or changes a
 sysctl in response to a failure.
 
-The workflow retains native unprivileged, native sudo-root and ordinary
+The manually dispatched workflow retains native unprivileged, native sudo-root and ordinary
 container attempts before an explicitly configured container experiment.
 That experiment uses `--pid=host --cap-add PERFMON
 --security-opt seccomp=unconfined` and a read-only bind of existing native
@@ -83,7 +83,9 @@ The reducer uses only directly closed, consistent transitions:
 Running intervals do not subtract interrupts or hypervisor steal time and are
 not exact function CPU durations. Fork starts a distinct TID lifetime. Exit closes it; later reuse needs a new
 fork and cannot inherit the old state. Leader exec preserves the lifetime;
-nonleader exec/TID replacement is explicitly unqualified. Initial state and
+nonleader exec/TID replacement is explicitly unqualified. Descendant scope
+expires on exit or replacement; an unrelated fork cannot inherit membership
+by reusing a descendant or runner TID. Initial state and
 the tail after the last transition stay unknown. The proof follows all
 captured descendants of the runner, with separately marked thread/child
 roles. It makes no general guarantee about detached or namespace-changing
@@ -91,9 +93,10 @@ descendants. Synthetic report fixtures independently exercise PID reuse,
 missing wakeups, preemption, equal Virtual times and half-open boundaries.
 
 Actual Process Step intervals come from the existing diagnostics observations,
-using `[begin_ns,end_ns)`. A worker's overlap with that interval is a separate
+using `[begin_ns,end_ns)`. An auxiliary thread or child's overlap is a separate
 `worker_window_association`, never exclusive Step work or additional main-TID
-time. Fixture phases are separate windows. They validate observed states but
+time. This label describes host threads/children, never a Process participant.
+Fixture phases are separate windows. They validate observed states but
 cannot replace a missing runner interval. Failed intervals retain their own
 outcome and are excluded from completed-Step counts. A hard-killed runner can
 leave only a fixture begin marker; its actual interval and duration stay absent.
@@ -124,7 +127,7 @@ The guard threshold is not a hard quota. Whole-Run supervision is 30 seconds,
 perf's safety workload is 35 seconds, tool exports have a 120-second limit,
 and collector/runner termination has a 5-second grace before SIGKILL.
 Activation observations are independently capped at 1 MiB. Fixture markers
-and Messages are bounded by the fixed three Steps and finite workers.
+and Messages are bounded by the fixed three Steps and finite threads/children.
 Each analysis input is capped at 256 MiB. There is no interactive data or DOM.
 
 `PERF_RECORD_LOST`, loss statistics, export warnings/errors and unparsed
@@ -139,8 +142,8 @@ extending the last known state to the end of a Step.
 The Run is launched independently of perf and owns the existing Participant
 cleanup path. Stopping or interrupting the collector does not signal the Run.
 Failure and hard-kill fixtures are intentional and separately identified.
-The hard-kill fixture first joins its background worker, kills its parent
-runner, then exits; its peer sees protocol EOF and closes its worker.
+The hard-kill fixture first joins its background thread, kills its parent
+runner, then exits; its peer sees protocol EOF and closes its thread.
 No cleanup behavior is inferred from a successful collector exit.
 
 Three fresh repetitions retain elapsed Run times, collector setup/control
@@ -153,10 +156,50 @@ timing threshold is a CI correctness gate.
 
 ## Evidence, decision and source semantics
 
+Qualification runs only on explicit dispatch for a named investigation:
+
+```sh
+gh workflow run proof-host-scheduling.yml --ref proof/362-host-scheduling
+```
+
+PR updates run the ordinary repository checks and do not start privileged
+scheduler collection. The committed `Dockerfile` defines the proof image;
+the workflow records its base and derived image identities. perf and Ubuntu
+notices are documented in [THIRD-PARTY-NOTICES.md](../../THIRD-PARTY-NOTICES.md).
+
 The [retained evidence](evidence/README.md) supplies measurements, environment
 dispositions and replay commands. `validate.py EVIDENCE` verifies saved file
 digests, repeats decoding/state reduction without perf, checks the fixture
 and outcome/Recording equality, and distinguishes unavailable attempts.
+
+To inspect one saved capture with the current decoder without replacing its
+reports, use `decode.py CAPTURE_DIR FRESH_OUTPUT.json`. This joins actual
+observations, markers, event attributes and scoped scheduler events. The
+`report.py INPUT.json FRESH_OUTPUT.json` reducer accepts normalized events;
+there is no separate test-only perf-text entry point.
+
+Begin markers are points inside `[begin,end)`. Fixture end markers denote
+exclusive interval boundaries and may equal the Activation end. Reports
+retain the ordered state intervals, including explicit initial/final unknown
+regions; validation checks adjacency and bounds rather than using a seeded
+unknown-duration total as evidence of a partition. The CPU, sleep, pipe-wait
+and contended phases each require their independently expected state to have
+been observed. There is no minimum-duration threshold for runnable delay.
+Collector interruption and size-limit reasons remain explicit even when
+later PID/namespace evidence is absent.
+
+After downloading the Actions artifact into a fresh directory, retain it with
+the same tool used for the committed evidence:
+
+```sh
+gh run download RUN_ID --name host-scheduling-evidence --dir build/scheduler-artifact
+python3 proofs/host-scheduling/retain.py build/scheduler-artifact \
+  build/scheduler-retained --run-url https://github.com/Stevie1704/sil/actions/runs/RUN_ID
+```
+
+This writes `portable-evidence.tar.xz` and `archive.sha256` in the fresh output
+directory. Historical archives keep their original sources and validator;
+they are not silently regenerated with a newer decoder.
 
 The [decision record](../../docs/profiling-investigation-decisions.md) names
 the production gaps and reopening criteria. **Defer** requires no production
