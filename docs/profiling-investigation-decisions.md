@@ -111,7 +111,7 @@ Tasks, independently retained workload markers and actual perf control.
 
 **Long-window feasibility is positive; production adoption remains deferred.**
 On the named workload, bounded files are approximately 94% smaller for Native
-work and 88–89% smaller for Process work than whole-Run capture. Setup exec/DSO
+work and about 89% smaller for Process work than whole-Run capture. Setup exec/DSO
 metadata and post-disable lifetime records survive named CPU controls. The
 proof retains requested Virtual time separately from notification, command,
 acknowledgment, workload and CPU-sample host timestamps. An acknowledgment identifies no
