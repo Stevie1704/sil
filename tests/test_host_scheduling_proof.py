@@ -106,14 +106,15 @@ def test_child_cpu_during_parent_sleep_is_kept_as_window_association(tmp_path):
     assert result["windows"][1]["states_ns"]["running"] == 40
 
 
-def test_pinned_perf_text_preserves_direct_wakeup_and_switch_states(tmp_path):
+@pytest.mark.parametrize("raw_fields", [False, True])
+def test_pinned_perf_text_preserves_direct_wakeup_and_switch_states(tmp_path, raw_fields):
     source = tmp_path / "input.json"
     source.write_text(json.dumps({"clock": "host_monotonic", "namespace_verified": True,
         "loss": False, "truncated": False, "events": [], "windows": [
             {"participant": "slow", "index": 0, "virtual_ns": 0, "tid": 7,
              "begin_ns": 10, "end_ns": 60, "outcome": "completed"}]}))
     perf = tmp_path / "perf.txt"
-    perf.write_text("\n".join([
+    rows = [
         "[000] 0.000000005: sched:sched_process_fork: comm=parent pid=1 child_comm=child child_pid=7",
         "[000] 0.000000010: sched:sched_wakeup_new: child:7 [120] CPU:000",
         "[000] 0.000000015: sched:sched_switch: swapper/0:0 [120] R ==> child:7 [120]",
@@ -121,7 +122,15 @@ def test_pinned_perf_text_preserves_direct_wakeup_and_switch_states(tmp_path):
         "[000] 0.000000040: sched:sched_wakeup: child:7 [120] CPU:000",
         "[000] 0.000000045: sched:sched_switch: swapper/0:0 [120] R ==> child:7 [120]",
         "[000] 0.000000055: sched:sched_switch: child:7 [120] S ==> swapper/0:0 [120]",
-    ]) + "\n")
+    ]
+    if raw_fields:
+        rows = [row.replace("child:7 [120] CPU:000", "comm=child pid=7 prio=120 target_cpu=000")
+            .replace("swapper/0:0 [120] R ==> child:7 [120]",
+                     "prev_comm=swapper/0 prev_pid=0 prev_prio=120 prev_state=R ==> next_comm=child next_pid=7 next_prio=120")
+            .replace("child:7 [120] S ==> swapper/0:0 [120]",
+                     "prev_comm=child prev_pid=7 prev_prio=120 prev_state=S ==> next_comm=swapper/0 next_pid=0 next_prio=120")
+                for row in rows]
+    perf.write_text("\n".join(rows) + "\n")
     output = tmp_path / "report.json"
     result = subprocess.run([sys.executable, str(REPORT), str(source), str(output),
                              "--perf-text", str(perf)], capture_output=True, text=True)

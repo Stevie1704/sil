@@ -86,7 +86,7 @@ jobs:
         run: |
           for environment in build/scheduler-evidence/*/; do
             if [ -f "$environment/results.json" ]; then
-              .venv/bin/python proofs/host-scheduling/validate.py "$environment"
+              sudo .venv/bin/python proofs/host-scheduling/validate.py "$environment"
             fi
           done
       - name: Verify policy unchanged and retain exact experiment sources

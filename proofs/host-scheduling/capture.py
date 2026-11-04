@@ -91,12 +91,14 @@ class Perf:
         return False
 
     def finish(self):
+        escalated = False
         if self.process.poll() is None:
             self.control_command("disable")
             os.killpg(self.process.pid, signal.SIGINT)
             try:
                 self.process.wait(timeout=5)
             except subprocess.TimeoutExpired:
+                escalated = True
                 os.killpg(self.process.pid, signal.SIGKILL)
         self.process.wait()
         self.log.close()
@@ -105,4 +107,5 @@ class Perf:
         return {"argv": self.argv, "ready": self.ready,
                 "start_ns": self.start_ns, "exit_observed_ns": time.monotonic_ns(),
                 "exit_code": self.process.returncode, "controls": self.commands,
-                "ring_per_cpu": self.pages}
+                "ring_per_cpu": self.pages, "shutdown_signal": "SIGINT",
+                "cleanup_escalated_to_sigkill": escalated}

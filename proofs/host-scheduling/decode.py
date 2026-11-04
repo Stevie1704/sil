@@ -29,6 +29,11 @@ def parse_events(path):
         row = {"cpu": int(cpu), "time_ns": int(seconds) * 10**9 + int(fraction)}
         fields = dict(re.findall(r"(\w+)=([^\s]+)", payload))
         if name == "sched_switch":
+            if {"prev_pid", "next_pid", "prev_state"} <= fields.keys():
+                row.update(event="switch", prev_pid=int(fields["prev_pid"]),
+                           next_pid=int(fields["next_pid"]), prev_state=fields["prev_state"])
+                events.append(row)
+                continue
             switch = re.fullmatch(r".+:(\d+) \[\d+\] (\S+) ==> .+:(\d+) \[\d+\]", payload)
             if not switch:
                 unknown += 1
@@ -36,6 +41,10 @@ def parse_events(path):
             prev, state, nxt = switch.groups()
             row.update(event="switch", prev_pid=int(prev), next_pid=int(nxt), prev_state=state)
         elif name in ("sched_wakeup", "sched_wakeup_new"):
+            if "pid" in fields:
+                row.update(event="wakeup", pid=int(fields["pid"]))
+                events.append(row)
+                continue
             wakeup = re.fullmatch(r".+:(\d+) \[\d+\] CPU:\d+", payload)
             if not wakeup:
                 unknown += 1
