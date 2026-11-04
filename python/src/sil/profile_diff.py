@@ -16,6 +16,7 @@ from sil.diagnostics_run import GivenOnce, command_error
 from sil.profile_analysis import cpu_ranking, cpu_rows, function_paths, profile_tasks
 from sil.profile_benchmark import Benchmark, benchmark_context, load_benchmark
 from sil.profile_set import ProfileSet, ProfileSetError, load_profile_set
+from sil.source_scope_set import is_scope_report
 
 PROG = "sil profile diff"
 ROW_LIMIT = 100
@@ -248,6 +249,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--new-benchmark", type=Path, action=GivenOnce,
                         help="separate NEW repeated benchmark; requires --base-benchmark")
     args = parser.parse_args(argv)
+    for path in (args.base, args.new):
+        if is_scope_report(path):
+            return command_error(
+                PROG, f"'{path}' is a source-scope report (scopes.json); "
+                "sil profile diff compares profile.json sets only", 2)
     if (args.base_benchmark is None) != (args.new_benchmark is None):
         return command_error(PROG, "--base-benchmark and --new-benchmark must be supplied together", 2)
     if args.html is not None:

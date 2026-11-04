@@ -140,6 +140,20 @@ def test_unattributed_calls_are_counted_by_reason(tmp_path, capsys,
             "crossing_interval 1, other_participant 1)") in out
 
 
+@pytest.mark.parametrize("side", ["base", "new"])
+def test_diff_rejects_a_scope_report(tmp_path, capsys, side):
+    scopes = capture_dir(tmp_path, "complete")
+    other = tmp_path / "profile.json"
+    other.write_text("{}")
+    argv = [scopes, other] if side == "base" else [other, scopes]
+
+    code = profile_diff.main([str(a) for a in argv])
+
+    captured = capsys.readouterr()
+    assert (code, captured.out) == (2, "")
+    assert "source-scope" in captured.err
+
+
 def _relist(scopes: Path, name: str, data: bytes) -> None:
     """Replace one artifact and record its new size and SHA-256, so only
     its content is wrong."""
