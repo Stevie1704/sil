@@ -41,15 +41,12 @@ FAILURE_REASONS = ("observer_unavailable", "raw_incomplete", "raw_invalid",
 
 
 class CaptureFailed(Exception):
-    """An identity check failed: the capture is `failed` with `reason`.
-    `header` is the raw header when it could be read, for the loss
-    counters of `scopes.json`."""
+    """An identity check or a budget failed: the capture is `failed` with
+    `reason`, and no decoded file is written."""
 
-    def __init__(self, reason: str, detail: str,
-                 header: RawHeader | None = None):
+    def __init__(self, reason: str, detail: str):
         super().__init__(f"{reason}: {detail}")
         self.reason = reason
-        self.header = header
 
 
 @dataclass(frozen=True)
@@ -92,8 +89,7 @@ def read_header(events: bytes) -> RawHeader:
     if not 1 <= capacity <= MAX_RECORDS or build_id_bytes > len(build_id) \
             or len(events) != HEADER.size + RECORD.size * capacity \
             or records > capacity:
-        raise CaptureFailed("raw_invalid", "the raw sizes do not agree",
-                            header)
+        raise CaptureFailed("raw_invalid", "the raw sizes do not agree")
     return header
 
 
@@ -109,11 +105,10 @@ def decode(events: bytes, observations: str, scope_map: dict, *,
     header = read_header(events)
     records = _records(events, header, scopes)
     if header.state == ACTIVE:
-        raise CaptureFailed("raw_incomplete", "the runner did not finalize",
-                            header)
+        raise CaptureFailed("raw_incomplete", "the runner did not finalize")
     if header.state == UNAVAILABLE:
         raise CaptureFailed("observer_unavailable",
-                            "the observer could not activate", header)
+                            "the observer could not activate")
     stream = _Stream.parse(observations)
     _check_identities(header, stream, scope_map, capture_id, library_sha256)
     return _Join(header, records, stream, participant).document()
@@ -139,16 +134,15 @@ def _records(events: bytes, header: RawHeader,
              scopes: set[int]) -> list[tuple[int, int, int, int]]:
     """(monotonic_ns, tid, scope, edge) of each kept record."""
     if header.state == CREATED and header.records:
-        raise CaptureFailed("raw_invalid", "a created file has records",
-                            header)
-    records, last = [], {}
+        raise CaptureFailed("raw_invalid", "a created file has records")
+    records: list[tuple[int, int, int, int]] = []
+    last: dict[int, int] = {}
     for index in range(header.records):
         ns, tid, scope, edge, reserved = RECORD.unpack_from(
             events, HEADER.size + RECORD.size * index)
         if edge not in (ENTRY, RETURN) or reserved or scope not in scopes \
                 or ns < last.get(tid, 0):
-            raise CaptureFailed("raw_invalid", f"record {index} is not valid",
-                                header)
+            raise CaptureFailed("raw_invalid", f"record {index} is not valid")
         last[tid] = ns
         records.append((ns, tid, scope, edge))
     return records
@@ -160,21 +154,20 @@ def _check_identities(header: RawHeader, stream: _Stream, scope_map: dict,
     if header.capture_id != capture_id or observed is None:
         raise CaptureFailed("capture_mismatch",
                             "the raw file or the observation stream is not "
-                            "of this capture", header)
+                            "of this capture")
     activated = header.state == FINALIZED
     if activated and (header.pid != observed.get("runner_pid")
                       or header.pid_namespace != observed.get("pid_namespace")):
         raise CaptureFailed("capture_mismatch",
-                            "the observer ran in another process", header)
-    if activated and header.build_id != scope_map["library"]["build_id"] \
+                            "the observer ran in another process")
+    if (activated and header.build_id != scope_map["library"]["build_id"]) \
             or library_sha256 != scope_map["library"]["sha256"]:
         raise CaptureFailed("identity_mismatch",
-                            "the library that ran is not the mapped build",
-                            header)
+                            "the library that ran is not the mapped build")
     if observed.get("clock") != "host_monotonic" or (
             activated and list(header.bracket) != sorted(header.bracket)):
         raise CaptureFailed("clock_unverified",
-                            "the clocks are not proven the same", header)
+                            "the clocks are not proven the same")
 
 
 def _host(row: dict, key: str) -> int:

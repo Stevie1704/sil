@@ -13,6 +13,8 @@ import uuid
 import pytest
 
 from sil.source_scope_decode import CaptureFailed, decode
+from sil.source_scope_report import (capture_record, encode_calls, encode_map,
+                                     encode_report, map_document, scope_report)
 from sil.source_scope_map import (MapError, file_identity, file_sha256, read_library,
                                   scope_entries)
 
@@ -312,3 +314,99 @@ def test_large_integers_and_many_rows_are_bounded():
     assert unattributed["rows"][-1]["entry_ns"] == "999"
     call = result["activations"][0]["calls"][0]
     assert (call["entry_ns"], call["elapsed_ns"]) == (str(top - 1), "1")
+
+
+
+def test_map_document_binds_the_scopes_to_both_builds(tmp_path):
+    scan = read_library(library(tmp_path))
+    document = json.loads(encode_map(map_document(scan, None)))
+    assert document == {"sil_source_scope_map": 1, "library": scan.identity,
+                        "original": None, "scopes": MAP["scopes"]}
+
+
+def test_calls_document_holds_the_maximum_capture():
+    pairs = 131072
+    records = [(2 * n + edge, 42, 1, edge) for n in range(pairs) for edge in (0, 1)]
+    result = run_decode(raw(records), stream((0, 2 * pairs)))
+    assert result["totals"]["attributed_calls"] == pairs
+    encoded = encode_calls(result)
+    assert len(encoded) <= 256 << 20 and json.loads(encoded) == result
+
+
+def test_more_calls_than_the_budget_is_a_normalized_limit():
+    calls = [{"scope": 1}] * 131073
+    with pytest.raises(CaptureFailed) as failed:
+        encode_calls({"activations": [{"calls": calls}]})
+    assert failed.value.reason == "normalized_limit"
+
+
+def report_for(events, calls, **capture):
+    return scope_report(
+        sil_version="0.2.1", configuration={"participant": "adas"},
+        run={"exit_code": 0}, identities={"instrumented": MAP["library"]},
+        artifacts=[], missing=[], scope_map=MAP, calls=calls,
+        capture=capture_record(events, calls, **capture))
+
+
+def test_report_summarizes_tasks_and_scopes():
+    events, observations, _ = fixture("unattributed")
+    report = report_for(events, run_decode(events, observations))
+    assert report["sil_source_scope_report"] == 1
+    assert report["producer"] == {"name": "sil profile", "sil_version": "0.2.1"}
+    assert report["capture"] == {
+        "status": "complete", "reasons": [], "capture_id": CAPTURE_ID,
+        "loss": {"dropped_full": 0, "dropped_contended": 0, "clock_errors": 0},
+        "records": 12}
+    assert report["summary"]["tasks"] == [
+        {"participant": "adas", "task": "control", "activations": 2, "exact": 1,
+         "unavailable": {"not_completed": 1}}]
+    check, confirmed = report["summary"]["scopes"][:2]
+    assert check == {"id": 1, "name": "check_object", "attributed_calls": 1,
+                     "per_exact_activation": {"min": 1, "median": 1, "max": 1}}
+    assert confirmed["per_exact_activation"] == {"min": 0, "median": 0, "max": 0}
+    assert len(report["limitations"]) == 4
+
+
+def test_report_median_of_two_exact_activations():
+    events, observations, _ = fixture("complete")
+    report = report_for(events, run_decode(events, observations))
+    check = report["summary"]["scopes"][0]
+    assert check["per_exact_activation"] == {"min": 0, "median": 1, "max": 2}
+    confirmed = report["summary"]["scopes"][1]
+    assert confirmed["per_exact_activation"] == {"min": 0, "median": 0.5, "max": 1}
+
+
+def test_a_failed_decode_reports_the_reason_and_kept_counters():
+    events, observations, _ = fixture("identity-mismatch")
+    with pytest.raises(CaptureFailed) as failed:
+        run_decode(events, observations)
+    report = report_for(events, None, failure=failed.value)
+    assert report["capture"] == {
+        "status": "failed", "reasons": ["identity_mismatch"], "capture_id": CAPTURE_ID,
+        "loss": {"dropped_full": 0, "dropped_contended": 0, "clock_errors": 0},
+        "records": 2}
+    assert report["summary"] == {"tasks": [], "scopes": []}
+    unread = report_for(b"short", None, failure=CaptureFailed("raw_invalid", "short"))
+    assert unread["capture"]["loss"] is None and unread["capture"]["capture_id"] is None
+
+
+def test_an_interrupted_capture_keeps_its_problems():
+    events, observations, _ = fixture("loss")
+    capture = report_for(events, run_decode(events, observations),
+                         interrupted=True)["capture"]
+    assert (capture["status"], capture["reasons"]) == ("interrupted",
+                                                       ["interrupted", "events_lost"])
+
+
+def test_report_is_escaped_ascii_within_one_mebibyte():
+    name = '</script> "'
+    scope_map = {**MAP, "scopes": [{"id": 1, "name": name, "sites": []}]}
+    calls = run_decode(raw(CALL), stream((0, 100)), scope_map=scope_map)
+    report = scope_report(
+        sil_version="0.2.1", configuration={}, run={}, identities={}, artifacts=[],
+        missing=[], scope_map=scope_map, calls=calls, capture=capture_record(raw(CALL), calls))
+    encoded = encode_report(report)
+    assert encoded.isascii() and b"</script>" in encoded
+    assert json.loads(encoded)["summary"]["scopes"][0]["name"] == name
+    with pytest.raises(ValueError):
+        encode_report({**report, "configuration": {"pad": "x" * (1 << 20)}})
