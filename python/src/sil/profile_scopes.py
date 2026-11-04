@@ -53,8 +53,9 @@ from sil.source_scope_report import (
 SESSION_VARIABLE = "SIL_SOURCE_SCOPE_SESSION"
 MAX_SCOPE_RECORDS = 65536
 MAX_ACTIVATION_BYTES = 64 << 20
-OBSERVER = {"soname": OBSERVER_SONAME, "symbol_prefix": "sil_source_scope_v1_",
-            "raw_version": VERSION}
+# The observer ABI that wrote the raw file: soname, symbol version and raw
+# file version.
+OBSERVER_VERSION = f"{OBSERVER_SONAME} sil_source_scope_v1 raw {VERSION}"
 
 
 @dataclass(frozen=True)
@@ -338,7 +339,8 @@ def build_report(request: ScopesRequest, layout: ScopesLayout, cwd: Path,
         configuration=_configuration(request, found, cwd),
         run=run_record(capture_run), capture=capture,
         identities={"instrumented": found.scan.identity,
-                    "original": found.original, "observer": OBSERVER,
+                    "original": found.original,
+                    "observer_version": OBSERVER_VERSION,
                     "compiler": found.scan.compiler},
         artifacts=artifact_rows(request.target, cwd, _files(layout)),
         missing=_missing(request, layout, cwd),
