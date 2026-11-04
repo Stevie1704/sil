@@ -58,7 +58,8 @@ def analyze(document: dict) -> dict:
             prev, nxt, cpu = e["prev_pid"], e["next_pid"], e["cpu"]
             expected = cpu_current.get(cpu)
             if expected is not None and expected != prev:
-                reasons.add("missing_switch")
+                if expected in live or prev in live:
+                    reasons.add("missing_switch")
                 if expected in live:
                     change(live[expected], at, "unknown", invalidate=True)
             if prev in live:

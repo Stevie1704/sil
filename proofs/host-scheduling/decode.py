@@ -63,6 +63,12 @@ def prepare(out: Path, result: dict, namespace: list[int]):
                 and len(re.findall(r"clockid\s*:\s*1\b", attributes)) == 6
                 and len(re.findall(r"use_clockid\s*:\s*1\b", attributes)) == 6)
     events, unparsed = parse_events(out / "events.txt")
+    descendants = {header.get("runner_pid")}
+    for event in events:
+        if event["event"] == "fork" and event["parent_pid"] in descendants:
+            descendants.add(event["child_pid"])
+    events = [event for event in events if event["event"] != "fork"
+              or event["child_pid"] in descendants]
     warnings = "\n".join(lines(out / "events-errors.txt"))
     stats = "\n".join(lines(out / "stats.txt"))
     loss_sources = []
@@ -83,10 +89,25 @@ def prepare(out: Path, result: dict, namespace: list[int]):
                        and m["participant"] == row["participant"]
                        and m["index"] == row["index"]), None)
         if marker:
+            ends = [m for m in markers if m["phase"] == "step" and m["edge"] == "end"
+                    and m["participant"] == marker["participant"] and m["index"] == marker["index"]]
+            # Independent direct-syscall markers must sit inside actual runner
+            # intervals on the same clock. Mere CLOCK_MONOTONIC labels are insufficient.
+            if not (int(row["begin_ns"]) <= marker["host_ns"] <= int(row["end_ns"])):
+                clock_ok = False
+            if ends and not (marker["host_ns"] <= ends[0]["host_ns"] <= int(row["end_ns"])):
+                clock_ok = False
+            spawns = [r for r in observations if r.get("kind") == "spawn"
+                      and r["participant"] == marker["participant"] and r["pid"] == marker["pid"]]
+            if len(spawns) != 1 or not any(e["event"] == "fork" and e["child_pid"] == marker["tid"]
+                    and e["parent_pid"] == header.get("runner_pid")
+                    and int(spawns[0]["at_ns"]) <= e["time_ns"] <= marker["host_ns"] for e in events):
+                namespace_ok = False
             windows.append({"kind": "step", "participant": row["participant"],
                 "index": row["index"], "virtual_ns": row["virtual_time_ns"],
                 "tid": marker["tid"], "begin_ns": int(row["begin_ns"]),
                 "end_ns": int(row["end_ns"]), "outcome": row["outcome"]})
+    steps = list(windows)
     for marker in markers:
         if marker["edge"] != "end" or marker["phase"] in ("step", "lifetime"):
             continue
@@ -95,6 +116,13 @@ def prepare(out: Path, result: dict, namespace: list[int]):
             "participant": marker["participant"], "index": marker["index"],
             "virtual_ns": marker["virtual_ns"], "tid": marker["tid"],
             "begin_ns": start["host_ns"], "end_ns": marker["host_ns"], "outcome": "fixture_closed"})
+        if marker["phase"] in ("background", "wait_child", "competitor"):
+            for step in steps:
+                begin = max(step["begin_ns"], start["host_ns"])
+                end = min(step["end_ns"], marker["host_ns"])
+                if begin < end and step["participant"] == marker["participant"]:
+                    windows.append({**step, "kind": "worker_window_association", "phase": marker["phase"],
+                                    "tid": marker["tid"], "begin_ns": begin, "end_ns": end})
     for marker in markers:
         if marker["phase"] == "step" and marker["edge"] == "begin" and not any(
                 w["kind"] == "step" and w["participant"] == marker["participant"]

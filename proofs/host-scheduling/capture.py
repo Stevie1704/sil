@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+from contextlib import ExitStack
 from pathlib import Path
 import resource
 import select
@@ -20,11 +21,13 @@ def limits():
     resource.setrlimit(resource.RLIMIT_FSIZE, (FILE_BYTES, FILE_BYTES))
 
 
-def command(argv, out: Path, *, timeout=120):
+def command(argv, out: Path, *, timeout=120, stderr: Path | None = None):
     start = time.monotonic_ns()
-    with out.open("wb") as log:
+    with ExitStack() as stack:
+        log = stack.enter_context(out.open("wb"))
+        errors = stack.enter_context(stderr.open("wb")) if stderr else subprocess.STDOUT
         process = subprocess.Popen(list(map(str, argv)), stdout=log,
-            stderr=subprocess.STDOUT, start_new_session=True, preexec_fn=limits)
+            stderr=errors, start_new_session=True, preexec_fn=limits)
         try:
             process.wait(timeout=timeout)
         except BaseException:
@@ -61,9 +64,23 @@ class Perf:
         self.commands.append(row)
         try:
             os.write(self.control, (name + "\n").encode())
-            if select.select([self.ack], [], [], 5)[0] and os.read(self.ack, 64).strip() == b"ack":
-                row["ack_ns"] = time.monotonic_ns()
-                return True
+            buffer = b""
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                if not select.select([self.ack], [], [], max(0, deadline - time.monotonic()))[0]:
+                    break
+                chunk = os.read(self.ack, 64 - len(buffer))
+                if not chunk:
+                    break
+                buffer += chunk
+                if b"\0" in buffer or b"\n" in buffer:
+                    row["response_hex"] = buffer.hex()
+                    if buffer.strip(b"\0\n") == b"ack":
+                        row["ack_ns"] = time.monotonic_ns()
+                        return True
+                    break
+                if len(buffer) >= 64:
+                    break
         except BrokenPipeError:
             pass
         return False

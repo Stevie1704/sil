@@ -71,24 +71,24 @@ jobs:
             sil-scheduler-proof .venv/bin/python proofs/host-scheduling/qualify.py run \
             "$PWD/build/scheduler-work" --out "$PWD/build/scheduler-evidence/container-default" \
             --environment container-default --initial-pid-namespace "$initial_ns"
-      - name: Explicit isolated tracefs/root and documented container capability experiments
-        # This mount exists only in this private mount namespace. No sysctl or
-        # host mount is changed. Original-policy failures above stay unavailable.
+      - name: Documented PERFMON, host-PID and read-only tracefs container experiment
+        # Original-policy failures above stay unavailable. This explicitly
+        # grants only the experiment container access to existing host tracefs.
         run: |
-          sudo env SIL_SOURCE_REVISION="$SIL_SOURCE_REVISION" unshare --mount --propagation private \
-            bash -euo pipefail <<'SH'
-          mount -t tracefs tracefs /sys/kernel/tracing
           initial_ns=$(cat build/scheduler-evidence/initial-pid-namespace.txt)
-          .venv/bin/python proofs/host-scheduling/qualify.py run "$PWD/build/scheduler-work" \
-            --out "$PWD/build/scheduler-evidence/native-root-isolated-tracefs" \
-            --environment native-root-isolated-tracefs --initial-pid-namespace "$initial_ns"
           docker run --rm --pid=host --cap-add PERFMON --security-opt seccomp=unconfined \
             -e SIL_SOURCE_REVISION -v "$PWD:$PWD" -w "$PWD" \
-            -v "/proc/$$/root/sys/kernel/tracing:/sys/kernel/tracing:ro" \
+            --mount type=bind,src=/sys/kernel/tracing,dst=/sys/kernel/tracing,readonly \
             sil-scheduler-proof .venv/bin/python proofs/host-scheduling/qualify.py run \
             "$PWD/build/scheduler-work" --out "$PWD/build/scheduler-evidence/container-perfmon-hostpid" \
             --environment container-perfmon-hostpid-tracefs --initial-pid-namespace "$initial_ns"
-          SH
+      - name: Replay saved evidence and validate actual phase interpretations
+        run: |
+          for environment in build/scheduler-evidence/*/; do
+            if [ -f "$environment/results.json" ]; then
+              .venv/bin/python proofs/host-scheduling/validate.py "$environment"
+            fi
+          done
       - name: Verify policy unchanged and retain exact experiment sources
         if: always()
         run: |

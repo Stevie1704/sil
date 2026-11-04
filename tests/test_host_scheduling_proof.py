@@ -92,3 +92,15 @@ def test_failed_and_unclosed_steps_never_enter_completed_statistics(tmp_path):
                     windows=windows)
     assert result["completed_steps"] == 0
     assert result["windows"][1]["states_ns"] is None
+
+
+def test_child_cpu_during_parent_sleep_is_kept_as_window_association(tmp_path):
+    windows = [{"participant": "slow", "index": 0, "virtual_ns": 0, "tid": tid,
+                "begin_ns": 10, "end_ns": 60, "outcome": "completed", "kind": kind}
+               for tid, kind in ((7, "step"), (8, "worker_window_association"))]
+    events = [fork(1), fork(2, 8), switch(10, 0, 7),
+              switch(20, 7, 8), wake(50), switch(60, 8, 7)]
+    result = report(tmp_path, events, windows=windows)
+    assert result["completed_steps"] == 1
+    assert result["windows"][0]["states_ns"]["sleeping"] == 30
+    assert result["windows"][1]["states_ns"]["running"] == 40

@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import platform
 import signal
+import shutil
 import subprocess
 import sys
 import time
@@ -125,11 +126,12 @@ def execute(work, out, mode, observed, fault):
                 except subprocess.TimeoutExpired:
                     os.killpg(process.pid, signal.SIGKILL)
             process.wait()
+            run_end = time.monotonic_ns()
             if perf and not collector_stopped:
                 perf.process.send_signal(signal.SIGCONT) if perf.process.poll() is None else None
                 result["collector"] = perf.finish()
     result["run"] = {"argv": argv, "exit_code": process.returncode, "stopped": stopped,
-                     "wall_ns": time.monotonic_ns() - start}
+                     "wall_ns": run_end - start}
     result["availability"] = "available" if perf else "not_requested"
     if (out / "run.mcap").exists():
         result["recording_sha256"] = digest(out / "run.mcap")
@@ -144,12 +146,7 @@ def export(out, result):
         result["injected_truncation"] = True
     exports = {}
     exports["events"] = command(["perf", "script", "--ns", "-i", raw,
-        "-F", "cpu,time,event,trace"], out / "events-combined.txt")
-    # perf script diagnostics are kept separately to avoid mistaking warnings for events.
-    combined = (out / "events-combined.txt").read_text()
-    from decode import LINE
-    (out / "events.txt").write_text("\n".join(line for line in combined.splitlines() if LINE.search(line)) + "\n")
-    (out / "events-errors.txt").write_text("\n".join(line for line in combined.splitlines() if not LINE.search(line)) + "\n")
+        "-F", "cpu,time,event,trace"], out / "events.txt", stderr=out / "events-errors.txt")
     exports["attributes"] = command(["perf", "evlist", "-v", "-i", raw], out / "attributes.txt")
     exports["stats"] = command(["perf", "script", "-D", "-i", raw], out / "stats.txt")
     result["exports"] = exports
@@ -174,6 +171,11 @@ def run(work, out, environment, initial_namespace):
         ["dpkg-query", "-W"], ["readelf", "-n", work / "workload.so"]))]
     facts["binaries"] = {str(p): digest(p) for p in (
         work / "workload.so", work / "exec-helper", work / "build/sil-run", work / "build/sil-run-diagnostics")}
+    tools = [Path(found).resolve() for name in ("perf", "cc") if (found := shutil.which(name))]
+    tools += list(Path("/usr/lib").glob("linux-tools*/**/perf"))
+    facts["tool_binaries"] = {str(p): digest(p) for p in tools if p.is_file()}
+    facts["sources"] = {p.name: digest(p) for p in HERE.iterdir() if p.is_file()}
+    facts["boot_id"] = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
     formats = out / "event-formats"
     formats.mkdir()
     from capture import EVENTS
@@ -203,6 +205,7 @@ def run(work, out, environment, initial_namespace):
             rows.append(result)
             write(out / "results.json", rows)
             if result["availability"] == "unavailable":
+                seal(out)
                 return
     for row in rows:
         if row["mode"] == "unclosed":
@@ -211,6 +214,10 @@ def run(work, out, environment, initial_namespace):
             baseline = next(r for r in rows if not r["observed"] and r["mode"] == row["mode"])
             assert row["run"]["exit_code"] == baseline["run"]["exit_code"] == (1 if row["mode"] == "failure" else 0)
             assert row["recording_sha256"] == baseline["recording_sha256"]
+    seal(out)
+
+
+def seal(out):
     write(out / "integrity.json", {str(p.relative_to(out)): digest(p) for p in sorted(out.rglob("*")) if p.is_file()})
 
 
