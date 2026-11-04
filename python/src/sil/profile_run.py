@@ -55,6 +55,7 @@ from sil.profile_scopes import MAX_SCOPE_RECORDS, ScopesRequest
 from sil.profile_report import HOTSPOT_LIMIT, validate_profile_report
 from sil.profile_storage import reserve_reached, space_warning
 from sil.profile_summary import format_summary
+from sil.source_scope_decode import MAX_RECORDS
 
 EVENT = "cpu-clock:u"
 FREQUENCY_HZ = 999
@@ -228,7 +229,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-scope-records", type=_positive,
                         action=GivenOnce, metavar="N",
                         help=f"scopes: the observer buffer in 16-byte "
-                             f"records, at most {SCOPE_RECORD_LIMIT} "
+                             f"records, at most {MAX_RECORDS} "
                              f"(default {MAX_SCOPE_RECORDS})")
     return parser
 
@@ -240,7 +241,6 @@ SCOPES_ONLY = ("original_library", "max_scope_records")
 NOT_FOR_SCOPES = ("frequency_hz", "stack_bytes", "modules_from",
                   "activations", "runner", "max_capture_bytes",
                   "symbolization_timeout_s")
-SCOPE_RECORD_LIMIT = 262144
 
 
 def request_from_arguments(
@@ -249,10 +249,8 @@ def request_from_arguments(
     args = parser.parse_args(argv)
     if args.collector == "scopes":
         return _scopes_request(parser, args)
-    for name in SCOPES_ONLY:
-        if getattr(args, name) is not None:
-            option = "--" + name.replace("_", "-")
-            parser.error(f"{option} is an option of the scopes collector")
+    _reject(parser, args, SCOPES_ONLY, "{} is an option of the scopes "
+            "collector")
     if args.collector == "heap":
         return _heap_request(parser, args)
     if args.collector != "cpu":
@@ -279,6 +277,15 @@ def request_from_arguments(
         args.max_activation_bytes or MAX_ACTIVATION_BYTES)
 
 
+def _reject(parser: argparse.ArgumentParser, args, names: tuple[str, ...],
+            message: str) -> None:
+    """A usage error for the first given option of `names`; `message`
+    names it at `{}`."""
+    for name in names:
+        if getattr(args, name):
+            parser.error(message.format("--" + name.replace("_", "-")))
+
+
 def _target(args, recording: Path | None,
             provenance: Path | None) -> RunTarget:
     return RunTarget(args.manifest, args.out, recording, provenance,
@@ -297,18 +304,15 @@ def _outputs(args) -> tuple[Path | None, Path | None]:
 
 
 def _scopes_request(parser: argparse.ArgumentParser, args) -> ScopesRequest:
-    for name in NOT_FOR_SCOPES:
-        if getattr(args, name):
-            option = "--" + name.replace("_", "-")
-            parser.error(f"{option} is not an option of the scopes "
-                         "collector")
+    _reject(parser, args, NOT_FOR_SCOPES, "{} is not an option of the "
+            "scopes collector")
     if args.participant is None:
         parser.error("--collector scopes needs --participant NAME: the "
                      "Native participant whose library has source scopes")
     records = args.max_scope_records or MAX_SCOPE_RECORDS
-    if records > SCOPE_RECORD_LIMIT:
+    if records > MAX_RECORDS:
         parser.error(f"--max-scope-records {records} is above "
-                     f"{SCOPE_RECORD_LIMIT}")
+                     f"{MAX_RECORDS}")
     try:
         recording, provenance = _outputs(args)
     except ValueError as error:
@@ -324,10 +328,7 @@ def _heap_request(parser: argparse.ArgumentParser, args) -> HeapRequest:
         parser.error("Activation correlation is unavailable for the heap "
                      "collector: Heaptrack's timestamps have no validated "
                      "mapping to host time (docs/profile-report.md)")
-    for name in CPU_ONLY:
-        if getattr(args, name):
-            option = "--" + name.replace("_", "-")
-            parser.error(f"{option} is an option of the cpu collector")
+    _reject(parser, args, CPU_ONLY, "{} is an option of the cpu collector")
     if args.runner and args.participant is not None:
         parser.error("--runner and --participant exclude each other")
     if not args.runner and args.participant is None:

@@ -23,8 +23,10 @@ from sil.diagnostics_shape import (
 )
 from sil.profile_navigation import check_selection, selected, selection_label
 from sil.profile_set import ProfileSetError, _decimal, _read_bounded
+from sil.recording import MCAP_MAGIC
 from sil.source_scope_decode import (
-    ACTIVATION_REASONS, CALLS_KEY, MAGIC, MAP_KEY, OBSERVATIONS_KEY,
+    ACTIVATION_REASONS, CALLS_KEY, LOSS_KEYS, MAGIC, MAP_KEY,
+    OBSERVATIONS_KEY,
 )
 from sil.source_scope_report import REPORT_KEY
 
@@ -33,7 +35,6 @@ MAP_PATH = "scopes/map.json"
 EVENTS_PATH = "scopes/events.bin"
 OBSERVATIONS_PATH = "activation/observations.jsonl"
 DIAGNOSTICS_PATH = "run.diagnostics.json"
-MCAP_MAGIC = b"\x89MCAP0\r\n"
 CAPTURE_STATUSES = ("complete", "partial", "failed", "interrupted")
 HASH_CHUNK = 1 << 20
 
@@ -69,8 +70,7 @@ REPORT = members({
     "capture": members({
         "status": one_of(CAPTURE_STATUSES), "reasons": items(TEXT),
         "capture_id": maybe(TEXT), "records": maybe(COUNT),
-        "loss": maybe(members({key: COUNT for key in (
-            "dropped_full", "dropped_contended", "clock_errors")}))}),
+        "loss": maybe(members({key: COUNT for key in LOSS_KEYS}))}),
     "identities": members({}, {"instrumented": maybe(LIBRARY),
                                "original": maybe(LIBRARY)}),
     "artifacts": items(members({"role": TEXT, "path": TEXT, "bytes": COUNT,

@@ -11,6 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from sil.profile_summary import _clean
+from sil.source_scope_decode import LOSS_KEYS
 from sil.source_scope_report import LIMITATIONS
 from sil.source_scope_set import ScopeSet
 
@@ -52,9 +53,7 @@ def _loss_line(capture: dict) -> str:
     loss = capture["loss"]
     if loss is None:
         return "loss: unknown (the raw header could not be read)"
-    return ("loss: " + ", ".join(f"{key} {loss[key]}" for key in
-                                 ("dropped_full", "dropped_contended",
-                                  "clock_errors")))
+    return "loss: " + ", ".join(f"{key} {loss[key]}" for key in LOSS_KEYS)
 
 
 def _known(value) -> str:

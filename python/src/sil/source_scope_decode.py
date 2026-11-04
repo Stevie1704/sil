@@ -35,9 +35,8 @@ MAX_ROWS = 1000
 # The first that applies is an unavailable Activation's reason.
 ACTIVATION_REASONS = ("observations_incomplete", "events_lost",
                       "not_completed", "unbalanced_scopes", "crossing_call")
-FAILURE_REASONS = ("observer_unavailable", "raw_incomplete", "raw_invalid",
-                   "capture_mismatch", "identity_mismatch",
-                   "clock_unverified", "map_invalid", "normalized_limit")
+# The loss counters of the raw header: each counts dropped events.
+LOSS_KEYS = ("dropped_full", "dropped_contended", "clock_errors")
 
 
 class CaptureFailed(Exception):
@@ -64,8 +63,12 @@ class RawHeader:
     build_id: str
 
     @property
+    def loss(self) -> dict[str, int]:
+        return {key: getattr(self, key) for key in LOSS_KEYS}
+
+    @property
     def lost(self) -> int:
-        return self.dropped_full + self.dropped_contended + self.clock_errors
+        return sum(self.loss.values())
 
 
 def read_header(events: bytes) -> RawHeader:

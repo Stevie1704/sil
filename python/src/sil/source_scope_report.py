@@ -91,9 +91,7 @@ def capture_record(events: bytes | None, calls: dict | None, *,
     return {
         "status": status, "reasons": reasons,
         "capture_id": header.capture_id if header else None,
-        "loss": {"dropped_full": header.dropped_full,
-                 "dropped_contended": header.dropped_contended,
-                 "clock_errors": header.clock_errors} if header else None,
+        "loss": header.loss if header else None,
         "records": header.records if header else None}
 
 

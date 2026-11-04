@@ -38,6 +38,7 @@ from sil.profile_common import (
     resolve_exit, run_record,
 )
 from sil.profile_storage import RESERVE_BYTES, free_bytes
+from sil.recording import MCAP_MAGIC
 from sil.source_scope_decode import (
     CREATED, HEADER, MAGIC, MAX_RECORDS, RECORD, VERSION, CaptureFailed,
     decode,
@@ -54,7 +55,6 @@ from sil.source_scope_report import (
 SESSION_VARIABLE = "SIL_SOURCE_SCOPE_SESSION"
 MAX_SCOPE_RECORDS = 65536
 MAX_ACTIVATION_BYTES = 64 << 20
-MCAP_MAGIC = b"\x89MCAP0\r\n"
 # The observer ABI that wrote the raw file: soname, symbol version and raw
 # file version.
 OBSERVER_VERSION = f"{OBSERVER_SONAME} sil_source_scope_v1 raw {VERSION}"
