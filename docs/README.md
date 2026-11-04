@@ -53,7 +53,10 @@ agent.
   Record new architectural decisions here; consult the applicable ADR and its
   status when an older design statement differs. The
   [live observation and Run control](adr/0005-live-observation-and-run-control.md)
-  ADR is proposed, not accepted.
+  ADR is proposed, not accepted. The
+  [source-owned Native scopes](adr/0007-source-owned-native-scope-observer.md)
+  ADR accepts the [source-scope contract](proposals/native-source-scopes.md)
+  (#360); its implementation is pending.
 - [docs/decisions/](decisions/) retains the historical
   [consumer capability gate](decisions/118-consumer-capability-gate.md) and
   the scoped [Native ADAS reference decision](decisions/222-native-adas-reference.md),

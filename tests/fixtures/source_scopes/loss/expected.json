@@ -1,0 +1,16 @@
+{
+  "sil_source_scope_calls": 1,
+  "capture_id": "6c1f8e0a-2b7d-4f3e-9a51-0d2c4b6e8f10",
+  "participant": "adas",
+  "status": "partial",
+  "problems": ["events_lost"],
+  "totals": {"entries": 1, "returns": 1, "paired_calls": 1, "attributed_calls": 0,
+             "withheld_calls": 1, "unattributed": 0},
+  "activations": [
+    {"participant": "adas", "task": "control", "index": 0, "virtual_time_ns": 0,
+     "begin_ns": "5000", "end_ns": "5100", "outcome": "completed",
+     "status": "unavailable", "reason": "events_lost", "withheld_calls": 1,
+     "calls": [], "counts": null}
+  ],
+  "unattributed": {"reasons": {}, "rows": [], "rows_remainder": 0}
+}

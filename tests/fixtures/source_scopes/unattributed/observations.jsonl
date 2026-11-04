@@ -1,0 +1,5 @@
+{"sil_activation_observations": 1, "clock": "host_monotonic", "runner_pid": 42, "runner_tid": 42, "limit_bytes": 67108864, "pid_namespace": {"device": 4, "inode": 4026531836}}
+{"kind": "activation", "participant": "adas", "task": "control", "task_kind": "native_task", "index": 0, "virtual_time_ns": 0, "begin_ns": "3000", "end_ns": "3100", "outcome": "completed", "tid": 42}
+{"kind": "activation", "participant": "adas", "task": "control", "task_kind": "native_task", "index": 1, "virtual_time_ns": 10000000, "begin_ns": "3100", "end_ns": "3200", "outcome": "failed", "tid": 42}
+{"kind": "activation", "participant": "other", "task": "plan", "task_kind": "native_task", "index": 0, "virtual_time_ns": 10000000, "begin_ns": "3200", "end_ns": "3300", "outcome": "completed", "tid": 42}
+{"kind": "end", "records": 3, "dropped": 0, "truncated": false, "write_failed": false, "bytes": 600}

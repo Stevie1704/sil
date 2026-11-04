@@ -1,0 +1,30 @@
+{
+  "sil_source_scope_raw": 1,
+  "observer": {
+    "name": "libsil_source_scope",
+    "version": 1
+  },
+  "capture_id": "6c1f8e0a-2b7d-4f3e-9a51-0d2c4b6e8f10",
+  "pid": 42,
+  "pid_namespace": {
+    "device": 4,
+    "inode": 4026531836
+  },
+  "clock": "host_monotonic",
+  "clock_bracket_ns": [
+    "900",
+    "901",
+    "902"
+  ],
+  "clock_errors": 0,
+  "library": {
+    "build_id": "5f1c2a9e0b7d4c3a8e6f1a2b3c4d5e6f70819203",
+    "path": "/work/build-scopes/libadas_reference.so"
+  },
+  "capacity_records": 65536,
+  "records": 6,
+  "dropped_full": 0,
+  "dropped_contended": 0,
+  "bytes_written": 160,
+  "write_status": "complete"
+}

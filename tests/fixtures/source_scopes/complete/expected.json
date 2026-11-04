@@ -1,0 +1,29 @@
+{
+  "sil_source_scope_calls": 1,
+  "capture_id": "6c1f8e0a-2b7d-4f3e-9a51-0d2c4b6e8f10",
+  "participant": "adas",
+  "status": "complete",
+  "problems": [],
+  "totals": {"entries": 5, "returns": 5, "paired_calls": 5, "attributed_calls": 5,
+             "withheld_calls": 0, "unattributed": 0},
+  "activations": [
+    {"participant": "adas", "task": "control", "index": 0, "virtual_time_ns": 0,
+     "begin_ns": "1000", "end_ns": "1100", "outcome": "completed",
+     "status": "exact", "reason": null, "withheld_calls": 0,
+     "calls": [
+       {"scope": 4, "depth": 0, "parent": null, "entry_ns": "1000", "return_ns": "1090", "elapsed_ns": "90"},
+       {"scope": 2, "depth": 1, "parent": 0, "entry_ns": "1010", "return_ns": "1040", "elapsed_ns": "30"},
+       {"scope": 3, "depth": 2, "parent": 1, "entry_ns": "1020", "return_ns": "1030", "elapsed_ns": "10"}
+     ],
+     "counts": {"2": 1, "3": 1, "4": 1}},
+    {"participant": "adas", "task": "control", "index": 1, "virtual_time_ns": 10000000,
+     "begin_ns": "1100", "end_ns": "1200", "outcome": "completed",
+     "status": "exact", "reason": null, "withheld_calls": 0,
+     "calls": [
+       {"scope": 1, "depth": 0, "parent": null, "entry_ns": "1100", "return_ns": "1150", "elapsed_ns": "50"},
+       {"scope": 1, "depth": 0, "parent": null, "entry_ns": "1160", "return_ns": "1170", "elapsed_ns": "10"}
+     ],
+     "counts": {"1": 2}}
+  ],
+  "unattributed": {"reasons": {}, "rows": [], "rows_remainder": 0}
+}

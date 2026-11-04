@@ -1,0 +1,21 @@
+{
+  "sil_source_scope_calls": 1,
+  "capture_id": "6c1f8e0a-2b7d-4f3e-9a51-0d2c4b6e8f10",
+  "participant": "adas",
+  "status": "complete",
+  "problems": [],
+  "totals": {"entries": 3, "returns": 3, "paired_calls": 3, "attributed_calls": 3,
+             "withheld_calls": 0, "unattributed": 0},
+  "activations": [
+    {"participant": "adas", "task": "control", "index": 0, "virtual_time_ns": 0,
+     "begin_ns": "2000", "end_ns": "2100", "outcome": "completed",
+     "status": "exact", "reason": null, "withheld_calls": 0,
+     "calls": [
+       {"scope": 5, "depth": 0, "parent": null, "entry_ns": "2000", "return_ns": "2050", "elapsed_ns": "50"},
+       {"scope": 5, "depth": 1, "parent": 0, "entry_ns": "2010", "return_ns": "2040", "elapsed_ns": "30"},
+       {"scope": 5, "depth": 2, "parent": 1, "entry_ns": "2020", "return_ns": "2030", "elapsed_ns": "10"}
+     ],
+     "counts": {"5": 3}}
+  ],
+  "unattributed": {"reasons": {}, "rows": [], "rows_remainder": 0}
+}
