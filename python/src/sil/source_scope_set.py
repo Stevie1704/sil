@@ -22,7 +22,7 @@ from sil.diagnostics_shape import (
     shape_errors,
 )
 from sil.profile_navigation import check_selection, selected, selection_label
-from sil.profile_set import ProfileSetError, _decimal, _read_bounded
+from sil.profile_set import ProfileSetError, decimal_text, read_bounded
 from sil.recording import MCAP_MAGIC
 from sil.source_scope_decode import (
     ACTIVATION_REASONS, CALLS_KEY, LOSS_KEYS, MAGIC, MAP_KEY,
@@ -91,11 +91,11 @@ SCOPE_MAP = members({
     "scopes": items(members({"id": COUNT, "name": TEXT, "sites": items(
         members({"file": TEXT, "line": COUNT}))}))})
 CALL = members({"scope": COUNT, "depth": COUNT, "parent": maybe(COUNT),
-                "entry_ns": _decimal, "return_ns": _decimal,
-                "elapsed_ns": _decimal})
+                "entry_ns": decimal_text, "return_ns": decimal_text,
+                "elapsed_ns": decimal_text})
 ACTIVATION = members({
     "participant": TEXT, "task": TEXT, "index": COUNT,
-    "virtual_time_ns": INTEGER, "begin_ns": _decimal, "end_ns": _decimal,
+    "virtual_time_ns": INTEGER, "begin_ns": decimal_text, "end_ns": decimal_text,
     "outcome": TEXT, "status": one_of(("exact", "unavailable")),
     "reason": maybe(one_of(ACTIVATION_REASONS)), "withheld_calls": COUNT,
     "calls": items(CALL), "counts": maybe(_counts)})
@@ -109,8 +109,8 @@ CALLS = members({
     "unattributed": members({
         "reasons": _counts, "rows_remainder": COUNT,
         "rows": items(members({"scope": COUNT, "tid": COUNT,
-                               "entry_ns": maybe(_decimal),
-                               "return_ns": maybe(_decimal),
+                               "entry_ns": maybe(decimal_text),
+                               "return_ns": maybe(decimal_text),
                                "reason": TEXT}))})})
 
 
@@ -141,7 +141,7 @@ def _versioned(document: Any, key: str, shape: Shape | None,
 def is_scope_report(path: Path) -> bool:
     """True when `path` holds a document with the scope report's key."""
     try:
-        document = _json(_read_bounded(Path(path), str(path)), str(path))
+        document = _json(read_bounded(Path(path), str(path)), str(path))
     except (OSError, ProfileSetError):
         return False
     return isinstance(document, dict) and REPORT_KEY in document
@@ -151,7 +151,7 @@ def load_scope_set(path: Path) -> ScopeSet:
     """Read and check `scopes.json` and every artifact it lists."""
     path = Path(path)
     try:
-        data = _read_bounded(path, str(path))
+        data = read_bounded(path, str(path))
     except OSError as error:
         raise ProfileSetError(f"cannot read '{path}': {error}") from error
     report = _versioned(_json(data, str(path)), REPORT_KEY, REPORT,
@@ -212,7 +212,7 @@ def _check_artifact(directory: Path, artifact: dict) -> dict | None:
                 raise ProfileSetError(f"'{name}' is not an MCAP Recording")
         return None
     try:
-        data = _read_bounded(path, name)
+        data = read_bounded(path, name)
     except OSError as error:
         raise ProfileSetError(f"scopes.json lists '{name}', which cannot be "
                               f"read ({error})") from error

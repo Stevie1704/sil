@@ -7,7 +7,7 @@ from pathlib import Path
 
 from sil.diagnostics_html_markup import Html, code, join, section, table, tag, void
 from sil.diagnostics_report import ReportError, parse_report
-from sil.profile_set import ProfileSet, ProfileSetError, _read_bounded
+from sil.profile_set import ProfileSet, ProfileSetError, read_bounded
 
 NAVIGATION_LIMIT = 200_000
 PAGE_SIZE = 100
@@ -78,7 +78,7 @@ def with_diagnostics(profile: ProfileSet, path: Path | None) -> ProfileSet:
     if artifact is None:
         raise ProfileSetError('profile has no diagnostics artifact identity to verify')
     try:
-        data = _read_bounded(path, str(path))
+        data = read_bounded(path, str(path))
         if artifact['bytes'] != len(data) or artifact['sha256'] != hashlib.sha256(data).hexdigest():
             raise ProfileSetError('diagnostics size/SHA-256 does not match this profile Run')
         diagnostics = parse_report(data.decode('utf-8'), source=str(path))
