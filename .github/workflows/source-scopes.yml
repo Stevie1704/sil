@@ -89,6 +89,7 @@ jobs:
             tests/test_source_scope_header.py \
             tests/test_source_scope_contract.py \
             tests/test_source_scope_decoding.py \
+            tests/test_source_scope_render.py \
             tests/test_diagnostics_launcher.py tests/test_profile_run.py \
             -v -rs --junitxml "$EVIDENCE/tests.xml" | tee "$EVIDENCE/tests.txt"
 

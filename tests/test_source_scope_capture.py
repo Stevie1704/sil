@@ -626,3 +626,22 @@ def test_the_library_is_dormant_in_a_cpu_profile(scenarios, tmp_path, tools,
                           cwd=tmp_path, env=environment)
     assert done.returncode == code == 0, done.stderr
     assert (tmp_path / "cpu" / "run.mcap").read_bytes() == recording
+
+
+@needs_capture
+@pytest.mark.parametrize("scenario, code", [("plain", 0), ("longjmp", 1),
+                                            ("kill", 137)])
+def test_sil_profile_render_presents_a_saved_capture(tools, scenarios,
+                                                     tmp_path, scenario,
+                                                     code):
+    """The renderer (#373) verifies and presents what the capture wrote:
+    complete, partial, and failed without a diagnostics report."""
+    proc = capture(scenario_manifest(tmp_path, scenario), tools, tmp_path)
+    assert proc.returncode == code, proc.stderr
+    report, _ = saved(tmp_path / "scopes")
+    shown = sil(["render", "scopes/scopes.json", "--html", "scopes.html"],
+                tools, tmp_path)
+    assert shown.returncode == 0, shown.stderr
+    assert f"capture: {report['capture']['status']}" in shown.stdout or \
+        report["capture"]["status"] in shown.stdout
+    assert (tmp_path / "scopes.html").stat().st_size > 0
