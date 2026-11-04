@@ -76,18 +76,34 @@ def test_without_the_opt_in_a_scope_is_no_code_and_no_data(tmp_path):
         compile_object(without_scopes(SOURCE), tmp_path)
 
 
+def two_builds(tmp_path: Path, *flags: str) -> tuple[Path, Path]:
+    """The library with the scope lines and the one with blank lines."""
+    paths = []
+    for name, source in (("with", SOURCE),
+                         ("without", without_scopes(SOURCE))):
+        built = compile_library(source, tmp_path, "-Wl,--build-id=sha1",
+                                *flags)
+        assert built.returncode == 0, built.stderr
+        paths.append((tmp_path / "libscoped.so").rename(
+            tmp_path / f"{name}.so"))
+    return paths[0], paths[1]
+
+
 @needs_elf
 def test_without_the_opt_in_the_library_has_the_same_bytes(tmp_path):
-    # The GCC build that the contract qualifies, with debug data.
-    built = compile_library(SOURCE, tmp_path, "-Wl,--build-id=sha1")
-    assert built.returncode == 0, built.stderr
-    with_macro = (tmp_path / "libscoped.so").read_bytes()
-    (tmp_path / "with.so").write_bytes(with_macro)
-    built = compile_library(without_scopes(SOURCE), tmp_path,
-                            "-Wl,--build-id=sha1")
-    assert built.returncode == 0, built.stderr
-    assert (tmp_path / "libscoped.so").read_bytes() == with_macro, \
-        differing_sections(tmp_path / "with.so", tmp_path / "libscoped.so")
+    # GCC marks the start of each statement in the line table at -O2 -g, and
+    # a scope line is a statement even when it declares nothing.
+    with_scopes, without = two_builds(tmp_path, "-gno-statement-frontiers")
+    assert with_scopes.read_bytes() == without.read_bytes(), \
+        differing_sections(with_scopes, without)
+
+
+@needs_elf
+def test_with_statement_markers_only_the_line_table_differs(tmp_path):
+    with_scopes, without = two_builds(tmp_path)
+    # The build ID hashes the whole file, the line table included.
+    assert set(differing_sections(with_scopes, without)) <= {
+        ".debug_line", ".note.gnu.build-id"}
 
 
 def differing_sections(a: Path, b: Path) -> list[str]:
