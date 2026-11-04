@@ -144,11 +144,15 @@ def prepare(out: Path, result: dict, namespace: list[int]):
         if marker["phase"] == "step" and marker["edge"] == "begin" and not any(
                 w["kind"] == "step" and w["participant"] == marker["participant"]
                 and w["index"] == marker["index"] for w in windows):
+            fixture_closed = any(m["phase"] == "step" and m["edge"] == "end"
+                                 and m["participant"] == marker["participant"]
+                                 and m["index"] == marker["index"] for m in markers)
             windows.append({"kind": "step", "participant": marker["participant"],
                 "index": marker["index"], "virtual_ns": marker["virtual_ns"],
                 "tid": marker["tid"], "begin_ns": marker["host_ns"],
-                "end_ns": None, "outcome": "unclosed" if result["run"]["exit_code"] == -9 else "interval_absent",
-                "interval_source": "fixture_begin_only; runner interval absent"})
+                "end_ns": None, "outcome": "unclosed" if result["run"]["exit_code"] == -9
+                            and not fixture_closed else "interval_absent",
+                "interval_source": "fixture_work_only; runner interval absent"})
     document = {"clock": "host_monotonic" if clock_ok else "unknown",
         "namespace_verified": namespace_ok, "events": events, "windows": windows,
         "loss": bool(loss_sources), "truncated": (unparsed > 0 or any(
