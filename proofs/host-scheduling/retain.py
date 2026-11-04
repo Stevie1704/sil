@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 import tarfile
+
+from evidence import sha256
 
 
 def retain(source: Path, output: Path, run_url: str):
@@ -30,8 +31,7 @@ def retain(source: Path, output: Path, run_url: str):
         item = tarfile.TarInfo("retention.json")
         item.size = len(metadata)
         tar.addfile(item, io.BytesIO(metadata))
-    with archive.open("rb") as stream:
-        digest = hashlib.file_digest(stream, "sha256").hexdigest()
+    digest = sha256(archive)
     (output / "archive.sha256").write_text(f"{digest}  {archive.name}\n")
     print(json.dumps({"archive_bytes": archive.stat().st_size, "payload_bytes": sum(p.stat().st_size for p in files)}))
 

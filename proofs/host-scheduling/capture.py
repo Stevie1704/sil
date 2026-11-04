@@ -21,7 +21,7 @@ def limits():
     resource.setrlimit(resource.RLIMIT_FSIZE, (FILE_BYTES, FILE_BYTES))
 
 
-def command(argv, out: Path, *, timeout=120, stderr: Path | None = None):
+def run_bounded_tool(argv, out: Path, *, timeout=120, stderr: Path | None = None):
     start = time.monotonic_ns()
     with ExitStack() as stack:
         log = stack.enter_context(out.open("wb"))
