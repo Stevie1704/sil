@@ -133,6 +133,52 @@ use only the commands of this guide.
 [proofs/agent-investigation](../proofs/agent-investigation/README.md) shows
 these steps on four cases, with a real agent trial and checks of its claims.
 
+## Interpret saved measurements
+
+Use this workflow when the user supplies diagnostics, benchmark results or a
+profile and asks what they mean, where the cost lies or whether a change
+helped. Start with the saved evidence; collecting a new Run is a follow-up
+experiment when the question needs it.
+
+1. **Identify the evidence.** Read the JSON report's type and version:
+   `sil_run_diagnostics` or `sil_benchmark_report` uses `sil docs
+   diagnostics-report`; `sil_profile_report` uses `sil docs profile-report`.
+   Read "Measure a Run" or "Profile a Run" below for the metric meanings
+   and limits, starting at the report-reading step. If only terminal output
+   or HTML is available, explain the visible findings and identify the JSON
+   and referenced normalized files needed to verify or explore them.
+2. **Establish coverage.** Check the recorded Run outcome and measurement
+   completeness separately, including capture and correlation status for
+   profiles. Read unavailable reasons, collection loss, symbolization quality
+   and retained-data bounds where relevant. State which part of the question
+   the available evidence can answer; missing evidence stays unknown.
+3. **Explain the dominant measured costs.** Choose the metric that answers
+   the question: phases for Run wall time, Task/Step timing for slow
+   Activations, CPU self/inclusive hotspots for sampled work, or allocation
+   metrics for heap activity. Cite each finding's artifact and JSON member,
+   value, unit, measurement scope and denominator where applicable. Apply
+   the limits in the sections below before attributing a cost to a
+   Participant, function or allocation site. Distinguish an observed hotspot
+   from a hypothesis about why it is expensive.
+4. **Check comparisons before claiming improvement.** Inspect host/build
+   identities, Manifest, measurement configuration, scope and completeness
+   on both sides, and explain relevant differences. Read absolute values
+   alongside shares and their denominators: a smaller CPU share alone does
+   not establish a speedup. Use the repeated-Run context described below to
+   assess timing changes; one pair of profiles supplies no significance
+   verdict.
+5. **Choose the next discriminating measurement.** If an explanation remains
+   uncertain, state the competing hypotheses and propose a measurement for
+   which they predict different outcomes. For example, a slow Process Step
+   with little sampled CPU work leaves waiting and incomplete CPU sampling
+   as alternatives; inspect capture coverage before proposing another
+   capture. To test an optimization's effect on Run time, benchmark both
+   configurations under comparable conditions.
+6. **Report the answer.** Lead with the supported finding, give its evidence
+   and material limits, and separate hypotheses from conclusions. Finish
+   with the proposed experiment when needed, or state that the supplied
+   evidence answers the question.
+
 ## Measure a Run
 
 Use these steps when the user asks how fast a Run is, which Participant is
