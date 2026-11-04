@@ -1,0 +1,94 @@
+"""Independent examples at the #362 proof's offline report boundary."""
+import json
+from pathlib import Path
+import subprocess
+import sys
+
+import pytest
+
+
+REPORT = Path(__file__).resolve().parents[1] / "proofs/host-scheduling/report.py"
+
+
+def report(tmp_path, events, **changes):
+    document = {"clock": "host_monotonic", "namespace_verified": True,
+        "loss": False, "truncated": False,
+        "events": events,
+        "windows": [{"participant": "slow", "index": 0, "virtual_ns": 0,
+                     "tid": 7, "begin_ns": 10, "end_ns": 60,
+                     "outcome": "completed"}], **changes}
+    source = tmp_path / "input.json"
+    target = tmp_path / "report.json"
+    source.write_text(json.dumps(document))
+    result = subprocess.run([sys.executable, str(REPORT), str(source), str(target)],
+                            text=True, capture_output=True)
+    assert result.returncode == 0, result.stderr
+    return json.loads(target.read_text())
+
+
+def fork(t, child=7):
+    return {"time_ns": t, "cpu": 0, "event": "fork", "parent_pid": 1,
+            "child_pid": child}
+
+
+def switch(t, prev, nxt, state="S"):
+    return {"time_ns": t, "cpu": 0, "event": "switch", "prev_pid": prev,
+            "next_pid": nxt, "prev_state": state}
+
+
+def wake(t, pid=7):
+    return {"time_ns": t, "cpu": 0, "event": "wakeup", "pid": pid}
+
+
+def test_direct_events_partition_half_open_step_with_unknown_edges(tmp_path):
+    result = report(tmp_path, [fork(5), wake(10), switch(15, 0, 7),
+        switch(25, 7, 0), wake(40), switch(45, 0, 7), switch(55, 7, 0)])
+    assert result["windows"][0]["states_ns"] == {
+        "running": 20, "runnable": 10, "sleeping": 15, "unknown": 5}
+
+
+def test_missing_wakeup_does_not_turn_entire_gap_into_sleep(tmp_path):
+    result = report(tmp_path, [fork(5), switch(10, 0, 7),
+        switch(20, 7, 0), switch(50, 0, 7), switch(60, 7, 0)])
+    assert result["windows"][0]["states_ns"] == {
+        "running": 20, "runnable": 0, "sleeping": 0, "unknown": 30}
+    assert "missing_wakeup" in result["reasons"]
+
+
+def test_pid_reuse_and_equal_virtual_times_keep_lifetimes_separate(tmp_path):
+    windows = [{"participant": name, "index": 0, "virtual_ns": 0, "tid": 7,
+                "begin_ns": a, "end_ns": b, "outcome": "completed"}
+               for name, a, b in (("first", 10, 20), ("second", 40, 50))]
+    result = report(tmp_path, [fork(5), switch(10, 0, 7), switch(20, 7, 0),
+        {"time_ns": 21, "cpu": 0, "event": "exit", "pid": 7},
+        fork(35), switch(40, 0, 7), switch(50, 7, 0)], windows=windows)
+    assert [w["states_ns"]["running"] for w in result["windows"]] == [10, 10]
+    assert result["windows"][0]["lifetime"] != result["windows"][1]["lifetime"]
+
+
+def test_preemption_is_runnable_and_exec_preserves_lifetime(tmp_path):
+    result = report(tmp_path, [fork(5), switch(10, 0, 7),
+        switch(20, 7, 0, "R+"), switch(30, 0, 7),
+        {"time_ns": 35, "cpu": 0, "event": "exec", "pid": 7, "old_pid": 7},
+        switch(60, 7, 0)])
+    assert result["windows"][0]["states_ns"]["runnable"] == 10
+    assert len(result["lifetimes"]) == 1
+    assert result["lifetimes"][0]["exec_ns"] == [35]
+
+
+@pytest.mark.parametrize("change", [{"loss": True}, {"truncated": True},
+    {"clock": "unknown"}, {"namespace_verified": False}])
+def test_loss_truncation_clock_or_namespace_failure_keeps_time_unknown(tmp_path, change):
+    events = [fork(5), switch(10, 0, 7), switch(60, 7, 0)]
+    result = report(tmp_path, events, **change)
+    assert result["windows"][0]["states_ns"]["unknown"] == 50
+
+
+def test_failed_and_unclosed_steps_never_enter_completed_statistics(tmp_path):
+    windows = [{"participant": "slow", "index": i, "virtual_ns": 0,
+                "tid": 7, "begin_ns": 10, "end_ns": end, "outcome": outcome}
+               for i, end, outcome in ((0, 60, "failed"), (1, None, "unclosed"))]
+    result = report(tmp_path, [fork(5), switch(10, 0, 7), switch(60, 7, 0)],
+                    windows=windows)
+    assert result["completed_steps"] == 0
+    assert result["windows"][1]["states_ns"] is None

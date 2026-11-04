@@ -1,0 +1,110 @@
+name: proof-host-scheduling
+
+on:
+  push:
+    branches: ['proof/362-host-scheduling']
+    paths:
+      - 'proofs/host-scheduling/**'
+      - 'tests/test_host_scheduling_proof.py'
+      - '.github/workflows/proof-host-scheduling.yml'
+  pull_request:
+    paths:
+      - 'proofs/host-scheduling/**'
+      - 'tests/test_host_scheduling_proof.py'
+      - '.github/workflows/proof-host-scheduling.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      SIL_SOURCE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install collector and retain original policy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libssl-dev \
+            "linux-tools-$(uname -r)" linux-tools-common build-essential \
+            cmake binutils python3-venv
+          uv venv --python /usr/bin/python3 .venv
+          uv pip install -p .venv/bin/python -e python/
+          mkdir -p build/scheduler-evidence
+          cat /proc/sys/kernel/perf_event_paranoid > build/scheduler-evidence/paranoid-before.txt
+          stat -Lc '%d:%i' /proc/1/ns/pid > build/scheduler-evidence/initial-pid-namespace.txt
+          dpkg-query -W > build/scheduler-evidence/packages.txt
+      - name: Build unmodified runners and independent fixture
+        run: .venv/bin/python proofs/host-scheduling/qualify.py build "$PWD/build/scheduler-work"
+      - name: Observe native unprivileged and existing sudo-root availability
+        run: |
+          initial_ns=$(cat build/scheduler-evidence/initial-pid-namespace.txt)
+          .venv/bin/python proofs/host-scheduling/qualify.py run "$PWD/build/scheduler-work" \
+            --out "$PWD/build/scheduler-evidence/native-unprivileged" \
+            --environment native-unprivileged --initial-pid-namespace "$initial_ns"
+          sudo env SIL_SOURCE_REVISION="$SIL_SOURCE_REVISION" \
+            "$PWD/.venv/bin/python" proofs/host-scheduling/qualify.py run "$PWD/build/scheduler-work" \
+            --out "$PWD/build/scheduler-evidence/native-root-existing" \
+            --environment native-root-existing --initial-pid-namespace "$initial_ns"
+      - name: Build a container with the exact host perf package
+        run: |
+          perf_package="linux-tools-$(uname -r)"
+          perf_version=$(dpkg-query -W -f='${Version}' "$perf_package")
+          cat > build/scheduler-container.Dockerfile <<'EOF'
+          FROM ubuntu:24.04
+          ARG PERF_PACKAGE
+          RUN apt-get update && apt-get install -y --no-install-recommends \
+              "$PERF_PACKAGE" linux-tools-common python3 gcc libc6-dev binutils libssl3t64 \
+              && rm -rf /var/lib/apt/lists/*
+          EOF
+          docker build --build-arg "PERF_PACKAGE=$perf_package=$perf_version" \
+            -f build/scheduler-container.Dockerfile -t sil-scheduler-proof .
+          docker image inspect sil-scheduler-proof > build/scheduler-evidence/container-image.json
+      - name: Observe default-container availability without policy changes
+        run: |
+          initial_ns=$(cat build/scheduler-evidence/initial-pid-namespace.txt)
+          docker run --rm -e SIL_SOURCE_REVISION -v "$PWD:$PWD" -w "$PWD" \
+            sil-scheduler-proof .venv/bin/python proofs/host-scheduling/qualify.py run \
+            "$PWD/build/scheduler-work" --out "$PWD/build/scheduler-evidence/container-default" \
+            --environment container-default --initial-pid-namespace "$initial_ns"
+      - name: Explicit isolated tracefs/root and documented container capability experiments
+        # This mount exists only in this private mount namespace. No sysctl or
+        # host mount is changed. Original-policy failures above stay unavailable.
+        run: |
+          sudo env SIL_SOURCE_REVISION="$SIL_SOURCE_REVISION" unshare --mount --propagation private \
+            bash -euo pipefail <<'SH'
+          mount -t tracefs tracefs /sys/kernel/tracing
+          initial_ns=$(cat build/scheduler-evidence/initial-pid-namespace.txt)
+          .venv/bin/python proofs/host-scheduling/qualify.py run "$PWD/build/scheduler-work" \
+            --out "$PWD/build/scheduler-evidence/native-root-isolated-tracefs" \
+            --environment native-root-isolated-tracefs --initial-pid-namespace "$initial_ns"
+          docker run --rm --pid=host --cap-add PERFMON --security-opt seccomp=unconfined \
+            -e SIL_SOURCE_REVISION -v "$PWD:$PWD" -w "$PWD" \
+            -v "/proc/$$/root/sys/kernel/tracing:/sys/kernel/tracing:ro" \
+            sil-scheduler-proof .venv/bin/python proofs/host-scheduling/qualify.py run \
+            "$PWD/build/scheduler-work" --out "$PWD/build/scheduler-evidence/container-perfmon-hostpid" \
+            --environment container-perfmon-hostpid-tracefs --initial-pid-namespace "$initial_ns"
+          SH
+      - name: Verify policy unchanged and retain exact experiment sources
+        if: always()
+        run: |
+          cat /proc/sys/kernel/perf_event_paranoid > build/scheduler-evidence/paranoid-after.txt
+          cmp build/scheduler-evidence/paranoid-before.txt build/scheduler-evidence/paranoid-after.txt
+          cp -R proofs/host-scheduling build/scheduler-evidence/proof-sources
+          sudo chown -R "$(id -u):$(id -g)" build/scheduler-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: host-scheduling-evidence
+          retention-days: 30
+          path: |
+            build/scheduler-evidence/
+            build/scheduler-work/commands.json
+            build/scheduler-work/build-*.txt
+            build/scheduler-work/*.json
+            build/scheduler-work/workload.so
+            build/scheduler-work/exec-helper

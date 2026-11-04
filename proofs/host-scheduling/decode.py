@@ -1,0 +1,115 @@
+"""Decode pinned perf text and bind independent markers to actual Process Steps."""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import re
+
+from report import INPUT_BYTES, analyze
+
+LINE = re.compile(r"\[(\d+)\]\s+(\d+)\.(\d{9}):\s+sched:(sched_\w+):\s+(.*)")
+
+
+def lines(path):
+    if path.stat().st_size > INPUT_BYTES:
+        raise ValueError(f"input exceeds {INPUT_BYTES} bytes: {path}")
+    return path.read_text().splitlines()
+
+
+def parse_events(path):
+    events, unknown = [], 0
+    for line in lines(path):
+        if not line.strip() or line.startswith("#"):
+            continue
+        match = LINE.search(line)
+        if not match:
+            unknown += 1
+            continue
+        cpu, seconds, fraction, name, payload = match.groups()
+        row = {"cpu": int(cpu), "time_ns": int(seconds) * 10**9 + int(fraction)}
+        fields = dict(re.findall(r"(\w+)=([^\s]+)", payload))
+        if name == "sched_switch":
+            row.update(event="switch", prev_pid=int(fields["prev_pid"]),
+                       next_pid=int(fields["next_pid"]), prev_state=fields["prev_state"])
+        elif name in ("sched_wakeup", "sched_wakeup_new"):
+            row.update(event="wakeup", pid=int(fields["pid"]))
+        elif name == "sched_process_fork":
+            row.update(event="fork", parent_pid=int(fields["parent_pid"]),
+                       child_pid=int(fields["child_pid"]))
+        elif name == "sched_process_exec":
+            row.update(event="exec", pid=int(fields["pid"]), old_pid=int(fields["old_pid"]))
+        elif name == "sched_process_exit":
+            row.update(event="exit", pid=int(fields["pid"]))
+        else:
+            unknown += 1
+            continue
+        events.append(row)
+    return events, unknown
+
+
+def prepare(out: Path, result: dict, namespace: list[int]):
+    markers = [json.loads(line) for line in lines(out / "markers.jsonl")]
+    observations = ([json.loads(line) for line in lines(out / "activations.jsonl")]
+                    if (out / "activations.jsonl").exists() else [])
+    headers = [row for row in observations if "sil_activation_observations" in row]
+    header = headers[0] if len(headers) == 1 else {}
+    expected_ns = {"device": namespace[0], "inode": namespace[1]}
+    namespace_ok = (header.get("pid_namespace") == expected_ns
+                    and all(m["namespace"] == namespace for m in markers)
+                    and result["initial_pid_namespace"])
+    attributes = "\n".join(lines(out / "attributes.txt"))
+    # Verify the retained event attributes, not just the requested CLI option.
+    clock_ok = (header.get("clock") == "host_monotonic"
+                and len(re.findall(r"clockid\s*:\s*1\b", attributes)) == 6
+                and len(re.findall(r"use_clockid\s*:\s*1\b", attributes)) == 6)
+    events, unparsed = parse_events(out / "events.txt")
+    warnings = "\n".join(lines(out / "events-errors.txt"))
+    stats = "\n".join(lines(out / "stats.txt"))
+    loss_sources = []
+    if re.search(r"LOST(?:_SAMPLES)?(?: events)?\s*:\s*[1-9]\d*", stats):
+        loss_sources.append("perf_statistics")
+    if re.search(r"lost\s+[1-9]\d*|[1-9]\d*\s+(?:lost|events lost)", warnings, re.I):
+        loss_sources.append("perf_script_warning")
+    if "PERF_RECORD_LOST" in stats:
+        loss_sources.append("perf_lost_record")
+
+    starts = {(m["participant"], m["index"], m["phase"], m["tid"]): m
+              for m in markers if m["edge"] == "begin"}
+    windows = []
+    for row in observations:
+        if row.get("kind") != "activation" or row.get("task_kind") != "process_step":
+            continue
+        marker = next((m for m in markers if m["phase"] == "step" and m["edge"] == "begin"
+                       and m["participant"] == row["participant"]
+                       and m["index"] == row["index"]), None)
+        if marker:
+            windows.append({"kind": "step", "participant": row["participant"],
+                "index": row["index"], "virtual_ns": row["virtual_time_ns"],
+                "tid": marker["tid"], "begin_ns": int(row["begin_ns"]),
+                "end_ns": int(row["end_ns"]), "outcome": row["outcome"]})
+    for marker in markers:
+        if marker["edge"] != "end" or marker["phase"] in ("step", "lifetime"):
+            continue
+        start = starts[(marker["participant"], marker["index"], marker["phase"], marker["tid"])]
+        windows.append({"kind": "fixture_phase", "phase": marker["phase"],
+            "participant": marker["participant"], "index": marker["index"],
+            "virtual_ns": marker["virtual_ns"], "tid": marker["tid"],
+            "begin_ns": start["host_ns"], "end_ns": marker["host_ns"], "outcome": "fixture_closed"})
+    for marker in markers:
+        if marker["phase"] == "step" and marker["edge"] == "begin" and not any(
+                w["kind"] == "step" and w["participant"] == marker["participant"]
+                and w["index"] == marker["index"] for w in windows):
+            windows.append({"kind": "step", "participant": marker["participant"],
+                "index": marker["index"], "virtual_ns": marker["virtual_ns"],
+                "tid": marker["tid"], "begin_ns": marker["host_ns"],
+                "end_ns": None, "outcome": "unclosed" if result["run"]["exit_code"] == -9 else "interval_absent",
+                "interval_source": "fixture_begin_only; runner interval absent"})
+    document = {"clock": "host_monotonic" if clock_ok else "unknown",
+        "namespace_verified": namespace_ok, "events": events, "windows": windows,
+        "loss": bool(loss_sources), "truncated": (unparsed > 0 or any(
+            result["exports"][key]["exit_code"] != 0 for key in ("events", "attributes", "stats")))}
+    analysis = analyze(document)
+    analysis.update(loss_sources=loss_sources, unparsed_lines=unparsed,
+                    clock_verified=clock_ok, namespace_verified=namespace_ok,
+                    activation_footer=next((r for r in observations if r.get("kind") == "end"), None))
+    return document, analysis
