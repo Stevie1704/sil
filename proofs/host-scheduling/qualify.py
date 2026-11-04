@@ -75,16 +75,17 @@ def execute(work, out, mode, observed, fault):
     out.mkdir()
     env = {**os.environ, "PYTHONPATH": str(ROOT / "python/src"),
            "SIL_SCHED_MARKERS": str(out / "markers.jsonl")}
+    deadline_ms = 180 if mode == "edge" else 10000
     argv = [str(work / "build" / ("sil-run-diagnostics" if observed else "sil-run")),
             str(manifest(work, mode)), "-o", str(out / "run.mcap"),
-            "--participant-timeout-ms", "10000"]
+            "--participant-timeout-ms", str(deadline_ms)]
     if observed:
         argv += ["--diagnostics-out", str(out / "diagnostics.json"),
                  "--activation-observations", str(out / "activations.jsonl"),
                  "--activation-observations-limit-bytes", str(1 << 20)]
     perf = Perf(out, pages="1" if fault == "loss" else "1M") if observed else None
     result = {"mode": mode, "fault": fault, "observed": observed,
-              "policies": {"response_deadline_ms": 10000, "guard_seconds": GUARD_SECONDS,
+              "policies": {"response_deadline_ms": deadline_ms, "guard_seconds": GUARD_SECONDS,
                   "raw_guard_bytes": GUARD_BYTES, "hard_per_file_bytes": FILE_BYTES,
                   "poll_ms": 10, "sampling_subtraction": False}, "growth": []}
     if perf and not perf.ready:
@@ -95,8 +96,13 @@ def execute(work, out, mode, observed, fault):
     start = time.monotonic_ns()
     stopped, collector_stopped, paused_at = None, False, None
     with (out / "stdout.txt").open("wb") as stdout, (out / "stderr.txt").open("wb") as stderr:
-        process = subprocess.Popen(argv, cwd=out, env=env, stdout=stdout,
-                                   stderr=stderr, start_new_session=True)
+        try:
+            process = subprocess.Popen(argv, cwd=out, env=env, stdout=stdout,
+                                       stderr=stderr, start_new_session=True)
+        except BaseException:
+            if perf:
+                perf.finish()
+            raise
         try:
             while process.poll() is None:
                 elapsed = time.monotonic_ns() - start
@@ -164,7 +170,7 @@ def run(work, out, environment, initial_namespace):
     ns = namespace()
     facts = {"environment": environment, "system": platform.system(),
              "machine": platform.machine(), "kernel": platform.release(),
-             "uid": os.getuid(), "pid_namespace": ns,
+             "uid": os.getuid(), "cpu_count": os.cpu_count(), "pid_namespace": ns,
              "initial_pid_namespace": initial_namespace, "source_revision": os.environ.get("SIL_SOURCE_REVISION")}
     for name, path in (("status", "/proc/self/status"), ("paranoid", "/proc/sys/kernel/perf_event_paranoid"),
                        ("bpf_disabled", "/proc/sys/kernel/unprivileged_bpf_disabled"), ("mounts", "/proc/mounts")):
@@ -193,6 +199,7 @@ def run(work, out, environment, initial_namespace):
     write(out / "identity.json", facts)
     rows = []
     cases = [("success", i, None) for i in range(3)] + [("failure", 0, None), ("unclosed", 0, None)]
+    cases += [("edge", i, None) for i in range(3)]
     cases += [("success", 0, fault) for fault in ("interrupt", "limit", "loss", "truncated")]
     for mode, index, fault in cases:
         for observed in (False, True):
@@ -214,7 +221,9 @@ def run(work, out, environment, initial_namespace):
                 seal(out)
                 return
     for row in rows:
-        if row["mode"] == "unclosed":
+        if row["mode"] == "edge":
+            assert row["run"]["exit_code"] in (0, 1), row
+        elif row["mode"] == "unclosed":
             assert row["run"]["exit_code"] == -9, row
         else:
             baseline = next(r for r in rows if not r["observed"] and r["mode"] == row["mode"])
@@ -228,6 +237,11 @@ def seal(out):
 
 
 if __name__ == "__main__":
+    def interrupt(signum, frame):
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        raise KeyboardInterrupt(f"proof interrupted by signal {signum}")
+
+    signal.signal(signal.SIGTERM, interrupt)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("build", "run"))
     parser.add_argument("work", type=Path)

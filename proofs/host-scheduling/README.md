@@ -105,10 +105,13 @@ claim follows.
 
 ## Bounds, loss and cleanup
 
-Each available environment has 14 fresh cases: three ordinary/observed
+Each available environment has 20 fresh cases: three ordinary/observed
 success pairs, deliberate failure and hard-kill pairs, plus collector
 interruption, a 64 KiB guard request, a one-page-ring loss attempt, and
-deliberately truncated saved data. Every capture has one independent perf
+deliberately truncated saved data. Three additional ordinary/observed pairs
+use an explicitly selected 180 ms Response deadline near the initially
+observed Step cost. Their outcomes are observations, never an equality or
+timing assertion. Every capture has one independent perf
 session and one Run. There is no live scheduler wait or collector hook in the
 kernel. The supervisor enables perf and waits for acknowledgment **before**
 starting the Run. Ack/exit observations are not exact collection boundaries.
@@ -142,8 +145,8 @@ No cleanup behavior is inferred from a successful collector exit.
 Three fresh repetitions retain elapsed Run times, collector setup/control
 observations and raw-file growth. They include marker instrumentation in all
 modes and supply no general overhead correction or significance claim.
-The selected 10-second Response deadline is deliberately generous. Equality
-on this fixture gives no timing-edge guarantee: instrumentation, scheduling
+The normal 10-second Response deadline is deliberately generous. Equality
+there gives no timing-edge guarantee: instrumentation, scheduling
 and disk contention can move a workload across a Response deadline. No noisy
 timing threshold is a CI correctness gate.
 

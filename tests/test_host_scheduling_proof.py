@@ -128,3 +128,11 @@ def test_pinned_perf_text_preserves_direct_wakeup_and_switch_states(tmp_path):
     assert result.returncode == 0, result.stderr
     assert json.loads(output.read_text())["windows"][0]["states_ns"] == {
         "running": 20, "runnable": 10, "sleeping": 15, "unknown": 5}
+
+
+def test_nonleader_exec_does_not_retain_old_tid_state(tmp_path):
+    result = report(tmp_path, [fork(5), switch(10, 0, 7),
+        {"time_ns": 30, "cpu": 0, "event": "exec", "pid": 8, "old_pid": 7},
+        switch(60, 7, 0)])
+    assert "nonleader_exec_unqualified" in result["reasons"]
+    assert result["windows"][0]["states_ns"]["unknown"] == 50

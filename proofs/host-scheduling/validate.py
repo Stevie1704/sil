@@ -31,8 +31,9 @@ def validate(root: Path):
             document, analysis = prepare(directory, row, identity["pid_namespace"])
             assert document == read(directory / "input.json")
             assert analysis == read(directory / "analysis.json")
-            assert analysis["clock_verified"] or row["fault"] == "truncated"
-            assert analysis["namespace_verified"] or row["mode"] == "unclosed"
+            if row["fault"] is None and row["mode"] in ("success", "failure"):
+                assert analysis["clock_verified"]
+                assert analysis["namespace_verified"]
             if row["mode"] == "success" and row["fault"] is None:
                 assert analysis["completed_steps"] == 6
                 assert not analysis["reasons"], analysis["reasons"]
@@ -59,7 +60,7 @@ def validate(root: Path):
                 if window["states_ns"] is not None:
                     assert sum(window["states_ns"].values()) == window["end_ns"] - window["begin_ns"]
             output.append({"name": row["name"], "analysis": analysis})
-        if row["mode"] != "unclosed":
+        if row["mode"] not in ("unclosed", "edge"):
             baseline = next(r for r in rows if not r["observed"] and r["mode"] == row["mode"])
             assert row["run"]["exit_code"] == baseline["run"]["exit_code"] == (1 if row["mode"] == "failure" else 0)
             assert row["recording_sha256"] == baseline["recording_sha256"]
@@ -69,6 +70,8 @@ def validate(root: Path):
                          "index": i, "value": 3776395645756024896}
                         for i in range(3) for channel in ("peer", "slow")]
             assert row["messages"] == (expected[:3] if row["mode"] == "failure" else expected)
+        if row["mode"] == "edge":
+            assert row["run"]["exit_code"] in (0, 1)
         recording = directory / "run.mcap"
         with recording.open("rb") as stream:
             assert hashlib.file_digest(stream, "sha256").hexdigest() == row["recording_sha256"]

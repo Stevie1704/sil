@@ -57,7 +57,12 @@ class Perf:
             pass_fds=(control_read, ack_write), start_new_session=True, preexec_fn=limits)
         os.close(control_read)
         os.close(ack_write)
-        self.ready = self.control_command("enable")
+        self.ready = False
+        try:
+            self.ready = self.control_command("enable")
+        except BaseException:
+            self.finish()
+            raise
 
     def control_command(self, name):
         row = {"command": name, "write_ns": time.monotonic_ns(), "ack_ns": None}
