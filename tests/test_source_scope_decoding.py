@@ -8,9 +8,11 @@ import hashlib
 import json
 from pathlib import Path
 import struct
+import uuid
 
 import pytest
 
+from sil.source_scope_decode import CaptureFailed, decode
 from sil.source_scope_map import (MapError, file_identity, file_sha256, read_library,
                                   scope_entries)
 
@@ -145,3 +147,168 @@ def test_the_original_library_is_identified_without_a_scope_section(tmp_path):
                                    "sha256": digest}
     assert file_sha256(path) == digest
     assert file_sha256(tmp_path / "missing.so") is None
+
+
+CASES = sorted(path.name for path in FIXTURES.iterdir() if path.is_dir())
+CAPTURE_ID = "6c1f8e0a-2b7d-4f3e-9a51-0d2c4b6e8f10"
+MAP = json.loads((FIXTURES / "map.json").read_text())
+
+
+def fixture(case):
+    folder = FIXTURES / case
+    return ((folder / "events.bin").read_bytes(),
+            (folder / "observations.jsonl").read_text(),
+            json.loads((folder / "expected.json").read_text()))
+
+
+def run_decode(events, observations, *, scope_map=MAP, capture_id=CAPTURE_ID,
+               library_sha256=MAP["library"]["sha256"]):
+    return decode(events, observations, scope_map, participant="adas",
+                  capture_id=capture_id, library_sha256=library_sha256)
+
+
+@pytest.mark.parametrize("case", CASES)
+def test_decoder_reproduces_each_worked_example(case):
+    events, observations, expected = fixture(case)
+    if "error" in expected:
+        with pytest.raises(CaptureFailed) as failure:
+            run_decode(events, observations)
+        assert {"error": failure.value.reason} == expected
+    else:
+        assert run_decode(events, observations) == expected
+
+
+HEADER = struct.Struct("<8sHHHH16sIIQQQQQ3QQQB40s95x")
+RECORD = struct.Struct("<QIHBB")
+MAP_BUILD_ID = bytes.fromhex(MAP["library"]["build_id"])
+
+
+def raw(records=(), *, capacity=None, state=2, pid=42, clock=(900, 901, 902),
+        lost=(0, 0, 0), build_id=MAP_BUILD_ID, magic=b"SILSCOPE", kept=None,
+        namespace=(4, 4026531836), capture_id=CAPTURE_ID):
+    """An events.bin with (ns, tid, scope, edge[, reserved]) records."""
+    capacity = len(records) if capacity is None else capacity
+    head = HEADER.pack(magic, 1, 256, 16, state, uuid.UUID(capture_id).bytes, pid, 0,
+                       capacity, len(records) if kept is None else kept, *lost, *clock,
+                       *namespace, len(build_id), build_id)
+    body = b"".join(RECORD.pack(*(tuple(r) + (0,))[:5]) for r in records)
+    return head + body + bytes(16 * max(0, capacity - len(records)))
+
+
+def stream(*activations, end=True, **header):
+    lines = [{"sil_activation_observations": 1, "clock": "host_monotonic",
+              "runner_pid": 42, "runner_tid": 42, "limit_bytes": 67108864,
+              "pid_namespace": {"device": 4, "inode": 4026531836}, **header}]
+    for index, (begin, finish, *rest) in enumerate(activations):
+        lines.append({"kind": "activation", "participant": rest[0] if rest else "adas",
+                      "task": "control", "task_kind": "native_task", "index": index,
+                      "virtual_time_ns": index, "begin_ns": str(begin),
+                      "end_ns": str(finish), "outcome": "completed", "tid": 42})
+    if end is True:
+        end = {"kind": "end", "records": len(activations), "dropped": 0,
+               "truncated": False, "write_failed": False, "bytes": 0}
+    if end:
+        lines.append(end)
+    return "\n".join(json.dumps(line) for line in lines) + "\n"
+
+
+CALL = [(10, 42, 1, 0), (20, 42, 1, 1)]
+
+
+def failure(events, observations=None, **options):
+    with pytest.raises(CaptureFailed) as failed:
+        run_decode(events, observations or stream((0, 100)), **options)
+    return failed.value.reason
+
+
+def test_a_matching_capture_decodes():
+    assert run_decode(raw(CALL), stream((0, 100)))["totals"]["attributed_calls"] == 1
+
+
+@pytest.mark.parametrize("events", [
+    raw(CALL, magic=b"SILSCOPX"), raw(CALL, state=4), raw(CALL)[:-1],
+    raw(CALL, kept=3), raw(CALL, capacity=0), raw([(10, 42, 9, 0)]),
+    raw([(10, 42, 1, 2)]), raw([(10, 42, 1, 0, 1)]), raw([(20, 42, 1, 0), (10, 42, 1, 1)]),
+    raw(CALL, state=0), b"SILSCOPE"],
+    ids=["magic", "state", "size", "records", "capacity", "scope", "edge", "reserved",
+         "time-order", "created-with-records", "short"])
+def test_invalid_raw_files_fail_before_output(events):
+    assert failure(events) == "raw_invalid"
+
+
+def test_raw_file_states():
+    assert failure(raw(CALL, state=1)) == "raw_incomplete"
+    assert failure(raw(CALL, state=3)) == "observer_unavailable"
+    created = run_decode(raw([], capacity=4, state=0, pid=0, build_id=b"", clock=(0, 0, 0)),
+                         stream((0, 100)))
+    assert (created["status"], created["totals"]["entries"]) == ("complete", 0)
+    assert created["activations"][0]["status"] == "exact"
+
+
+def test_capture_identity_checks():
+    other = "00000000-0000-4000-8000-000000000000"
+    assert failure(raw(CALL), capture_id=other) == "capture_mismatch"
+    assert failure(raw(CALL, pid=43)) == "capture_mismatch"
+    assert failure(raw(CALL, namespace=(4, 1))) == "capture_mismatch"
+    assert failure(raw(CALL), stream((0, 100), pid_namespace=None)) == "capture_mismatch"
+    assert failure(raw(CALL), "not json\n") == "capture_mismatch"
+
+
+def test_a_rebuilt_or_changed_library_is_an_identity_mismatch():
+    assert failure(raw(CALL, build_id=bytes(20))) == "identity_mismatch"
+    assert failure(raw(CALL), library_sha256="0" * 64) == "identity_mismatch"
+    assert failure(raw(CALL), library_sha256=None) == "identity_mismatch"
+
+
+def test_unproven_clocks_fail():
+    assert failure(raw(CALL), stream((0, 100), clock="host_realtime")) == "clock_unverified"
+    assert failure(raw(CALL, clock=(902, 901, 903))) == "clock_unverified"
+
+
+def test_an_invalid_map_fails():
+    duplicate = {**MAP, "scopes": MAP["scopes"] + MAP["scopes"][:1]}
+    assert failure(raw(CALL), scope_map=duplicate) == "map_invalid"
+    crowded = {**MAP, "scopes": [{"id": 1, "name": "a", "sites": [
+        {"file": "a.c", "line": n} for n in range(4097)]}]}
+    assert failure(raw(CALL), scope_map=crowded) == "map_invalid"
+
+
+def test_a_return_without_entry_is_a_missing_entry_row():
+    result = run_decode(raw([(20, 42, 1, 1)]), stream((0, 100)))
+    assert result["problems"] == ["unbalanced_scopes"]
+    assert result["unattributed"]["rows"] == [
+        {"scope": 1, "tid": 42, "entry_ns": None, "return_ns": "20",
+         "reason": "missing_entry"}]
+    assert result["activations"][0]["reason"] == "unbalanced_scopes"
+
+
+def test_a_cut_stream_leaves_later_calls_unattributed():
+    events = raw(CALL + [(110, 42, 1, 0), (120, 42, 1, 1),
+                         (210, 42, 2, 0), (220, 42, 2, 1)])
+    result = run_decode(events, stream((0, 100), (100, 150), end=False))
+    assert (result["status"], result["problems"]) == ("partial", ["observations_incomplete"])
+    assert [a["status"] for a in result["activations"]] == ["exact", "exact"]
+    assert result["unattributed"]["rows"] == [
+        {"scope": 2, "tid": 42, "entry_ns": "210", "return_ns": "220",
+         "reason": "observations_incomplete"}]
+
+
+def test_in_a_cut_stream_a_call_into_a_gap_is_observations_incomplete():
+    events = raw([(90, 42, 1, 0), (120, 42, 1, 1)])
+    result = run_decode(events, stream((0, 100), (130, 150), end=False))
+    assert result["activations"][0]["reason"] == "observations_incomplete"
+    assert result["unattributed"]["reasons"] == {"observations_incomplete": 1}
+
+
+def test_large_integers_and_many_rows_are_bounded():
+    top = 2 ** 64 - 1
+    records = [(n, 43, 1, edge) for n in range(1100) for edge in (0, 1)]
+    records += [(top - 1, 42, 1, 0), (top, 42, 1, 1)]
+    result = run_decode(raw(records), stream((top - 1, top + 1)))
+    unattributed = result["unattributed"]
+    assert len(unattributed["rows"]) == 1000 and unattributed["rows_remainder"] == 100
+    assert result["totals"]["unattributed"] == 1100
+    assert unattributed["reasons"] == {"worker_thread": 1100}
+    assert unattributed["rows"][-1]["entry_ns"] == "999"
+    call = result["activations"][0]["calls"][0]
+    assert (call["entry_ns"], call["elapsed_ns"]) == (str(top - 1), "1")
