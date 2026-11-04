@@ -9,8 +9,6 @@ name: proof-source-scopes
 # push gate.
 
 on:
-  push:
-    branches: ['feat/372-scope-capture']
   pull_request:
     paths:
       - 'include/sil/source_scope.h'
