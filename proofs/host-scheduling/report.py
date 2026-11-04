@@ -135,7 +135,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path)
     parser.add_argument("output", type=Path)
+    parser.add_argument("--perf-text", type=Path, help="decode retained perf script output before reduction")
     args = parser.parse_args()
-    result = analyze(read(args.input))
+    document = read(args.input)
+    if args.perf_text:
+        from decode import parse_events
+        document["events"], unparsed = parse_events(args.perf_text)
+        document["truncated"] = document["truncated"] or unparsed > 0
+    result = analyze(document)
     with args.output.open("x") as output:
         output.write(json.dumps(result, indent=2) + "\n")

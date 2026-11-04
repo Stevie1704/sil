@@ -63,6 +63,12 @@ def validate(root: Path):
             baseline = next(r for r in rows if not r["observed"] and r["mode"] == row["mode"])
             assert row["run"]["exit_code"] == baseline["run"]["exit_code"] == (1 if row["mode"] == "failure" else 0)
             assert row["recording_sha256"] == baseline["recording_sha256"]
+            # Independently worked affine recurrence modulo 2^64, composed by
+            # exponentiation, yields this literal for work(15M) XOR work(30M).
+            expected = [{"channel": channel, "virtual_ns": i * 1_000_000,
+                         "index": i, "value": 3776395645756024896}
+                        for i in range(3) for channel in ("peer", "slow")]
+            assert row["messages"] == (expected[:3] if row["mode"] == "failure" else expected)
         recording = directory / "run.mcap"
         with recording.open("rb") as stream:
             assert hashlib.file_digest(stream, "sha256").hexdigest() == row["recording_sha256"]

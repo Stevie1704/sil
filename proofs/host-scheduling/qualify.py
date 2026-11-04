@@ -10,6 +10,7 @@ import platform
 import signal
 import shutil
 import subprocess
+import struct
 import sys
 import time
 
@@ -135,6 +136,11 @@ def execute(work, out, mode, observed, fault):
     result["availability"] = "available" if perf else "not_requested"
     if (out / "run.mcap").exists():
         result["recording_sha256"] = digest(out / "run.mcap")
+        if mode != "unclosed":
+            from sil.recording import read_records
+            result["messages"] = [{"channel": channel, "virtual_ns": at,
+                "index": struct.unpack("<QQ", data)[0], "value": struct.unpack("<QQ", data)[1]}
+                for channel, at, data in read_records(out / "run.mcap")]
     return result
 
 

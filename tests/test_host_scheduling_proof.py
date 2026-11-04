@@ -104,3 +104,27 @@ def test_child_cpu_during_parent_sleep_is_kept_as_window_association(tmp_path):
     assert result["completed_steps"] == 1
     assert result["windows"][0]["states_ns"]["sleeping"] == 30
     assert result["windows"][1]["states_ns"]["running"] == 40
+
+
+def test_pinned_perf_text_preserves_direct_wakeup_and_switch_states(tmp_path):
+    source = tmp_path / "input.json"
+    source.write_text(json.dumps({"clock": "host_monotonic", "namespace_verified": True,
+        "loss": False, "truncated": False, "events": [], "windows": [
+            {"participant": "slow", "index": 0, "virtual_ns": 0, "tid": 7,
+             "begin_ns": 10, "end_ns": 60, "outcome": "completed"}]}))
+    perf = tmp_path / "perf.txt"
+    perf.write_text("\n".join([
+        "[000] 0.000000005: sched:sched_process_fork: comm=parent pid=1 child_comm=child child_pid=7",
+        "[000] 0.000000010: sched:sched_wakeup_new: child:7 [120] CPU:000",
+        "[000] 0.000000015: sched:sched_switch: swapper/0:0 [120] R ==> child:7 [120]",
+        "[000] 0.000000025: sched:sched_switch: child:7 [120] S ==> swapper/0:0 [120]",
+        "[000] 0.000000040: sched:sched_wakeup: child:7 [120] CPU:000",
+        "[000] 0.000000045: sched:sched_switch: swapper/0:0 [120] R ==> child:7 [120]",
+        "[000] 0.000000055: sched:sched_switch: child:7 [120] S ==> swapper/0:0 [120]",
+    ]) + "\n")
+    output = tmp_path / "report.json"
+    result = subprocess.run([sys.executable, str(REPORT), str(source), str(output),
+                             "--perf-text", str(perf)], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(output.read_text())["windows"][0]["states_ns"] == {
+        "running": 20, "runnable": 10, "sleeping": 15, "unknown": 5}

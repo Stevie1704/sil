@@ -29,12 +29,20 @@ def parse_events(path):
         row = {"cpu": int(cpu), "time_ns": int(seconds) * 10**9 + int(fraction)}
         fields = dict(re.findall(r"(\w+)=([^\s]+)", payload))
         if name == "sched_switch":
-            row.update(event="switch", prev_pid=int(fields["prev_pid"]),
-                       next_pid=int(fields["next_pid"]), prev_state=fields["prev_state"])
+            switch = re.fullmatch(r".+:(\d+) \[\d+\] (\S+) ==> .+:(\d+) \[\d+\]", payload)
+            if not switch:
+                unknown += 1
+                continue
+            prev, state, nxt = switch.groups()
+            row.update(event="switch", prev_pid=int(prev), next_pid=int(nxt), prev_state=state)
         elif name in ("sched_wakeup", "sched_wakeup_new"):
-            row.update(event="wakeup", pid=int(fields["pid"]))
+            wakeup = re.fullmatch(r".+:(\d+) \[\d+\] CPU:\d+", payload)
+            if not wakeup:
+                unknown += 1
+                continue
+            row.update(event="wakeup", pid=int(wakeup[1]))
         elif name == "sched_process_fork":
-            row.update(event="fork", parent_pid=int(fields["parent_pid"]),
+            row.update(event="fork", parent_pid=int(fields["pid"]),
                        child_pid=int(fields["child_pid"]))
         elif name == "sched_process_exec":
             row.update(event="exec", pid=int(fields["pid"]), old_pid=int(fields["old_pid"]))
@@ -57,10 +65,10 @@ def prepare(out: Path, result: dict, namespace: list[int]):
     namespace_ok = (header.get("pid_namespace") == expected_ns
                     and all(m["namespace"] == namespace for m in markers)
                     and result["initial_pid_namespace"])
-    attributes = "\n".join(lines(out / "attributes.txt"))
+    attributes = "\n".join(line for line in lines(out / "attributes.txt") if line.startswith("sched:"))
     # Verify the retained event attributes, not just the requested CLI option.
     clock_ok = (header.get("clock") == "host_monotonic"
-                and len(re.findall(r"clockid\s*:\s*1\b", attributes)) == 6
+                and len(re.findall(r"\bclockid\s*:\s*1\b", attributes)) == 6
                 and len(re.findall(r"use_clockid\s*:\s*1\b", attributes)) == 6)
     events, unparsed = parse_events(out / "events.txt")
     descendants = {header.get("runner_pid")}
