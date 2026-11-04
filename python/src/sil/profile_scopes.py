@@ -48,9 +48,12 @@ from sil.source_scope_map import (
     read_library,
 )
 from sil.source_scope_report import (
-    encode_calls, encode_map, encode_report, map_document, scope_report,
-    capture_record,
+    CALLS_PATH, DIAGNOSTICS_PATH, EVENTS_PATH, MAP_PATH, OBSERVATIONS_PATH,
+    REPORT_PATH, capture_record, encode_calls, encode_map, encode_report,
+    map_document, scope_report,
 )
+from sil.source_scope_set import ScopeSet
+from sil.source_scope_summary import format_scope_summary
 
 SESSION_VARIABLE = "SIL_SOURCE_SCOPE_SESSION"
 MAX_SCOPE_RECORDS = 65536
@@ -86,35 +89,35 @@ class ScopesLayout:
 
     @property
     def scopes(self) -> Path:
-        return self.out / "scopes"
+        return self.map.parent
 
     @property
     def map(self) -> Path:
-        return self.scopes / "map.json"
+        return self.out / MAP_PATH
 
     @property
     def events(self) -> Path:
-        return self.scopes / "events.bin"
+        return self.out / EVENTS_PATH
 
     @property
     def calls(self) -> Path:
-        return self.scopes / "calls.json"
+        return self.out / CALLS_PATH
 
     @property
     def activation(self) -> Path:
-        return self.out / "activation"
+        return self.observations.parent
 
     @property
     def observations(self) -> Path:
-        return self.activation / "observations.jsonl"
+        return self.out / OBSERVATIONS_PATH
 
     @property
     def diagnostics(self) -> Path:
-        return self.out / "run.diagnostics.json"
+        return self.out / DIAGNOSTICS_PATH
 
     @property
     def report(self) -> Path:
-        return self.out / "scopes.json"
+        return self.out / REPORT_PATH
 
 
 class Refusal(Exception):
@@ -428,44 +431,20 @@ def build_report(request: ScopesRequest, layout: ScopesLayout, cwd: Path,
 
 def publish(request: ScopesRequest, layout: ScopesLayout, cwd: Path,
             found: Preflight, capture_run: CaptureRun,
-            decoded: Decoded) -> dict | None:
-    """Write calls.json, then scopes.json last; the report, or None when a
-    file cannot be written."""
+            decoded: Decoded) -> ScopeSet | None:
+    """Write calls.json, then scopes.json last; the saved capture, or None
+    when a file cannot be written."""
     try:
         if decoded.calls_bytes is not None:
             write_new_file(layout.calls, decoded.calls_bytes.decode("ascii"))
         report = build_report(request, layout, cwd, found, capture_run,
                               decoded)
-        write_new_file(layout.report, encode_report(report).decode("ascii"))
+        source = encode_report(report).decode("ascii")
+        write_new_file(layout.report, source)
     except (OSError, ValueError) as error:
         sys.stderr.write(f"{PROG}: cannot write the scopes report: {error}\n")
         return None
-    return report
-
-
-def format_summary(report: dict, path: Path) -> str:
-    run, capture = report["run"], report["capture"]
-    lines = [f"scopes: {path}",
-             f"run: {run['status']}" + (
-                 f" (exit {run['exit_code']})" if run["exit_code"] is not None
-                 else ""),
-             f"capture: {capture['status']}" + (
-                 f" ({', '.join(capture['reasons'])})" if capture["reasons"]
-                 else "")]
-    for task in report["summary"]["tasks"]:
-        unavailable = ", ".join(f"{reason} {count}" for reason, count in
-                                sorted(task["unavailable"].items()))
-        lines.append(f"task {task['participant']}/{task['task']}: "
-                     f"{task['activations']} Activations, {task['exact']} "
-                     "exact" + (f", unavailable: {unavailable}"
-                                if unavailable else ""))
-    for scope in report["summary"]["scopes"]:
-        per = scope["per_exact_activation"]
-        lines.append(f"scope {scope['id']} {scope['name']}: "
-                     f"{scope['attributed_calls']} calls; per exact "
-                     f"Activation min {per['min']}, median {per['median']}, "
-                     f"max {per['max']}")
-    return "\n".join(lines) + "\n"
+    return ScopeSet(report, source, found.scope_map, decoded.calls)
 
 
 # --- main -------------------------------------------------------------------
@@ -486,9 +465,10 @@ def run_scopes(request: ScopesRequest, cwd: Path) -> int:
     capture_run = run_with_session(request, layout, native, cwd, capture_id,
                                    descriptor)
     decoded = decode_capture(request, layout, found, capture_id)
-    report = publish(request, layout, cwd, found, capture_run, decoded)
-    if report is not None:
-        sys.stdout.write(format_summary(report,
-                                        request.target.out / "scopes.json"))
-        sys.stdout.flush()
-    return resolve_exit(report, capture_run)
+    saved = publish(request, layout, cwd, found, capture_run, decoded)
+    if saved is None:
+        return resolve_exit(None, capture_run)
+    sys.stdout.write(format_scope_summary(
+        saved, request.target.out / REPORT_PATH))
+    sys.stdout.flush()
+    return resolve_exit(saved.report, capture_run)

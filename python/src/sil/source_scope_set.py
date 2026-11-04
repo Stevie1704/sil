@@ -28,13 +28,11 @@ from sil.source_scope_decode import (
     ACTIVATION_REASONS, CALLS_KEY, LOSS_KEYS, MAGIC, MAP_KEY,
     OBSERVATIONS_KEY,
 )
-from sil.source_scope_report import REPORT_KEY
+from sil.source_scope_report import (
+    CALLS_PATH, DIAGNOSTICS_PATH, EVENTS_PATH, MAP_PATH, OBSERVATIONS_PATH,
+    REPORT_KEY,
+)
 
-CALLS_PATH = "scopes/calls.json"
-MAP_PATH = "scopes/map.json"
-EVENTS_PATH = "scopes/events.bin"
-OBSERVATIONS_PATH = "activation/observations.jsonl"
-DIAGNOSTICS_PATH = "run.diagnostics.json"
 CAPTURE_STATUSES = ("complete", "partial", "failed", "interrupted")
 HASH_CHUNK = 1 << 20
 

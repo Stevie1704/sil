@@ -16,6 +16,13 @@ from sil.source_scope_decode import MAP_KEY, CaptureFailed, read_header
 from sil.source_scope_map import LibraryScan, MapError
 
 REPORT_KEY = "sil_source_scope_report"
+# The files of a capture directory DIR, relative to it ("Files").
+REPORT_PATH = "scopes.json"
+MAP_PATH = "scopes/map.json"
+EVENTS_PATH = "scopes/events.bin"
+CALLS_PATH = "scopes/calls.json"
+OBSERVATIONS_PATH = "activation/observations.jsonl"
+DIAGNOSTICS_PATH = "run.diagnostics.json"
 PRODUCER = "sil profile"
 MAX_MAP_BYTES = 2 << 20
 MAX_CALLS = 131072

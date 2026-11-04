@@ -296,7 +296,7 @@ def test_a_complete_capture_writes_the_scopes_directory(
         assert file_sha256(out / row["path"]) == row["sha256"]
     assert report["missing"] == []
     assert "capture: complete" in proc.stdout
-    assert "scope 1 plain: 10 calls" in proc.stdout
+    assert "plain: 10 calls" in proc.stdout
     # The capture Run records what the ordinary runner records.
     code, recording = ordinary(sil_run, manifest, tmp_path)
     assert code == 0 and recording == (out / "run.mcap").read_bytes()
