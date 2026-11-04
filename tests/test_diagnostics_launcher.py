@@ -162,6 +162,51 @@ def test_an_unreadable_environment_descriptor_is_a_usage_error(
     assert "cannot read the environment" in proc.stderr
 
 
+# --- the source-scope session (#372) ----------------------------------------
+# docs/proposals/native-source-scopes.md: the launcher adds the runner's PID
+# to SIL_SOURCE_SCOPE_SESSION, so only the runner itself matches it.
+
+SESSION = "capture=00112233445566778899aabbccddeeff,capacity=7,fd=9"
+PRINT_SESSION = 'printf "%s %s" "$SIL_SOURCE_SCOPE_SESSION" "$$"'
+
+
+def test_the_scope_session_names_the_runner_pid(sil_diagnostics_launcher):
+    proc = subprocess.run(
+        [str(sil_diagnostics_launcher), "/bin/sh", "-c", PRINT_SESSION],
+        capture_output=True, text=True,
+        env={**os.environ, "SIL_SOURCE_SCOPE_SESSION": SESSION})
+    assert proc.returncode == 0, proc.stderr
+    session, pid = proc.stdout.rsplit(" ", 1)
+    # `$$` of the exec'd shell is the runner's PID.
+    assert session == f"{SESSION},pid={pid}"
+
+
+def test_the_scope_session_of_a_descriptor_environment_names_the_runner_pid(
+        sil_diagnostics_launcher, tmp_path):
+    environment = tmp_path / "environment"
+    environment.write_bytes(b"PATH=/usr/bin:/bin\0SIL_SOURCE_SCOPE_SESSION="
+                            + SESSION.encode() + b"\0")
+    with environment.open("rb") as stream:
+        proc = subprocess.run(
+            [str(sil_diagnostics_launcher), "--environment-fd",
+             str(stream.fileno()), "/bin/sh", "-c", PRINT_SESSION],
+            capture_output=True, text=True, pass_fds=(stream.fileno(),))
+    assert proc.returncode == 0, proc.stderr
+    session, pid = proc.stdout.rsplit(" ", 1)
+    assert session == f"{SESSION},pid={pid}"
+
+
+def test_without_a_scope_session_the_environment_is_unchanged(
+        sil_diagnostics_launcher):
+    environment = {key: value for key, value in os.environ.items()
+                   if key != "SIL_SOURCE_SCOPE_SESSION"}
+    proc = subprocess.run(
+        [str(sil_diagnostics_launcher), "/usr/bin/env"],
+        capture_output=True, text=True, env=environment)
+    assert proc.returncode == 0, proc.stderr
+    assert "SIL_SOURCE_SCOPE_SESSION" not in proc.stdout
+
+
 @pytest.mark.parametrize("signal_number", [signal.SIGINT, signal.SIGTERM])
 def test_signal_to_the_launcher_interrupts_the_run_and_its_participants(
     sil_diagnostics_launcher, sil_run_diagnostics, tmp_path, signal_number
