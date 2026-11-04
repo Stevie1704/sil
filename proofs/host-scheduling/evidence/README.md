@@ -5,6 +5,61 @@ the named fixture's running, runnable and sleeping intervals. A supported
 collector still needs an adopter workload and a separate reviewed state and
 coverage contract. No production collector or existing v1 schema changes ship.
 
+## Follow-up qualification after review
+
+The [manual follow-up qualification](https://github.com/Stevie1704/sil/actions/runs/41797215745)
+passed at `b9ffcd6576b2a2f43e77ca45b469b4b133084b85`.
+`review-fixes.tar.xz` retains its complete artifact and matching proof sources:
+5,515,316 compressed bytes for 163,844,352 payload bytes. Its 42 executed Runs
+and 26 capture attempts retain the same four explicitly named environments;
+both default attempts remain unavailable, and both available environments
+complete their 20-case qualification. Original archives below are unchanged.
+
+This capture validates the reviewed binding and reducer: descendant scope
+expires on exit/replacement, and a spawn observation belongs to its first
+matching birth rather than any later reused TID. Independent CLI fixtures
+also exercise unrelated reuse and a new child under the same runner. The
+begin-marker point must be inside `[begin,end)`; an end marker is an exclusive
+boundary and can coincide with the Activation end.
+
+Each normal repetition checks six observed CPU/running, sleep/sleeping,
+pipe-wait/sleeping and contended/runnable phases. There is no minimum runnable
+duration assertion. Reports now retain ordered state intervals with explicit
+unknown gaps and validate adjacency/bounds, backed by literal event examples
+at exact boundaries and before the first transition. Interrupted captures
+report `collector_interrupted`; size-guard stops report `collector_size_limit`.
+Independent tests verify those reasons preserve a known running prefix.
+
+The manual-only workflow uses the committed Dockerfile and records the
+resolved Ubuntu base image, derived image, package inventory and installed
+perf copyright notices. It does not start privileged tracing on PR updates.
+Normal/failure Recording and outcome equality passes. Native deadline-edge
+repetition 1 completes ordinarily (exit 0) and fails under observation (exit 1);
+the other current edge cases complete. These are observations of this
+experiment, not an overhead constant or a timing gate.
+
+Replay the follow-up independently with its own saved validator:
+
+```sh
+cd proofs/host-scheduling/evidence
+shasum -a 256 -c archive.sha256
+review_dir=$(mktemp -d)
+tar -xJf review-fixes.tar.xz -C "$review_dir"
+for environment in "$review_dir"/scheduler-evidence/*/; do
+  if [ -f "$environment/results.json" ]; then
+    python3 "$review_dir/scheduler-evidence/proof-sources/validate.py" "$environment"
+  fi
+done
+```
+
+Reviews of the active follow-up checked the listed changes and regressions;
+they are not an exhaustive correctness claim. Historical sources keep their
+original decoder and its limitations. The tables and earlier edge pairs in
+the following sections describe their pinned original captures, not the
+follow-up measurements, and are never pooled with this experiment.
+
+## Original qualification
+
 The [successful final Linux qualification](https://github.com/Stevie1704/sil/actions/runs/41791048279)
 ran source `c3d9bc331a57488c5f9a09b70bbfa5044df6353f` on x86-64, kernel
 `7.0.0-1017-azure`, four CPUs, glibc `2.39-0ubuntu8.9`, GCC
