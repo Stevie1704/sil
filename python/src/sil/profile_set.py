@@ -58,7 +58,7 @@ class ProfileSet:
     diagnostics: dict | None = None
 
 
-def _decimal(value: Any, where: str, errors: list) -> None:
+def decimal_text(value: Any, where: str, errors: list) -> None:
     if not (type(value) is str and value.isascii() and value.isdigit()):
         errors.append(f"{where} is not a decimal string")
 
@@ -83,19 +83,19 @@ SOURCE = maybe(members({"file": TEXT, "line": COUNT}))
 FRAME = members({"module": maybe(TEXT), "symbol": maybe(TEXT),
                  "source": SOURCE})
 SAMPLES = members({
-    "time_origin_ns": maybe(_decimal), "frames": items(FRAME),
+    "time_origin_ns": maybe(decimal_text), "frames": items(FRAME),
     "stacks": items(items(COUNT)),
     "samples": items(_row(INTEGER, TEXT, TEXT, COUNT, COUNT))})
 CORRELATION = members({
     "activations": items(members({
         "participant": TEXT, "task": TEXT, "kind": TEXT, "index": COUNT,
-        "virtual_time_ns": INTEGER, "begin_ns": _decimal, "end_ns": _decimal,
+        "virtual_time_ns": INTEGER, "begin_ns": decimal_text, "end_ns": decimal_text,
         "outcome": TEXT, "samples": COUNT, "weight_ns": COUNT})),
     "replays": items(members({"participant": TEXT, "index": COUNT,
-        "virtual_time_ns": INTEGER, "begin_ns": _decimal, "end_ns": _decimal,
+        "virtual_time_ns": INTEGER, "begin_ns": decimal_text, "end_ns": decimal_text,
         "outcome": TEXT, "samples": COUNT, "weight_ns": COUNT})),
-    "phases": items(members({"phase": TEXT, "begin_ns": _decimal,
-                             "end_ns": _decimal})),
+    "phases": items(members({"phase": TEXT, "begin_ns": decimal_text,
+                             "end_ns": decimal_text})),
     "samples": items(_row(TEXT, _reference))})
 ALLOCATIONS = members({
     "frames": items(FRAME), "stacks": items(items(COUNT)),
@@ -105,7 +105,7 @@ ALLOCATIONS = members({
 def load_profile_set(path: Path) -> ProfileSet:
     """Read and check the set of `path` (its `profile.json`)."""
     try:
-        text = _read_bounded(Path(path), str(path)).decode("utf-8")
+        text = read_bounded(Path(path), str(path)).decode("utf-8")
     except (OSError, UnicodeDecodeError) as error:
         raise ProfileSetError(f"cannot read '{path}': {error}") from error
     try:
@@ -154,7 +154,7 @@ def _sidecar(directory: Path, name: str | None, key: str, shape: Shape,
         raise ProfileSetError(f"'{name}' is not inside the profile directory")
     path = directory / relative
     try:
-        data = _read_bounded(path, name)
+        data = read_bounded(path, name)
     except OSError as error:
         raise ProfileSetError(
             f"profile.json names '{name}', which cannot be read ({error}); "
@@ -189,7 +189,7 @@ def _sidecar(directory: Path, name: str | None, key: str, shape: Shape,
     return document
 
 
-def _read_bounded(path: Path, name: str) -> bytes:
+def read_bounded(path: Path, name: str) -> bytes:
     """The bytes of one file of the set; a file above MAX_INPUT_BYTES is
     refused before it is read."""
     with path.open("rb") as file:

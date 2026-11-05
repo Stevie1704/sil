@@ -1,10 +1,11 @@
 # Contract: opt-in Native C source scopes (#360)
 
-Status: **accepted contract, not implemented.** This document resolves
-[#360](https://github.com/Stevie1704/sil/issues/360). It is the contract for
-separate implementation tickets (see [Decision and tickets](#decision-and-tickets)).
-No command, header, library or file format in this document is supported
-until those tickets ship it. The ownership and compatibility decision is
+Status: **implemented.** This document resolves
+[#360](https://github.com/Stevie1704/sil/issues/360). It is the contract of
+the implementation tickets #371, #372 and #373 (see
+[Decision and tickets](#decision-and-tickets)); the retained Linux evidence
+is in [`proofs/source-scopes/evidence/`](../../proofs/source-scopes/evidence/README.md).
+The ownership and compatibility decision is
 [ADR 0007](../adr/0007-source-owned-native-scope-observer.md).
 
 The [#320 proof](../../proofs/function-tracing/README.md) is the evidence.
@@ -69,8 +70,12 @@ static int confirms(const object *radar, const object *camera) {
   ID must have the same name. Sites with the same ID and different names
   are a conflicting duplicate.
 - Without the macro `SIL_SOURCE_SCOPES` defined to 1, the macro expands to
-  nothing: no code, no data and no link dependency. This is the **opt-out**
-  and the default.
+  compile-time checks only: no code, no data, no symbol and no link
+  dependency. This is the **opt-out** and the default. Debug-line caveat:
+  with `-g`, GCC writes a line-table statement marker for each scope line,
+  so `.debug_line`, and with it the build ID, can differ from a build
+  without the scope lines. An empty expansion does not prevent this. With
+  `-gno-statement-frontiers` or without `-g`, the bytes are the same.
 
 With `SIL_SOURCE_SCOPES=1`, each use expands to:
 
@@ -106,8 +111,9 @@ The session names an open descriptor of `scopes/events.bin`. The command
 made and preallocated that file before the Run. At the first enter, the
 active observer checks the file's size and header, sets `FD_CLOEXEC` on
 the descriptor and maps the whole file once, shared and prefaulted
-(`MAP_SHARED | MAP_POPULATE`). If a check or the mapping fails, it stays
-dormant and, when it can, sets the header state to `unavailable`. Records
+(`MAP_SHARED | MAP_POPULATE`), then reads the clock bracket. If a check,
+the mapping or a clock read of the bracket fails, it stays dormant and,
+when it can, sets the header state to `unavailable`. Records
 and counters are memory stores into this mapping. The kernel keeps them in
 the file also when the runner is killed.
 
@@ -146,8 +152,8 @@ sil profile MANIFEST --out DIR --collector scopes --participant NAME
 | other options | as the CPU collector | Passed to the runner unchanged and recorded. |
 
 `--frequency-hz`, `--stack-bytes`, `--modules-from`, `--activations`,
-`--runner` and `--max-capture-bytes` are usage errors with
-`--collector scopes`.
+`--runner`, `--max-capture-bytes` and `--symbolization-timeout-s` are usage
+errors with `--collector scopes`.
 
 ### Lifecycle
 
@@ -187,7 +193,11 @@ sil profile MANIFEST --out DIR --collector scopes --participant NAME
 SIGINT, SIGTERM and SIGHUP go to the whole session, as for the CPU
 collector. A runner that ends by signal or SIGKILL leaves the header in
 state `active` or `created`, not `finalized`. The capture is then `failed`
-with `raw_incomplete`; the kept records stay in the file as evidence.
+with `raw_incomplete`; the kept records stay in the file as evidence. A
+killed runner can also leave a file without the start of its contract: a
+Recording without the MCAP magic, or an observation stream without its
+header line. `scopes.json` lists such a file in `missing` with reason
+`not_written`, not in `artifacts`.
 
 ## Files
 
@@ -200,6 +210,17 @@ with `raw_incomplete`; the kept records stay in the file as evidence.
 | `scopes/events.bin` | raw header and records, version 1 | command creates it; observer fills it |
 | `scopes/calls.json` | `sil_source_scope_calls` v1 | command |
 | `run.mcap` | the Recording, unchanged | runner |
+
+In `scopes.json`, `artifacts` and `missing` name each file by its role:
+
+| Role | Path |
+| --- | --- |
+| `scope_map` | `scopes/map.json` |
+| `scope_events` | `scopes/events.bin` |
+| `scope_calls` | `scopes/calls.json` |
+| `activation_observations` | `activation/observations.jsonl` |
+| `diagnostics_report` | `run.diagnostics.json` |
+| `recording` | `run.mcap`, or the `-o` path when it is in `DIR` |
 
 The command writes no `profile.json`. The `sil_profile_report` v1 contract,
 its capture kinds and its field meanings do not change.
@@ -289,7 +310,7 @@ return and `returns - paired_calls` rows have no entry.
 | `configuration` | Manifest path and SHA-256, participant, capacity, guards, provenance mode |
 | `run` | As `sil_profile_report` v1 `run`: exit code, signal, first failure. Independent of the capture. |
 | `capture` | `status` (`complete`, `partial`, `failed`, `interrupted`), `reasons`, `capture_id`, loss counters, `records` |
-| `identities` | `instrumented` and `original` library identities, observer version, compiler identity from the library's `.comment` section |
+| `identities` | `instrumented` and `original`: `{path, build_id, sha256}` of each library, `original` null without `--original-library`; `observer_version`: the soname, symbol version and raw file version of the observer (`libsil_source_scope.so.1 sil_source_scope_v1 raw 1`); `compiler`: the compiler identity from the library's `.comment` section |
 | `artifacts` | `{role, path, bytes, sha256}` of each existing file in the table above except `scopes.json` itself; `path` relative to `DIR`. The Recording is an artifact only when it is in `DIR`, as in the [profile contract](../profile-report.md#no-recording-digest-handoff). |
 | `missing` | `{role, path, reason}` of each expected file that does not exist: `not_requested` (for example `--no-recording`) or `not_written` (for example `calls.json` after a failed decode) |
 | `summary` | Per Task: Activations, exact, unavailable by reason; per scope: total attributed calls, and min/median/max calls per exact Activation |
@@ -391,7 +412,7 @@ dormant process.
 | Work in a scope | Dormant: 1 atomic load. Active: 1 clock system call, 1 try-lock, 1 store into prefaulted memory. No allocation, file system call, retry or wait | `dropped_contended` on contention |
 | Finalization | One memory store; no file I/O and no timeout | — |
 | Scope map | At most 4,096 sites of 256 B (1 MiB section); `map.json` at most 2 MiB | preflight exit 2 |
-| Observation stream | `--max-activation-bytes`, 64 MiB by default, existing policy; a full disk ends the stream | `observations_incomplete` |
+| Observation stream | `--max-activation-bytes`, 64 MiB by default, existing policy; a full disk ends the stream | `observations_incomplete`; a disk full before the stream's header line leaves no `runner_pid` to compare, so the capture is `failed` with `capture_mismatch` |
 | `calls.json` | Bounded by the records: at most 131,072 calls; at most 256 MiB | capture `failed`, `normalized_limit`; raw files stay |
 | Unattributed rows | 1,000, then counts only | `rows_remainder` |
 | `scopes.json` | At most 1 MiB | — |
@@ -481,8 +502,8 @@ the implementation: worked examples or a counted fixture.
 | Q15 | Library unloaded before the observation `end` line and the Recording close | State `finalized` without file I/O; shutdown phase and Recording unchanged | API/lifecycle |
 | Q16 | Full file system during the Run | Raw records kept (preallocated); `observations_incomplete` if the stream is cut; Run continues | API/lifecycle |
 | Q17 | Instrumented library under `sil run`, `sil-run`, a CPU profile and as a Process participant | Dormant: no file; equal Recordings and exit codes | API/lifecycle |
-| Q18 | `sil-run` binary and kernel sources | No `sil_source_scope` symbol or include. The source check already runs offline in `tests/test_source_scope_contract.py`; the binary check is pending | API/lifecycle |
-| Q19 | Build without `SIL_SOURCE_SCOPES` | Same bytes as without the header calls; no `DT_NEEDED` | API/lifecycle |
+| Q18 | `sil-run` binary and kernel sources | No `sil_source_scope` symbol or include. `tests/test_source_scope_contract.py` checks the sources offline and the `sil-run` binary on Linux | API/lifecycle |
+| Q19 | Build without `SIL_SOURCE_SCOPES` | Same code, data, symbols and dynamic section as without the header calls; no `DT_NEEDED`. With `-g`, only `.debug_line` and the build ID can differ (debug-line caveat in [Source API](#source-api)) | API/lifecycle |
 | Q20 | Original and instrumented builds | Both identities retained; inline decisions of both builds retained | API/lifecycle |
 | Q21 | Ordinary versus capture Runs, generous Response deadlines, 3 repeats | Byte-identical Recordings and equal outcomes; elapsed and storage retained without a threshold | API/lifecycle |
 | Q22 | Fixtures in `tests/fixtures/source_scopes/` (offline) | The map extractor reproduces `map.json` from `scope-section.bin`; the decoder output equals each `expected.json` | decoding |

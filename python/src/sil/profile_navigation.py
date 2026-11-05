@@ -7,14 +7,16 @@ from pathlib import Path
 
 from sil.diagnostics_html_markup import Html, code, join, section, table, tag, void
 from sil.diagnostics_report import ReportError, parse_report
-from sil.profile_set import ProfileSet, ProfileSetError, _read_bounded
+from sil.profile_set import ProfileSet, ProfileSetError, read_bounded
 
 NAVIGATION_LIMIT = 200_000
 PAGE_SIZE = 100
 
 
-def select_activations(profile: ProfileSet, *, participant=None, task=None,
-                       index=None, start=None, end=None) -> ProfileSet:
+def check_selection(*, participant=None, task=None, index=None, start=None,
+                    end=None) -> bool:
+    """Raise ProfileSetError for an invalid combination of the selection
+    options; return whether any option is given."""
     if task is not None and participant is None:
         raise ProfileSetError('--task requires --participant')
     if index is not None and (participant is None or task is None or index < 0):
@@ -25,7 +27,29 @@ def select_activations(profile: ProfileSet, *, participant=None, task=None,
         raise ProfileSetError('Virtual time bounds must be nonnegative integer nanoseconds')
     if start is not None and end is not None and start >= end:
         raise ProfileSetError('Virtual time range must have --from less than --to')
-    if all(v is None for v in (participant, task, index, start, end)):
+    return any(v is not None for v in (participant, task, index, start, end))
+
+
+def selected(activation: dict, *, index=None, start=None, end=None) -> bool:
+    """Whether a candidate Activation has the index or Virtual time asked."""
+    return ((index is None or activation['index'] == index)
+            and (start is None or activation['virtual_time_ns'] >= start)
+            and (end is None or activation['virtual_time_ns'] < end))
+
+
+def selection_label(*, participant=None, task=None, index=None, start=None,
+                    end=None) -> str:
+    label = f"Participant {participant or 'all'}, Task {task or 'all'}"
+    if index is not None:
+        return label + f', Activation index {index}'
+    return label + (f", Virtual time [{start if start is not None else 'start'}, "
+                    f"{end if end is not None else 'end'}) ns")
+
+
+def select_activations(profile: ProfileSet, *, participant=None, task=None,
+                       index=None, start=None, end=None) -> ProfileSet:
+    if not check_selection(participant=participant, task=task, index=index,
+                           start=start, end=end):
         return profile
     if profile.correlation is None:
         raise ProfileSetError('offline Activation selection requires validated CPU correlation')
@@ -39,14 +63,9 @@ def select_activations(profile: ProfileSet, *, participant=None, task=None,
             and not any(p == participant and (task is None or t == task) for p, t in known)):
         raise ProfileSetError('Participant / Task is not present in the retained evidence')
     refs = tuple(i for i, a in candidates
-                 if (index is None or a['index'] == index)
-                 and (start is None or a['virtual_time_ns'] >= start)
-                 and (end is None or a['virtual_time_ns'] < end))
-    label = f"Participant {participant or 'all'}, Task {task or 'all'}"
-    if index is not None:
-        label += f', Activation index {index}'
-    else:
-        label += f", Virtual time [{start if start is not None else 'start'}, {end if end is not None else 'end'}) ns"
+                 if selected(a, index=index, start=start, end=end))
+    label = selection_label(participant=participant, task=task, index=index,
+                            start=start, end=end)
     return replace(profile, selection=refs, selection_label=label)
 
 
@@ -59,7 +78,7 @@ def with_diagnostics(profile: ProfileSet, path: Path | None) -> ProfileSet:
     if artifact is None:
         raise ProfileSetError('profile has no diagnostics artifact identity to verify')
     try:
-        data = _read_bounded(path, str(path))
+        data = read_bounded(path, str(path))
         if artifact['bytes'] != len(data) or artifact['sha256'] != hashlib.sha256(data).hexdigest():
             raise ProfileSetError('diagnostics size/SHA-256 does not match this profile Run')
         diagnostics = parse_report(data.decode('utf-8'), source=str(path))

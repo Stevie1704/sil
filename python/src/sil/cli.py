@@ -131,8 +131,9 @@ ROOT = Group("SiL: deterministic Runs of virtual ECUs\n\n"
         ModuleCommand("sil.profile_run", ""),
         ModuleCommand("sil.profile_render", ""),
         ModuleCommand("sil.profile_diff", ""),
-        "capture a CPU (Linux perf) or heap (Heaptrack) profile of one "
-        "fresh Run; 'sil profile render' presents a saved one; "
+        "capture a CPU (Linux perf) or heap (Heaptrack) profile, or the "
+        "source scopes of a Native participant, of one fresh Run; "
+        "'sil profile render' presents a saved one; "
         "'sil profile diff' compares two saved sets"),
     "diagnostics": Group("present saved diagnostics reports", {
         "render": ModuleCommand("sil.diagnostics_render",

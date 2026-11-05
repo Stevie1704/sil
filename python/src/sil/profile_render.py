@@ -26,6 +26,11 @@ from sil.profile_html import render_profile
 from sil.profile_set import ProfileSetError, load_profile_set
 from sil.profile_summary import format_summary
 from sil.profile_navigation import select_activations, with_diagnostics
+from sil.source_scope_html import render_scopes
+from sil.source_scope_set import (
+    is_scope_report, load_scope_set, select_scope_activations,
+)
+from sil.source_scope_summary import format_scope_summary
 
 PROG = "sil profile render"
 
@@ -58,6 +63,8 @@ def main(argv: list[str] | None = None) -> int:
         problem = new_path_problem("HTML report", args.html)
         if problem is not None:
             return command_error(PROG, problem, EXIT_USAGE)
+    if is_scope_report(args.profile):
+        return _render_scopes(args)
     try:
         profile = load_profile_set(args.profile)
     except ProfileSetError as error:
@@ -75,14 +82,41 @@ def main(argv: list[str] | None = None) -> int:
         # The download is the validated bytes, not a second read.
         page = render_profile(profile, profile.source)
     sys.stdout.write(format_summary(profile.report, args.profile))
-    if page is not None:
-        try:
-            write_new_file(args.html, page)
-        except OSError as error:
-            sys.stderr.write(f"{PROG}: cannot write the HTML report "
-                             f"'{args.html}': {error}\n")
-            return EXIT_FAILURE
-        sys.stdout.write(f"HTML report: {args.html}\n")
+    return _write_page(args.html, page)
+
+
+def _render_scopes(args: argparse.Namespace) -> int:
+    """The views of `scopes.json`; the document's version member chose it."""
+    if args.diagnostics is not None:
+        return command_error(PROG, "--diagnostics applies to profile.json "
+                             "only", EXIT_USAGE)
+    try:
+        scope_set = load_scope_set(args.profile)
+    except ProfileSetError as error:
+        return command_error(
+            PROG, f"'{args.profile}' is not a source-scope capture this "
+            f"version can present: {error}", EXIT_USAGE)
+    try:
+        scope_set = select_scope_activations(
+            scope_set, participant=args.participant, task=args.task,
+            index=args.activation_index, start=args.start, end=args.end)
+    except ProfileSetError as error:
+        return command_error(PROG, str(error), EXIT_USAGE)
+    page = render_scopes(scope_set) if args.html is not None else None
+    sys.stdout.write(format_scope_summary(scope_set, args.profile))
+    return _write_page(args.html, page)
+
+
+def _write_page(path: Path | None, page: str | None) -> int:
+    if page is None:
+        return EXIT_OK
+    try:
+        write_new_file(path, page)
+    except OSError as error:
+        sys.stderr.write(f"{PROG}: cannot write the HTML report "
+                         f"'{path}': {error}\n")
+        return EXIT_FAILURE
+    sys.stdout.write(f"HTML report: {path}\n")
     return EXIT_OK
 
 

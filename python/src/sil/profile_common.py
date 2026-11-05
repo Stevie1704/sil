@@ -143,8 +143,9 @@ def resolve_exit(report: dict | None, capture_run: CaptureRun) -> int:
         return run["exit_code"]
     if report is None or report["capture"]["status"] != "complete":
         return EXIT_FAILURE
-    correlation = report["activation_correlation"]
-    if correlation["kind"] == "activation" and \
+    # The scopes collector's report has no Activation correlation.
+    correlation = report.get("activation_correlation", {})
+    if correlation.get("kind") == "activation" and \
             correlation["status"] != "complete":
         return EXIT_FAILURE
     return EXIT_OK

@@ -2,7 +2,7 @@
 
 Date: 2026-11-04
 
-Status: accepted (contract); implementation pending
+Status: accepted; implemented (#371, #372, #373)
 
 Relates to [issue #360](https://github.com/Stevie1704/sil/issues/360),
 [issue #320](https://github.com/Stevie1704/sil/issues/320) and

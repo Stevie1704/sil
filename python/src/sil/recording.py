@@ -185,7 +185,7 @@ class MessageLocation(NamedTuple):
     size: int
 
 
-_MCAP_MAGIC = b"\x89MCAP0\r\n"
+MCAP_MAGIC = b"\x89MCAP0\r\n"
 _OP_MESSAGE = 0x05
 _OP_CHUNK = 0x06
 _OP_DATA_END = 0x0F
@@ -232,7 +232,7 @@ def _scan(path: str | Path, max_chunk_bytes: int, payloads: bool
     of every Message, in physical order."""
     record_index = 0
     with open(path, "rb") as stream:
-        if stream.read(len(_MCAP_MAGIC)) != _MCAP_MAGIC:
+        if stream.read(len(MCAP_MAGIC)) != MCAP_MAGIC:
             raise ValueError(f"{str(path)!r} is not an MCAP file")
         while True:
             start = stream.tell()

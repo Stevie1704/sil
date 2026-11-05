@@ -21,7 +21,7 @@ def format_summary(report: dict, path: Path) -> str:
     return _cpu_summary(report, path)
 
 
-def _clean(text) -> str:
+def clean(text) -> str:
     """Report text for a terminal: a control character (an ANSI escape, a
     newline) is written as its escape, so it cannot act on the terminal."""
     return "".join(f"\\x{ord(c):02x}" if unicodedata.category(c) == "Cc"
@@ -33,9 +33,9 @@ def _identity_lines(report: dict) -> list[str]:
 
     def known(key: str) -> str:
         value = identity.get(key)
-        return "unknown" if value is None else _clean(value)
+        return "unknown" if value is None else clean(value)
 
-    return [f"manifest: {_clean(identity['manifest_path'])} "
+    return [f"manifest: {clean(identity['manifest_path'])} "
             f"({known('manifest_hash')})",
             f"sil: {known('sil_version')}, {known('source_revision')}",
             "provenance mode: "
@@ -43,7 +43,7 @@ def _identity_lines(report: dict) -> list[str]:
 
 
 def _limitations_line(report: dict) -> str:
-    return "limitations: " + ", ".join(_clean(item) for item in
+    return "limitations: " + ", ".join(clean(item) for item in
                                        report["limitations"])
 
 
@@ -66,7 +66,7 @@ def _cpu_summary(report: dict, path: Path) -> str:
               if call_graph["method"] == "dwarf"
               else "frame-pointer call graph")
     lines = [
-        f"profile: {_clean(path)}",
+        f"profile: {clean(path)}",
         f"run: {run['status']}, {exit_text}",
         f"capture: cpu, {state}",
         *_identity_lines(report),
@@ -108,10 +108,10 @@ def _cpu_summary(report: dict, path: Path) -> str:
     if rows:
         lines.append("top self weight (share of all sample weight):")
         for row in rows:
-            name = _clean(row["symbol"] or "[unknown function]")
+            name = clean(row["symbol"] or "[unknown function]")
             module = Path(modules.get(row["module"]) or "[unknown module]")
             lines.append(f"  {_share(row['self_weight_ns'], totals['weight_ns'])}"
-                         f"  {name} ({_clean(module.name)})")
+                         f"  {name} ({clean(module.name)})")
         rest = totals["weight_ns"] - sum(r["self_weight_ns"] for r in rows)
         if rest:
             lines.append(f"  {_share(rest, totals['weight_ns'])}  "
@@ -163,10 +163,10 @@ def _heap_summary(report: dict, path: Path) -> str:
     else:
         where = (f"unsupported '{scope['requested']}' "
                  f"({scope['reason']})")
-    lines = [f"profile: {_clean(path)}", f"run: {run['status']}, {exit_text}",
+    lines = [f"profile: {clean(path)}", f"run: {run['status']}, {exit_text}",
              f"capture: heap, {state}", *_identity_lines(report),
-             f"scope: {_clean(where)}, "
-             f"{_clean(capture['backend']['version'] or 'Heaptrack')}",
+             f"scope: {clean(where)}, "
+             f"{clean(capture['backend']['version'] or 'Heaptrack')}",
              "activation correlation: unavailable (Heaptrack's timestamps "
              "have no validated mapping to host time)"]
     analysis = capture["analysis"]
@@ -195,11 +195,11 @@ def _heap_summary(report: dict, path: Path) -> str:
         lines.append("top allocation sites (innermost frame, bytes "
                      "allocated):")
         for row in rows:
-            name = _clean(row["symbol"] or "[unknown function]")
+            name = clean(row["symbol"] or "[unknown function]")
             module = Path(modules.get(row["module"]) or "[unknown module]")
             lines.append(f"  {format_bytes(row['allocated_bytes']):>10}  "
                          f"{row['allocations']:>8} calls  {name} "
-                         f"({_clean(module.name)})")
+                         f"({clean(module.name)})")
         calls = totals["allocations"] - sum(r["allocations"] for r in rows)
         size = totals["allocated_bytes"] - sum(r["allocated_bytes"]
                                                for r in rows)

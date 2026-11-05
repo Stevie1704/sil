@@ -19,10 +19,9 @@ from typing import Iterator, NamedTuple
 from mcap.exceptions import McapError
 from mcap.reader import make_reader
 
-from sil.recording import read_manifest_hash, stored_messages
+from sil.recording import MCAP_MAGIC, read_manifest_hash, stored_messages
 from sil.visualization.interchange import SOURCE_ENCODING
 
-_MAGIC = b"\x89MCAP0\r\n"
 _UNBOUNDED = 1 << 64  # export reads chunks of any declared size
 
 
@@ -124,12 +123,12 @@ def sha256_and_size(path: Path) -> tuple[str, int]:
 
 def _check_finalized(path: Path, size: int) -> None:
     with open(path, "rb") as stream:
-        head = stream.read(len(_MAGIC))
-        stream.seek(max(0, size - len(_MAGIC)))
-        tail = stream.read(len(_MAGIC))
-    if head != _MAGIC:
+        head = stream.read(len(MCAP_MAGIC))
+        stream.seek(max(0, size - len(MCAP_MAGIC)))
+        tail = stream.read(len(MCAP_MAGIC))
+    if head != MCAP_MAGIC:
         raise SourceError(f"source {str(path)!r} is not an MCAP file")
-    if size < 2 * len(_MAGIC) or tail != _MAGIC:
+    if size < 2 * len(MCAP_MAGIC) or tail != MCAP_MAGIC:
         raise SourceError(f"source {str(path)!r} is truncated: it does not "
                           "end with the MCAP footer magic")
 

@@ -756,6 +756,47 @@ count. Zero samples is not evidence of zero CPU use. An allocation that is
 outstanding at capture end is not a leak verdict. A profile describes this
 host build, not a target ECU or a worst-case execution time.
 
+### Source scopes
+
+A source owner can mark selected logical C calls in a Native library with
+`SIL_SOURCE_SCOPE(id, name)` from `include/sil/source_scope.h`, build it
+with `-DSIL_SOURCE_SCOPES=1` and link `-lsil_source_scope`. One capture
+gives the exact count, entry order, nesting and inclusive elapsed host time
+of these calls in each Native Task Activation. A sample cannot give these.
+[docs/proposals/native-source-scopes.md](proposals/native-source-scopes.md)
+is the contract.
+
+```sh
+sil profile manifest.json --out scopes --collector scopes \
+  --participant controller --original-library build-plain/libcontroller.so
+sil profile render scopes/scopes.json
+sil profile render scopes/scopes.json --html scopes.html \
+  --participant controller --task tick --activation-index 3
+```
+
+- **Host.** Linux x86-64/glibc, GCC 12. It needs no perf. Without
+  `SIL_SOURCE_SCOPES=1`, the library has no scope code; in every other Run
+  the observer is dormant and writes no file.
+- **Options.** `--participant NAME` (required) is the Native participant
+  with the instrumented library. `--original-library` records the identity
+  of the uninstrumented build; it is never loaded. `--max-scope-records N`
+  (65536, at most 262144) sets the preallocated buffer. Activation
+  observations are always on; `--max-activation-bytes` bounds them.
+  Options of the other collectors are usage errors (exit `2`).
+- **Outcome.** `scopes.json` states the Run and the capture separately, as
+  `profile.json` does. A capture with lost events, an unbalanced scope or a
+  cut observation stream is `partial`; an Activation with such a problem is
+  `unavailable` and shows its reason, never partial counts.
+- **Offline report.** `sil profile render DIR/scopes.json` checks every file
+  that `scopes.json` lists, then shows the statuses, identities, loss, the
+  per-Task exact and unavailable counts and the per-scope count table. With
+  one exact Activation selected, it lists its calls in entry order. `--html`
+  writes the same views as one offline page. `sil profile diff` rejects
+  `scopes.json`.
+
+Durations are inclusive host time of the instrumented build, observer cost
+included. They do not transfer to the original build.
+
 ### Profiling tools
 
 | Tool | Qualified versions | Install | Permission |

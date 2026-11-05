@@ -51,9 +51,11 @@ from sil.profile_common import (
 from sil.profile_cpu import CpuAnalysis, ModuleFacts, normalize_cpu
 from sil.profile_heap_run import HEAP_MAX_CAPTURE_BYTES, HeapRequest
 from sil.profile_modules import ModuleLocator
+from sil.profile_scopes import MAX_SCOPE_RECORDS, ScopesRequest
 from sil.profile_report import HOTSPOT_LIMIT, validate_profile_report
 from sil.profile_storage import reserve_reached, space_warning
 from sil.profile_summary import format_summary
+from sil.source_scope_decode import MAX_RECORDS
 
 EVENT = "cpu-clock:u"
 FREQUENCY_HZ = 999
@@ -166,9 +168,11 @@ def _positive(text: str) -> int:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=PROG, allow_abbrev=False,
-        description="Capture one CPU profile (Linux perf) or one heap "
-                    "profile (Heaptrack) of one fresh Run into a new "
-                    "directory (docs/profile-report.md). "
+        description="Capture one CPU profile (Linux perf), one heap "
+                    "profile (Heaptrack) or the source scopes of one Native "
+                    "participant of one fresh Run into a new directory "
+                    "(docs/profile-report.md, "
+                    "docs/proposals/native-source-scopes.md). "
                     "'sil profile render DIR/profile.json [--html FILE]' "
                     "presents a saved profile offline. "
                     "'sil profile diff BASE/profile.json NEW/profile.json "
@@ -177,10 +181,11 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--out", type=Path, required=True, action=GivenOnce,
                         metavar="DIR", help="the new profile directory")
     parser.add_argument("--collector", required=True, action=GivenOnce,
-                        help="cpu or heap")
+                        help="cpu, heap or scopes")
     parser.add_argument("--participant", action=GivenOnce, metavar="NAME",
                         help="heap scope: one Process participant that "
-                             "does not use the Clock shim")
+                             "does not use the Clock shim; scopes: the "
+                             "Native participant with source scopes")
     parser.add_argument("--runner", action="store_true",
                         help="heap scope: the runner process, with every "
                              "Native participant")
@@ -217,20 +222,40 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-activation-bytes", type=_positive,
                         action=GivenOnce, metavar="N",
                         help=f"default {MAX_ACTIVATION_BYTES}")
+    parser.add_argument("--original-library", type=Path, action=GivenOnce,
+                        metavar="PATH",
+                        help="scopes: the uninstrumented build of the "
+                             "library, identified and never loaded")
+    parser.add_argument("--max-scope-records", type=_positive,
+                        action=GivenOnce, metavar="N",
+                        help=f"scopes: the observer buffer in 16-byte "
+                             f"records, at most {MAX_RECORDS} "
+                             f"(default {MAX_SCOPE_RECORDS})")
     return parser
 
 
 CPU_ONLY = ("frequency_hz", "stack_bytes", "modules_from",
             "max_activation_bytes")
+SCOPES_ONLY = ("original_library", "max_scope_records")
+# Options of other collectors that have no meaning for source scopes.
+NOT_FOR_SCOPES = ("frequency_hz", "stack_bytes", "modules_from",
+                  "activations", "runner", "max_capture_bytes",
+                  "symbolization_timeout_s")
 
 
-def request_from_arguments(argv: list[str]) -> CpuRequest | HeapRequest:
+def request_from_arguments(
+        argv: list[str]) -> CpuRequest | HeapRequest | ScopesRequest:
     parser = _parser()
     args = parser.parse_args(argv)
+    if args.collector == "scopes":
+        return _scopes_request(parser, args)
+    _reject(parser, args, SCOPES_ONLY, "{} is an option of the scopes "
+            "collector")
     if args.collector == "heap":
         return _heap_request(parser, args)
     if args.collector != "cpu":
-        parser.error(f"unknown collector {args.collector!r}; use cpu or heap")
+        parser.error(f"unknown collector {args.collector!r}; use cpu, heap "
+                     "or scopes")
     if args.runner:
         parser.error("--runner selects a heap scope; the cpu collector "
                      "samples the runner and all its descendants")
@@ -252,6 +277,15 @@ def request_from_arguments(argv: list[str]) -> CpuRequest | HeapRequest:
         args.max_activation_bytes or MAX_ACTIVATION_BYTES)
 
 
+def _reject(parser: argparse.ArgumentParser, args, names: tuple[str, ...],
+            message: str) -> None:
+    """A usage error for the first given option of `names`; `message`
+    names it at `{}`."""
+    for name in names:
+        if getattr(args, name):
+            parser.error(message.format("--" + name.replace("_", "-")))
+
+
 def _target(args, recording: Path | None,
             provenance: Path | None) -> RunTarget:
     return RunTarget(args.manifest, args.out, recording, provenance,
@@ -269,15 +303,32 @@ def _outputs(args) -> tuple[Path | None, Path | None]:
     return recording, provenance
 
 
+def _scopes_request(parser: argparse.ArgumentParser, args) -> ScopesRequest:
+    _reject(parser, args, NOT_FOR_SCOPES, "{} is not an option of the "
+            "scopes collector")
+    if args.participant is None:
+        parser.error("--collector scopes needs --participant NAME: the "
+                     "Native participant whose library has source scopes")
+    records = args.max_scope_records or MAX_SCOPE_RECORDS
+    if records > MAX_RECORDS:
+        parser.error(f"--max-scope-records {records} is above "
+                     f"{MAX_RECORDS}")
+    try:
+        recording, provenance = _outputs(args)
+    except ValueError as error:
+        parser.error(str(error))
+    return ScopesRequest(
+        _target(args, recording, provenance), args.participant,
+        args.original_library, records,
+        args.max_activation_bytes or MAX_ACTIVATION_BYTES)
+
+
 def _heap_request(parser: argparse.ArgumentParser, args) -> HeapRequest:
     if args.activations:
         parser.error("Activation correlation is unavailable for the heap "
                      "collector: Heaptrack's timestamps have no validated "
                      "mapping to host time (docs/profile-report.md)")
-    for name in CPU_ONLY:
-        if getattr(args, name):
-            option = "--" + name.replace("_", "-")
-            parser.error(f"{option} is an option of the cpu collector")
+    _reject(parser, args, CPU_ONLY, "{} is an option of the cpu collector")
     if args.runner and args.participant is not None:
         parser.error("--runner and --participant exclude each other")
     if not args.runner and args.participant is None:
