@@ -67,7 +67,8 @@ All native artifacts retain their names and locations directly under the
 chosen build directory. Defining a target in a subdirectory does not change
 paths consumed by Manifests or tests. The runtime image carries editable
 example sources in the Python package; its native build selects only the
-runner, diagnostics runner, diagnostics launcher and Clock shim targets.
+runner, diagnostics runner, diagnostics launcher, Clock shim and source-scope
+observer targets.
 
 `python/pyproject.toml` owns the Python distribution and the shared product
 version. The root `Makefile` provides developer entry points across the native

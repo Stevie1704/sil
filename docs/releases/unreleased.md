@@ -2,6 +2,15 @@
 
 Move this text into the notes of the next release.
 
+## Source-scope installation
+
+The native development archive includes `sil/source_scope.h`, the observer
+`libsil_source_scope.so.1` and the `libsil_source_scope.so` link name. The
+runtime image includes the observer for instrumented Native participants.
+Release smoke checks compile a consumer against the installed archive,
+capture its calls in native and container Runs, compare their Recordings
+with ordinary Runs, and render copied scope evidence offline.
+
 ## Provenance mode
 
 `--provenance-mode full|external` selects who owns artifact identity. The

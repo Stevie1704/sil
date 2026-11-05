@@ -2,7 +2,9 @@
 """Run a release bundle without importing anything from the source checkout.
 
 The wheel and native archive are installed into a temporary environment, then
-the same representative ACC Run is executed twice. ``--check-symbols`` checks
+the same representative ACC Run is executed twice. As with install.sh, pip
+fetches the wheel's declared runtime dependencies during setup; SiL itself
+comes only from the supplied wheel. ``--check-symbols`` checks
 numeric ELF imports against bookworm's symbol limits (requires binutils).
 The optional container run uses the exact image reference supplied by the
 workflow; a release job supplies an ``image@sha256:...`` reference rather
@@ -67,7 +69,8 @@ def checked(
 
 def clean_environment(python_bin: Path, archive_bin: Path) -> dict[str, str]:
     environment = dict(os.environ)
-    for key in ("PYTHONPATH", "PYTHONHOME", "LD_PRELOAD", "DYLD_INSERT_LIBRARIES"):
+    for key in ("PYTHONPATH", "PYTHONHOME", "LD_PRELOAD", "LD_LIBRARY_PATH",
+                "DYLD_INSERT_LIBRARIES"):
         environment.pop(key, None)
     environment["PYTHONNOUSERSITE"] = "1"
     environment["PATH"] = os.pathsep.join(
@@ -224,6 +227,80 @@ def smoke_diagnostics(
     assert_offline_html(workspace / "copied" / "report.html")
 
 
+def prepare_scope_consumer(
+    native_root: Path, workspace: Path, environment: dict[str, str],
+) -> None:
+    """Compile a consumer using only the installed headers and observer.
+
+    Its absolute rpath finds the native installation. In the runtime image
+    that path does not exist: the image must supply the observer itself.
+    """
+    workspace.mkdir()
+    (workspace / "consumer.c").write_text("""\
+#include <sil/participant.h>
+#include <sil/source_scope.h>
+
+static void tick(void *user, uint64_t now_ns) {
+    SIL_SOURCE_SCOPE(1, "tick");
+    const sil_api_v1 *api = user;
+    api->publish(api->ctx, "ticks", &now_ns, sizeof now_ns);
+}
+
+int sil_participant_init(const sil_api_v1 *api, const char *name,
+                         const char *config_json) {
+    return api->register_task(api->ctx, "tick", 1000000, 0, 0, tick,
+                              (void *)api);
+}
+""")
+    checked(
+        ["cc", "-std=c11", "-O2", "-shared", "-fPIC", "-DSIL_SOURCE_SCOPES=1",
+         f"-I{native_root / 'include'}", "consumer.c", "-o", "consumer.so",
+         "-Wl,--build-id=sha1", f"-L{native_root / 'lib'}", "-lsil_source_scope",
+         f"-Wl,-rpath,{native_root / 'lib'}"],
+        cwd=workspace, env=environment,
+    )
+    checked(
+        ["python", "-c", """\
+from sil.manifest import Manifest
+m = Manifest(duration_ns=3000000)
+m.add_schemas({'smoke.Time': {'fields': [{'name': 'now_ns', 'type': 'u64'}]}})
+m.add_channel('ticks', schema='smoke.Time')
+m.add_native('scoped', library='consumer.so', publishes=['ticks'])
+m.write('scopes-manifest.json')
+"""],
+        cwd=workspace, env=environment,
+    )
+
+
+def smoke_source_scopes(workspace: Path, execute) -> None:
+    """Capture exact calls and render copied evidence with installed SiL."""
+    def invoke(args: list[str]) -> None:
+        result = execute(args)
+        if result.returncode:
+            raise SmokeError(
+                f"source-scope smoke failed: {args}:\n"
+                f"{result.stdout}\n{result.stderr}"
+            )
+
+    invoke(["run", "scopes-manifest.json", "-o", "ordinary.mcap"])
+    invoke(["profile", "scopes-manifest.json", "--collector", "scopes",
+            "--participant", "scoped", "--out", "capture", "-o", "captured.mcap"])
+    report = load_json(workspace / "capture/scopes.json")
+    if (report.get("sil_source_scope_report") != 1
+            or report["run"]["exit_code"] != 0
+            or report["capture"]["status"] != "complete"):
+        raise SmokeError("installed source-scope capture is incomplete")
+    calls = load_json(workspace / "capture/scopes/calls.json")
+    if (len(calls["activations"]) != 3
+            or any(a["counts"] != {"1": 1} for a in calls["activations"])):
+        raise SmokeError("installed observer did not capture one call per Activation")
+    if (workspace / "ordinary.mcap").read_bytes() != (workspace / "captured.mcap").read_bytes():
+        raise SmokeError("source-scope capture changed the Recording")
+    shutil.copytree(workspace / "capture", workspace / "offline")
+    invoke(["profile", "render", "offline/scopes.json", "--html", "offline/report.html"])
+    assert_offline_html(workspace / "offline/report.html")
+
+
 def smoke_native(
     bundle: Path, version: str, revision: str, workdir: Path,
     *, check_symbols: bool,
@@ -244,8 +321,8 @@ def smoke_native(
     venv.EnvBuilder(with_pip=True, clear=True).create(venv_dir)
     python_bin = venv_dir / "bin"
     checked(
-        [str(python_bin / "python"), "-m", "pip", "install", "--no-index",
-         "--no-deps", str(wheels[0])],
+        [str(python_bin / "python"), "-m", "pip", "install",
+         "--disable-pip-version-check", str(wheels[0])],
         cwd=workdir,
         env=clean_environment(python_bin, native_root / "bin"),
     )
@@ -338,6 +415,13 @@ def smoke_native(
         lambda command: run(command, cwd=native_workspace, env=environment,
                             timeout=300),
     )
+    scope_workspace = workdir / "native-scopes"
+    prepare_scope_consumer(native_root, scope_workspace, environment)
+    smoke_source_scopes(
+        scope_workspace,
+        lambda args: run([str(python_bin / "sil"), *args],
+                         cwd=scope_workspace, env=environment),
+    )
     return acc_manifest, manifest_hash
 
 
@@ -425,6 +509,15 @@ def smoke_container(
         first,
         lambda command: docker_run(image, manifest.parent, command, "sil",
                                    timeout=300),
+    )
+    scope_workspace = manifest.parent / "container-scopes"
+    scope_workspace.mkdir()
+    for name in ("consumer.so", "scopes-manifest.json"):
+        shutil.copyfile(manifest.parent / "native-scopes" / name,
+                        scope_workspace / name)
+    smoke_source_scopes(
+        scope_workspace,
+        lambda args: docker_run(image, scope_workspace, args, "sil"),
     )
 
 
