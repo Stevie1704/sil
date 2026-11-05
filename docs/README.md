@@ -19,6 +19,7 @@ agent.
 | Import and inspect an FMU, bind variables, or connect network terminals | [FMI importer](fmi.md) |
 | Convert CSV data and replay it into an FMU | [Recorded input and FMU replay](recorded-input.md) |
 | Couple FMUs through Channels or replace one with replay | [Coupling and substituting FMUs](fmu-coupling.md) |
+| Design a camera-based closed loop with an external simulator | [Visual integration guide (HTML)](closed-loop-camera.html) — proposed adapter, timing and implementation path |
 | Bring an existing C library into a Run | [Shared-library participants](library.md) |
 | Run a C application through the Native ABI and compare it | [Native ADAS reference application](adas-reference.md) |
 | Select a replay window, warm up a target, or replay long Recordings | [Replay](replay.md) |

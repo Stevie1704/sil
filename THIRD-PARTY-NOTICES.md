@@ -6,6 +6,16 @@ enters a published SiL artifact, names its license, and says where its license
 text is reproduced. All of them are permissive and impose no condition on a
 Participant that runs under SiL.
 
+## Embedded in the visual documentation
+
+The standalone [camera-loop guide](docs/closed-loop-camera.html) embeds its
+diagram styles and fonts; it requires no external runtime assets.
+
+| Component | Version | License | License text |
+| --- | --- | --- | --- |
+| [Archify](https://github.com/tt-a1i/archify) diagram template and styles | 3.0.1 | MIT, Copyright 2026 tt-a1i and 2025 Cocoon AI | Retained in an HTML comment in the guide |
+| [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) font subsets bundled by Archify | Google Fonts service revision v24 | SIL Open Font License 1.1, Copyright 2020 The JetBrains Mono Project Authors | Retained with the embedded font data in each diagram document |
+
 ## Compiled into the native binaries
 
 These are header-only libraries compiled into `sil-run`. They are present in
