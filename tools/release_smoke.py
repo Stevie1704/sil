@@ -2,7 +2,9 @@
 """Run a release bundle without importing anything from the source checkout.
 
 The wheel and native archive are installed into a temporary environment, then
-the same representative ACC Run is executed twice. ``--check-symbols`` checks
+the same representative ACC Run is executed twice. As with install.sh, pip
+fetches the wheel's declared runtime dependencies during setup; SiL itself
+comes only from the supplied wheel. ``--check-symbols`` checks
 numeric ELF imports against bookworm's symbol limits (requires binutils).
 The optional container run uses the exact image reference supplied by the
 workflow; a release job supplies an ``image@sha256:...`` reference rather
@@ -319,8 +321,8 @@ def smoke_native(
     venv.EnvBuilder(with_pip=True, clear=True).create(venv_dir)
     python_bin = venv_dir / "bin"
     checked(
-        [str(python_bin / "python"), "-m", "pip", "install", "--no-index",
-         "--no-deps", str(wheels[0])],
+        [str(python_bin / "python"), "-m", "pip", "install",
+         "--disable-pip-version-check", str(wheels[0])],
         cwd=workdir,
         env=clean_environment(python_bin, native_root / "bin"),
     )
