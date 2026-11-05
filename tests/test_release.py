@@ -8,6 +8,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tarfile
 from pathlib import Path
 
 import pytest
@@ -26,6 +27,7 @@ from release import (  # noqa: E402
     tag_version,
     validate_release_title,
     validate_native_archive,
+    validate_native_prefix,
 )
 
 VERSION = project_version(ROOT)
@@ -116,7 +118,8 @@ def test_release_title_must_match_version():
         validate_release_title("SiL 0.1.0", "0.1.0")
 
 
-def test_native_archive_is_complete_and_deterministic(tmp_path: Path):
+@pytest.fixture
+def native_prefix(tmp_path: Path) -> Path:
     prefix = tmp_path / "prefix"
     files = (
         *REQUIRED_NATIVE_PATHS,
@@ -138,13 +141,41 @@ def test_native_archive_is_complete_and_deterministic(tmp_path: Path):
             )
         else:
             path.write_text(relative)
+    return prefix
 
+
+def test_native_archive_is_complete_and_deterministic(tmp_path: Path, native_prefix: Path):
     first = tmp_path / "first.tar.gz"
     second = tmp_path / "second.tar.gz"
-    make_native_archive(prefix, first, VERSION)
-    make_native_archive(prefix, second, VERSION)
+    make_native_archive(native_prefix, first, VERSION)
+    make_native_archive(native_prefix, second, VERSION)
     assert first.read_bytes() == second.read_bytes()
     validate_native_archive(first, VERSION, "test-revision")
+
+
+@pytest.mark.parametrize("missing", [
+    "include/sil/source_scope.h",
+    "lib/libsil_source_scope.so",
+    "lib/libsil_source_scope.so.1",
+])
+def test_native_release_rejects_missing_source_scope_artifacts(
+    tmp_path: Path, native_prefix: Path, missing: str,
+):
+    complete = tmp_path / "complete.tar.gz"
+    make_native_archive(native_prefix, complete, VERSION)
+    (native_prefix / missing).unlink(missing_ok=True)
+    with pytest.raises(ReleaseError, match=missing):
+        validate_native_prefix(native_prefix, VERSION)
+
+    incomplete = tmp_path / "incomplete.tar.gz"
+    with tarfile.open(complete) as source:
+        with tarfile.open(incomplete, "w:gz") as target:
+            for member in source.getmembers():
+                if member.name.endswith("/" + missing):
+                    continue
+                target.addfile(member, source.extractfile(member) if member.isfile() else None)
+    with pytest.raises(ReleaseError, match=missing):
+        validate_native_archive(incomplete, VERSION)
 
 
 def test_runner_reports_the_project_version(sil_run):

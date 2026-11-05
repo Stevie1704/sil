@@ -39,6 +39,7 @@ COPY examples examples
 COPY include include
 COPY kernel kernel
 COPY shim shim
+COPY source_scope source_scope
 COPY tests tests
 COPY tools tools
 COPY cmake cmake
@@ -51,7 +52,7 @@ RUN version="${SIL_VERSION:-$(python tools/release.py project-version --root /sr
     && cmake -S . -B /build -DCMAKE_BUILD_TYPE=Release \
       -DSIL_SOURCE_REPOSITORY="${SIL_SOURCE_REPOSITORY}" \
       -DSIL_SOURCE_REVISION="${SIL_SOURCE_REVISION}" \
-    && cmake --build /build --target sil-run sil-run-diagnostics sil-diagnostics-launcher sil_clock_shim -j2 \
+    && cmake --build /build --target sil-run sil-run-diagnostics sil-diagnostics-launcher sil_clock_shim sil_source_scope -j2 \
     && cmake --install /build --prefix /opt/sil/native
 
 RUN python -m pip install --no-cache-dir \
@@ -95,6 +96,8 @@ COPY --from=build /opt/sil/native/bin/sil-run /usr/local/bin/sil-run
 COPY --from=build /opt/sil/native/bin/sil-run-diagnostics /usr/local/bin/sil-run-diagnostics
 COPY --from=build /opt/sil/native/bin/sil-diagnostics-launcher /usr/local/bin/sil-diagnostics-launcher
 COPY --from=build /opt/sil/native/lib/libsil_clock_shim.so /usr/local/lib/libsil_clock_shim.so
+COPY --from=build /opt/sil/native/lib/libsil_source_scope.so.1 /usr/local/lib/libsil_source_scope.so.1
+RUN ldconfig
 COPY --from=build /opt/sil/python /opt/sil/python
 COPY --from=build /opt/sil/licenses /usr/share/licenses/sil
 

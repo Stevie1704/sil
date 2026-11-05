@@ -766,6 +766,14 @@ of these calls in each Native Task Activation. A sample cannot give these.
 [docs/proposals/native-source-scopes.md](proposals/native-source-scopes.md)
 is the contract.
 
+The native development archive includes the header, the link library
+`lib/libsil_source_scope.so` and its runtime library
+`lib/libsil_source_scope.so.1`. When building against an extracted archive,
+pass `-I<PREFIX>/include -L<PREFIX>/lib -Wl,-rpath,<PREFIX>/lib` along with
+`-lsil_source_scope`, using the absolute installation prefix. The runtime
+image includes the versioned observer on its loader search path; mount your
+instrumented Participant library and Manifest as usual.
+
 ```sh
 sil profile manifest.json --out scopes --collector scopes \
   --participant controller --original-library build-plain/libcontroller.so
