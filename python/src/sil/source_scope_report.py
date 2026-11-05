@@ -72,7 +72,9 @@ def encode_calls(document: dict) -> bytes:
 
 def encode_report(document: dict) -> bytes:
     """The bytes of `scopes.json`; ValueError above its 1 MiB budget."""
-    encoded = _encode(document)
+    # All 4,096 scopes and their summaries must fit the report budget.
+    # Whitespace alone would push legal 63-byte names over that budget.
+    encoded = _encode(document, compact=True)
     if len(encoded) > MAX_REPORT_BYTES:
         raise ValueError(f"scopes.json has more than {MAX_REPORT_BYTES} bytes")
     return encoded
@@ -122,9 +124,11 @@ def scope_report(*, sil_version: str, configuration: dict, run: dict,
     }
 
 
-def _encode(document: dict) -> bytes:
+def _encode(document: dict, *, compact: bool = False) -> bytes:
     """ASCII JSON: every control and line-separator character is escaped."""
-    return (json.dumps(document, indent=2) + "\n").encode("ascii")
+    return (json.dumps(document, indent=None if compact else 2,
+                       separators=(",", ":") if compact else None)
+            + "\n").encode("ascii")
 
 
 def _summary(calls: dict, scope_map: dict) -> dict:

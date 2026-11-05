@@ -29,7 +29,8 @@ from pathlib import Path
 import pytest
 
 from conftest import BUILD_DIR, ROOT, file_sha256
-from sil import profile_scopes
+from sil import profile_run, profile_scopes
+from sil.profile_common import CaptureRun
 from sil.profile_scopes import create_raw_file, session_value
 from sil.profile_storage import RESERVE_BYTES
 from sil.source_scope_decode import CaptureFailed, decode
@@ -253,6 +254,35 @@ def test_a_failed_map_write_leaves_no_directory(tmp_path, monkeypatch,
     assert refusal.value.exit_code == 1
     assert "map.json" in str(refusal.value)
     assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("observations_started", [False, True])
+def test_a_runner_killed_before_its_first_scope_has_an_incomplete_raw_capture(
+        tmp_path, monkeypatch, allocation, capsys, observations_started):
+    from test_source_scope_decoding import stream
+
+    manifest = fake_manifest(tmp_path, fake_library(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(profile_scopes, "host_tools", lambda: None)
+
+    def killed(request, layout, native, cwd, session, descriptor):
+        if observations_started:
+            layout.observations.write_text(stream(end=False))
+        return CaptureRun([], -signal.SIGKILL, None, None, False, None)
+
+    monkeypatch.setattr(profile_scopes, "_execute", killed)
+
+    code = profile_run.main([str(manifest), "--out", "scopes",
+                             "--collector", "scopes", "--participant",
+                             PARTICIPANT, "--no-recording"])
+
+    assert code == 128 + signal.SIGKILL, capsys.readouterr().err
+    report, calls = saved(tmp_path / "scopes")
+    assert report["run"]["signal"] == signal.SIGKILL
+    assert (report["capture"]["status"], report["capture"]["reasons"]) == \
+        ("failed", ["raw_incomplete"])
+    assert raw_header(tmp_path / "scopes")["state"] == CREATED
+    assert report["capture"]["records"] == 0 and calls is None
 
 
 # --- the capture: Linux x86-64/glibc -------------------------------------------
@@ -561,8 +591,11 @@ def test_output_problems_and_raw_failures(tools, scenarios, tmp_path):
 
 
 @needs_capture
-def test_a_killed_runner_keeps_its_records(tools, scenarios, tmp_path):
-    proc = capture(scenario_manifest(tmp_path, "kill"), tools, tmp_path)
+@pytest.mark.parametrize("scenario, state, records", [
+    ("kill", ACTIVE, 7), ("kill_before_scope", CREATED, 0)])
+def test_a_killed_runner_keeps_its_records(tools, scenarios, tmp_path,
+                                         scenario, state, records):
+    proc = capture(scenario_manifest(tmp_path, scenario), tools, tmp_path)
     assert proc.returncode == 128 + signal.SIGKILL, proc.stderr
     out = tmp_path / "scopes"
     report, calls = saved(out)
@@ -571,9 +604,10 @@ def test_a_killed_runner_keeps_its_records(tools, scenarios, tmp_path):
     assert (report["capture"]["status"], report["capture"]["reasons"]) == \
         ("failed", ["raw_incomplete"])
     raw = raw_header(out)
-    # Three Activations of one call, then one entry before the kill.
-    assert (raw["state"], raw["records"]) == (ACTIVE, 7)
-    assert report["capture"]["records"] == 7 and calls is None
+    # Either no scope ran, or three Activations completed one call each
+    # before the entry of the scope that kills the runner.
+    assert (raw["state"], raw["records"]) == (state, records)
+    assert report["capture"]["records"] == records and calls is None
     assert {"role": "diagnostics_report", "path": "run.diagnostics.json",
             "reason": "not_written"} in report["missing"]
     # A Recording without the MCAP magic is not listed as one.

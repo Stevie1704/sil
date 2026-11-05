@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import tracemalloc
 
 import pytest
 
@@ -113,6 +114,52 @@ def test_render_prints_statuses_identities_counts_and_limitations(
     assert "select_lead" in out and "check_object" in out
     for limitation in LIMITATIONS:
         assert limitation in out
+
+
+def test_maximum_scope_map_can_be_published_and_rendered(tmp_path, capsys,
+                                                       monkeypatch):
+    scopes = [{"id": i, "name": "x" * 63,
+               "sites": [{"file": "x.c", "line": i}]}
+              for i in range(1, 4097)]
+    scope_map = {**MAP, "scopes": scopes}
+    assert len(encode_map(scope_map)) <= 2 << 20
+
+    report_path = capture_dir(tmp_path, "complete", scope_map=scope_map)
+    assert report_path.stat().st_size <= 1 << 20
+    report = json.loads(report_path.read_text())
+    assert len(report["summary"]["scopes"]) == 4096
+    assert report["summary"]["scopes"][-1]["attributed_calls"] == 0
+    code, out, err = render([report_path], capsys, tmp_path, monkeypatch)
+    assert code == 0, err
+    assert "capture: complete" in out and "4096" in out
+
+
+def test_nested_call_html_memory_is_bounded_by_the_display_limit(tmp_path):
+    from sil.source_scope_html import render_scopes
+    from sil.source_scope_set import load_scope_set, select_scope_activations
+    from test_source_scope_decoding import raw, stream
+
+    pairs = 10000
+    # A valid recursive Activation, decoded from the actual raw layout.
+    records = [(i, 42, 1, 0) for i in range(pairs)]
+    records += [(pairs + i, 42, 1, 1) for i in range(pairs)]
+    scopes = capture_dir(tmp_path, "complete", events=raw(records),
+                         observations=stream((0, 2 * pairs)))
+    scope_set = select_scope_activations(load_scope_set(scopes),
+                                         participant="adas", task="control", index=0)
+    # Measure presentation after loading; the bounded file reader can
+    # reserve its full 256 MiB read limit independently of rendering.
+    tracemalloc.start()
+    try:
+        source = render_scopes(scope_set)
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    page = Page(source)
+    assert "9500 more calls not shown" in page.text
+    # Formatting all 10,000 depths before truncation consumes over 100 MiB.
+    assert peak < 64 << 20
 
 
 def test_a_failed_capture_shows_its_reason_and_unavailable_files(

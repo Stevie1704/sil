@@ -170,17 +170,17 @@ def _activations(scope_set: ScopeSet) -> Html:
 
 
 def _calls(activation: dict, names: dict[int, str]) -> Html:
+    calls, footer = _bounded(activation["calls"], "calls")
     rows = [[str(c["depth"]),
              "  " * c["depth"] + names.get(c["scope"],
                                                      "[unnamed scope]"),
              str(c["scope"]), c["entry_ns"], c["return_ns"], c["elapsed_ns"]]
-            for c in activation["calls"]]
-    shown, footer = _bounded(rows, "calls")
+            for c in calls]
     return section("call-order", "Calls in entry order", table(
         "calls", "Calls of the selected Activation in entry order",
         [("Depth", True), ("Scope", False), ("ID", True),
          ("Entry (host ns)", True), ("Return (host ns)", True),
-         ("Elapsed (host ns)", True)], shown, footer=footer,
+         ("Elapsed (host ns)", True)], rows, footer=footer,
         filterable=False), level=3,
         note="Elapsed time is inclusive: nested durations overlap.")
 

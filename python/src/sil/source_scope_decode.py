@@ -193,7 +193,9 @@ class _Stream:
     @classmethod
     def parse(cls, text: str) -> _Stream:
         stream, end = cls(), None
-        lines = [line for line in text.splitlines() if line.strip()]
+        # JSONL records end at LF; Unicode line separators can occur inside
+        # the runner's UTF-8 JSON strings (for example, in Task names).
+        lines = [line for line in text.split("\n") if line.strip()]
         for number, line in enumerate(lines):
             try:
                 row = json.loads(line)

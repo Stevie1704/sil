@@ -227,6 +227,20 @@ def test_a_matching_capture_decodes():
     assert run_decode(raw(CALL), stream((0, 100)))["totals"]["attributed_calls"] == 1
 
 
+@pytest.mark.parametrize("separator", ["\u0085", "\u2028", "\u2029"])
+def test_unicode_separators_in_names_do_not_cut_the_observation_stream(separator):
+    rows = [json.loads(line) for line in stream((0, 100)).split("\n") if line]
+    rows[1]["task"] = f"control{separator}loop"
+    # The runner writes UTF-8 JSON with LF record delimiters.
+    observations = "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + "\n"
+
+    calls = run_decode(raw(CALL), observations)
+
+    assert (calls["status"], calls["problems"]) == ("complete", [])
+    assert calls["totals"]["attributed_calls"] == 1
+    assert calls["activations"][0]["task"] == rows[1]["task"]
+
+
 @pytest.mark.parametrize("events", [
     raw(CALL, magic=b"SILSCOPX"), raw(CALL, state=4), raw(CALL)[:-1],
     raw(CALL, kept=3), raw(CALL, capacity=0), raw([(10, 42, 9, 0)]),

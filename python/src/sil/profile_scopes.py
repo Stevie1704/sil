@@ -40,8 +40,8 @@ from sil.profile_common import (
 from sil.profile_storage import RESERVE_BYTES, free_bytes
 from sil.recording import MCAP_MAGIC
 from sil.source_scope_decode import (
-    CREATED, HEADER, MAGIC, MAX_RECORDS, RECORD, VERSION, CaptureFailed,
-    decode,
+    ACTIVE, CREATED, HEADER, MAGIC, MAX_RECORDS, RECORD, VERSION, CaptureFailed,
+    decode, read_header,
 )
 from sil.source_scope_map import (
     OBSERVER_SONAME, LibraryScan, MapError, file_identity, file_sha256,
@@ -323,12 +323,19 @@ class Decoded:
 
 
 def decode_capture(request: ScopesRequest, layout: ScopesLayout,
-                   found: Preflight, capture_id: uuid.UUID) -> Decoded:
+                   found: Preflight, capture_id: uuid.UUID,
+                   capture_run: CaptureRun) -> Decoded:
     """Decode the saved files; the calls document or the failure."""
     events = _read(layout.events, raw_size(MAX_RECORDS))
     observations = _read(layout.observations,
                          request.max_activation_bytes + (1 << 20))
     try:
+        # A created file normally means a successful zero-event capture.
+        # A signaled runner did not finalize, even if no scope activated it
+        # and the observation header was never written.
+        if run_record(capture_run)["signal"] is not None and \
+                read_header(events or b"").state in (CREATED, ACTIVE):
+            raise CaptureFailed("raw_incomplete", "the runner did not finalize")
         calls = decode(events or b"",
                        (observations or b"").decode("utf-8", "replace"),
                        found.scope_map, participant=request.participant,
@@ -464,7 +471,7 @@ def run_scopes(request: ScopesRequest, cwd: Path) -> int:
         return command_error(PROG, str(refusal), refusal.exit_code)
     capture_run = run_with_session(request, layout, native, cwd, capture_id,
                                    descriptor)
-    decoded = decode_capture(request, layout, found, capture_id)
+    decoded = decode_capture(request, layout, found, capture_id, capture_run)
     saved = publish(request, layout, cwd, found, capture_run, decoded)
     if saved is None:
         return resolve_exit(None, capture_run)

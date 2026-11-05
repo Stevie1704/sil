@@ -176,6 +176,7 @@ static void tick(void *user, uint64_t now_ns) {
   (void)user;
   (void)now_ns;
   const uint64_t index = g.activations;
+  if (is("kill_before_scope")) raise(SIGKILL);
   if (is("plain") || is("fill") || is("corrupt") || is("slow")) plain();
   if (is("slow")) usleep(1000);
   if (is("recursion")) recurse(2);
