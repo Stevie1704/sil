@@ -13,17 +13,19 @@ glibc 2.39, GCC 12.4.0 (`12.4.0-2ubuntu1~24.04.1`), binutils 2.42, perf
 | `tests.txt` | The verbose pytest log of the source-scope tests |
 | `results.json` | The ADAS proof: build commands and identities of both builds, 12 Runs, Recording SHA-256 |
 | `original.inline.txt`, `instrumented.inline.txt` | GCC 12 inline decisions of both ADAS builds (`-fopt-info-inline-optimized`) |
-| `capture-one-0/`, `capture-eight-0/` | `scopes.json`, `scopes/map.json` and `scopes/calls.json` of the first capture of each maneuver |
 
-The workflow artifact `source-scopes-evidence` (30 days) also holds the raw
-`events.bin` files, observation streams, Recordings, copied sources and
-libraries of every Run.
+`proof.py` writes the final `results.json` (with `recording_sha256`) only
+after it checked the counts and the entry order of every Activation in
+`calls.json`, and the library identities in `scopes.json`, of all 6
+captures. The workflow artifact `source-scopes-evidence` (30 days) also
+holds those files, the raw `events.bin` files, observation streams,
+Recordings, copied sources and libraries of every Run.
 
 ## Rows
 
 | Row | Evidence | Result |
 | --- | --- | --- |
-| Q1 | `results.json` captures, `capture-*-0/` | Every one of the 20 Activations of each maneuver is `exact` with counts (2, 1, 1, 1) and (16, 8, 36, 1) and #320's entry order, in all 6 captures |
+| Q1 | `results.json` `runs` `capture` and `summary` | Every one of the 20 Activations of each maneuver is `exact` with counts (2, 1, 1, 1) and (16, 8, 36, 1) and #320's entry order, in all 6 captures |
 | Q2 | `test_recursion_nests_three_calls` | 3 nested calls, depths 0–2 |
 | Q3 | `test_an_early_return_is_a_return_event` | 30 entries, 30 returns; both paths of scope 4 return |
 | Q4 | `test_two_tasks_at_one_virtual_time_keep_their_calls` | Tasks at equal Virtual times keep {5: 1} and {6: 2} |
@@ -40,7 +42,7 @@ libraries of every Run.
 | Q17 | `test_the_library_is_dormant_outside_a_scopes_capture`, `test_the_library_is_dormant_in_a_cpu_profile`, `test_a_process_that_is_not_the_runner_stays_dormant` | `sil-run`, `sil run`, the diagnostics runner, a CPU profile and a Process participant: equal Recordings and exit codes; a dormant observer leaves the raw file byte-identical |
 | Q18 | `test_ordinary_runner_sources_have_no_scope_observer`, `test_ordinary_runner_binary_has_no_scope_observer` | No `sil_source_scope` in the kernel sources or the `sil-run` binary |
 | Q19 | `test_without_the_opt_in_*`, `test_with_statement_markers_only_the_line_table_differs` | Same bytes with `-g -gno-statement-frontiers` and without `-g`; no `DT_NEEDED`. With default `-O2 -g`, only `.debug_line` and the build ID differ (see below) |
-| Q20 | `results.json` `builds`, `*.inline.txt`, `capture-*-0/scopes.json` `identities` | Both builds' SHA-256, build ID, `DT_NEEDED` and inline decisions; GCC 12 inlined `confirms` and `confirmed` in both builds |
+| Q20 | `results.json` `builds`, `*.inline.txt` | Both builds' SHA-256, build ID, `DT_NEEDED` and inline decisions; GCC 12 inlined `confirms` and `confirmed` in both builds |
 | Q21 | `results.json` `runs` | 3 repeats × (`sil-run` original, `sil-run` instrumented, 2 captures): 12 exit codes 0, one Recording SHA-256 `2c9532406de00e2d9cffb2207ce6798659b688a9f00b877e2c62e772f4c11334`; elapsed host time and storage per Run retained |
 
 Q19 finding: GCC 12 at `-O2 -g` writes a line-table statement marker for
