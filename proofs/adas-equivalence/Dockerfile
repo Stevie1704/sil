@@ -8,10 +8,11 @@ FROM ${PYTHON_IMAGE}
 # The Debian snapshot of proofs/adas-fmu: the same compiler gives the same
 # archive bytes, so the archive digest can be held to its pin. procps gives
 # `ps`, for the check that no importer process outlives its Run.
+COPY container/install-build-deps.sh /tmp/install-build-deps.sh
 RUN rm -f /etc/apt/sources.list.d/*.sources \
     && echo 'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260901T000000Z bookworm main' > /etc/apt/sources.list \
-    && apt-get -o Acquire::Check-Valid-Until=false update \
-    && apt-get install -y --no-install-recommends build-essential cmake libssl-dev procps \
+    && sh /tmp/install-build-deps.sh build-essential cmake libssl-dev procps \
+    && rm -f /tmp/install-build-deps.sh \
     && rm -rf /var/lib/apt/lists/*
 # FMPy 0.3.26 by hash, in the base interpreter only. The SiL environment
 # below has no FMPy, and independent.py imports no SiL.

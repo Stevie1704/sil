@@ -2,6 +2,8 @@
 
 import json
 import os
+import shlex
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -25,7 +27,7 @@ log = Path(os.environ["APT_TEST_LOG"])
 calls = json.loads(log.read_text()) if log.exists() else []
 args = sys.argv[1:]
 phase = ("update" if "update" in args else
-         "download" if "--download-only" in args else "install")
+         "install" if "--no-download" in args else "download")
 attempt = sum(call["phase"] == phase for call in calls)
 calls.append({"phase": phase, "args": args})
 log.write_text(json.dumps(calls))
@@ -40,16 +42,54 @@ if attempt < failures.get(phase, 0):
     sleep.chmod(0o755)
     log = tmp_path / "calls.json"
 
-    def run(**failures):
+    def run(script=None, **failures):
+        command = (["sh", "-ec", script] if script is not None else
+                   ["sh", str(ROOT / "container/install-build-deps.sh"), "cmake", "libssl-dev"])
         result = subprocess.run(
-            ["sh", str(ROOT / "container/install-build-deps.sh"), "cmake", "libssl-dev"],
+            command,
             env={**os.environ, "PATH": f"{tmp_path}{os.pathsep}{os.environ['PATH']}",
-                 "APT_TEST_LOG": str(log), "APT_TEST_FAILURES": json.dumps(failures)},
+                 "APT_TEST_LOG": str(log), "APT_TEST_FAILURES": json.dumps(failures),
+                 "DEBIAN_SNAPSHOT": "20260901T000000Z"},
             capture_output=True, text=True, timeout=5,
         )
         return result, json.loads(log.read_text())
 
     return run
+
+
+@pytest.mark.parametrize("dockerfile", [
+    "Dockerfile",
+    "proofs/acc-fmi/Dockerfile",
+    "proofs/adas-closed-loop/Dockerfile",
+    "proofs/adas-equivalence/Dockerfile",
+])
+@pytest.mark.parametrize("phase", ["update", "download"])
+def test_snapshot_build_recovers_at_the_dockerfile_call_site(
+    apt_build, tmp_path, dockerfile, phase,
+):
+    instructions = (ROOT / dockerfile).read_text().replace("\\\n", " ").splitlines()
+    helper_copy = "COPY container/install-build-deps.sh /tmp/install-build-deps.sh"
+    helper = tmp_path / "install-build-deps.sh"
+    for instruction in instructions:
+        if instruction == helper_copy:
+            shutil.copyfile(ROOT / "container/install-build-deps.sh", helper)
+        if instruction.startswith("RUN ") and "snapshot.debian.org" in instruction:
+            script = instruction.removeprefix("RUN ")
+            break
+    else:
+        pytest.fail(f"no snapshot package installation in {dockerfile}")
+    # Execute the Dockerfile's shell command with filesystem paths redirected
+    # into the test workspace and failures injected only at the APT boundary.
+    apt_dir = tmp_path / "apt"
+    (apt_dir / "sources.list.d").mkdir(parents=True)
+    script = script.replace("/etc/apt", shlex.quote(str(apt_dir)))
+    script = script.replace("/tmp/install-build-deps.sh", shlex.quote(str(helper)))
+    script = script.replace("/var/lib/apt/lists", shlex.quote(str(tmp_path / "lists")))
+    result, calls = apt_build(script=script, **{phase: 2})
+    assert result.returncode == 0, result.stderr
+    assert sum(call["phase"] == phase for call in calls) == 3
+    assert calls[-1]["phase"] == "install"
+    assert "20260901T000000Z" in (apt_dir / "sources.list").read_text()
 
 
 @pytest.mark.parametrize("phase", ["update", "download"])
