@@ -13,6 +13,7 @@ on:
       - 'proofs/acc-fmi/models/**'
       - 'python/src/sil/examples/acc/dynamics.py'
       - '.github/workflows/proof-public-workloads.yml'
+      - 'container/install-snapshot-packages.sh'
   workflow_dispatch:
 
 jobs:

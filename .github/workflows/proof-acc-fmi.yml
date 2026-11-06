@@ -13,6 +13,7 @@ on:
       - 'python/src/sil/fmi/**'
       - 'python/src/sil/examples/acc/**'
       - '.github/workflows/proof-acc-fmi.yml'
+      - 'container/install-snapshot-packages.sh'
   workflow_dispatch:
 
 jobs:

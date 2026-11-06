@@ -7,11 +7,12 @@
 # the archives vendored under tests/fixtures/reference-fmus/2.0/.
 ARG PYTHON_IMAGE=python:3.13.7-slim-bookworm@sha256:adafcc17694d715c905b4c7bebd96907a1fd5cf183395f0ebc4d3428bd22d92d
 FROM ${PYTHON_IMAGE}
+COPY container/install-snapshot-packages.sh /tmp/install-snapshot-packages.sh
 RUN rm -f /etc/apt/sources.list.d/*.sources \
     && echo 'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260901T000000Z bookworm main' > /etc/apt/sources.list \
-    && apt-get -o Acquire::Check-Valid-Until=false update \
-    && apt-get install -y --no-install-recommends build-essential cmake libssl-dev ca-certificates git \
+    && sh /tmp/install-snapshot-packages.sh build-essential cmake libssl-dev ca-certificates git \
         libprotobuf-dev protobuf-compiler \
+    && rm -f /tmp/install-snapshot-packages.sh \
     && rm -rf /var/lib/apt/lists/*
 # FMPy 0.3.26 and the OSMP build tools, pinned by hash, and the SiL runtime
 # closure (mcap), pinned by exact version as the runtime image installs it.

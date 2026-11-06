@@ -16,18 +16,19 @@ ARG SIL_SOURCE_REVISION
 # Freeze Debian's package index as well as the base filesystem. Build tools
 # never cross into the runtime stage.
 ARG DEBIAN_SNAPSHOT=20260901T000000Z
+COPY container/install-snapshot-packages.sh /tmp/install-snapshot-packages.sh
 RUN rm -f /etc/apt/sources.list.d/*.sources \
     && printf '%s\n' \
       "deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT} bookworm main" \
       "deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT} bookworm-updates main" \
       "deb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT} bookworm-security main" \
       > /etc/apt/sources.list \
-    && apt-get -o Acquire::Check-Valid-Until=false update \
-    && apt-get install -y --no-install-recommends \
+    && sh /tmp/install-snapshot-packages.sh \
       build-essential \
       ca-certificates \
       cmake \
       libssl-dev \
+    && rm -f /tmp/install-snapshot-packages.sh \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src

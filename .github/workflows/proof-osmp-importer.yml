@@ -12,6 +12,7 @@ on:
       - 'proofs/osmp-sensor/**'
       - 'python/src/sil/fmi/**'
       - '.github/workflows/proof-osmp-importer.yml'
+      - 'container/install-snapshot-packages.sh'
   workflow_dispatch:
 
 jobs:

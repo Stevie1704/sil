@@ -8,10 +8,11 @@ FROM ${PYTHON_IMAGE}
 # The Debian snapshot of proofs/adas-fmu: the same compiler gives the same
 # controller archive bytes. procps gives `ps`, for the check that no process
 # of a failed Run outlives it.
+COPY container/install-snapshot-packages.sh /tmp/install-snapshot-packages.sh
 RUN rm -f /etc/apt/sources.list.d/*.sources \
     && echo 'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260901T000000Z bookworm main' > /etc/apt/sources.list \
-    && apt-get -o Acquire::Check-Valid-Until=false update \
-    && apt-get install -y --no-install-recommends build-essential cmake libssl-dev procps \
+    && sh /tmp/install-snapshot-packages.sh build-essential cmake libssl-dev procps \
+    && rm -f /tmp/install-snapshot-packages.sh \
     && rm -rf /var/lib/apt/lists/*
 # PythonFMU3 0.3.4 and FMPy 0.3.26 by hash, in the base interpreter only.
 # The SiL environment below has neither, and independent.py imports no SiL.

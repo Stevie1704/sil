@@ -18,6 +18,7 @@ on:
       - 'CMakeLists.txt'
       - 'container/requirements.lock'
       - '.github/workflows/proof-osmp-qualification.yml'
+      - 'container/install-snapshot-packages.sh'
   workflow_dispatch:
 
 jobs:

@@ -14,6 +14,7 @@ on:
       - 'tests/fixtures/fmi2_fake.c'
       - 'tests/fixtures/reference-fmus/2.0/**'
       - '.github/workflows/proof-fmi2-importer.yml'
+      - 'container/install-snapshot-packages.sh'
   workflow_dispatch:
 
 jobs:

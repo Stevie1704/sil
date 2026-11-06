@@ -7,10 +7,11 @@ ARG PYTHON_IMAGE=python:3.13.7-slim-bookworm@sha256:adafcc17694d715c905b4c7bebd9
 FROM ${PYTHON_IMAGE}
 # The Debian snapshot of proofs/adas-fmu and proofs/adas-equivalence: the
 # same compiler builds the library, the archive and the timing harness.
+COPY container/install-snapshot-packages.sh /tmp/install-snapshot-packages.sh
 RUN rm -f /etc/apt/sources.list.d/*.sources \
     && echo 'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260901T000000Z bookworm main' > /etc/apt/sources.list \
-    && apt-get -o Acquire::Check-Valid-Until=false update \
-    && apt-get install -y --no-install-recommends build-essential cmake libssl-dev \
+    && sh /tmp/install-snapshot-packages.sh build-essential cmake libssl-dev \
+    && rm -f /tmp/install-snapshot-packages.sh \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 # Installed SiL, as a consumer installs it: the native prefix (sil-run,

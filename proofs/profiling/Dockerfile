@@ -9,11 +9,12 @@ FROM ${PYTHON_IMAGE}
 # Debian snapshot: build-essential (GCC 12.2), binutils (objcopy, readelf),
 # linux-perf (perf 6.1) and heaptrack (1.4.0). The exact package versions are
 # in probe.json and results.json.
+COPY container/install-snapshot-packages.sh /tmp/install-snapshot-packages.sh
 RUN rm -f /etc/apt/sources.list.d/*.sources \
     && echo 'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260901T000000Z bookworm main' > /etc/apt/sources.list \
-    && apt-get -o Acquire::Check-Valid-Until=false update \
-    && apt-get install -y --no-install-recommends build-essential cmake libssl-dev \
+    && sh /tmp/install-snapshot-packages.sh build-essential cmake libssl-dev \
        binutils linux-perf heaptrack \
+    && rm -f /tmp/install-snapshot-packages.sh \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 # Installed SiL, as in proofs/adas-cost: the native prefix and the wheel in
