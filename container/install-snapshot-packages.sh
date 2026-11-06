@@ -2,6 +2,12 @@
 # Install packages from the snapshot sources configured by the build stage.
 set -eu
 
+max_attempts=3
+# Seconds without progress before APT abandons a connection or transfer.
+fetch_timeout=30
+# The wait before attempt N+1 is N times this step: 15 s, then 30 s.
+backoff_step=15
+
 # Snapshot/CDN failures can include transient 404s as well as 503/504s.
 # Retry the fetch phase as a whole, including errors APT does not retry itself.
 retry_fetch() {
@@ -9,18 +15,18 @@ retry_fetch() {
     while :; do
         if apt-get \
             -o Acquire::Check-Valid-Until=false \
-            -o Acquire::http::Timeout=30 \
-            -o Acquire::https::Timeout=30 \
+            -o Acquire::http::Timeout="$fetch_timeout" \
+            -o Acquire::https::Timeout="$fetch_timeout" \
             -o Acquire::Retries=0 "$@"; then
             return 0
         else
             status=$?
         fi
-        if [ "$attempt" -ge 3 ]; then
+        if [ "$attempt" -ge "$max_attempts" ]; then
             return "$status"
         fi
-        echo "APT fetch failed (attempt $attempt/3, exit $status); retrying" >&2
-        sleep "$((attempt * 5))"
+        echo "APT fetch failed (attempt $attempt/$max_attempts, exit $status); retrying" >&2
+        sleep "$((attempt * backoff_step))"
         attempt=$((attempt + 1))
     done
 }

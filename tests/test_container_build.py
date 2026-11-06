@@ -44,7 +44,7 @@ if attempt < failures.get(phase, 0):
 
     def run(script=None, **failures):
         command = (["sh", "-ec", script] if script is not None else
-                   ["sh", str(ROOT / "container/install-build-deps.sh"), "cmake", "libssl-dev"])
+                   ["sh", str(ROOT / "container/install-snapshot-packages.sh"), "cmake", "libssl-dev"])
         result = subprocess.run(
             command,
             env={**os.environ, "PATH": f"{tmp_path}{os.pathsep}{os.environ['PATH']}",
@@ -68,11 +68,11 @@ def test_snapshot_build_recovers_at_the_dockerfile_call_site(
     apt_build, tmp_path, dockerfile, phase,
 ):
     instructions = (ROOT / dockerfile).read_text().replace("\\\n", " ").splitlines()
-    helper_copy = "COPY container/install-build-deps.sh /tmp/install-build-deps.sh"
-    helper = tmp_path / "install-build-deps.sh"
+    helper_copy = "COPY container/install-snapshot-packages.sh /tmp/install-snapshot-packages.sh"
+    helper = tmp_path / "install-snapshot-packages.sh"
     for instruction in instructions:
         if instruction == helper_copy:
-            shutil.copyfile(ROOT / "container/install-build-deps.sh", helper)
+            shutil.copyfile(ROOT / "container/install-snapshot-packages.sh", helper)
         if instruction.startswith("RUN ") and "snapshot.debian.org" in instruction:
             script = instruction.removeprefix("RUN ")
             break
@@ -83,7 +83,7 @@ def test_snapshot_build_recovers_at_the_dockerfile_call_site(
     apt_dir = tmp_path / "apt"
     (apt_dir / "sources.list.d").mkdir(parents=True)
     script = script.replace("/etc/apt", shlex.quote(str(apt_dir)))
-    script = script.replace("/tmp/install-build-deps.sh", shlex.quote(str(helper)))
+    script = script.replace("/tmp/install-snapshot-packages.sh", shlex.quote(str(helper)))
     script = script.replace("/var/lib/apt/lists", shlex.quote(str(tmp_path / "lists")))
     result, calls = apt_build(script=script, **{phase: 2})
     assert result.returncode == 0, result.stderr

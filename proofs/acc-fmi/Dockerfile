@@ -2,11 +2,11 @@
 FROM python:3.13.7-slim-bookworm@sha256:adafcc17694d715c905b4c7bebd96907a1fd5cf183395f0ebc4d3428bd22d92d
 # PythonFMU3 embeds Python source, not a Python runtime. This image supplies
 # CPython and libpython3.13.so, plus all declared Python dependencies.
-COPY container/install-build-deps.sh /tmp/install-build-deps.sh
+COPY container/install-snapshot-packages.sh /tmp/install-snapshot-packages.sh
 RUN rm -f /etc/apt/sources.list.d/*.sources \
     && echo 'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260901T000000Z bookworm main' > /etc/apt/sources.list \
-    && sh /tmp/install-build-deps.sh build-essential cmake libssl-dev ca-certificates \
-    && rm -f /tmp/install-build-deps.sh \
+    && sh /tmp/install-snapshot-packages.sh build-essential cmake libssl-dev ca-certificates \
+    && rm -f /tmp/install-snapshot-packages.sh \
     && rm -rf /var/lib/apt/lists/*
 COPY proofs/acc-fmi/requirements.lock /tmp/requirements.lock
 RUN pip install --no-cache-dir --require-hashes -r /tmp/requirements.lock
