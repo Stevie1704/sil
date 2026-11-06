@@ -42,14 +42,14 @@ if attempt < failures.get(phase, 0):
     sleep.chmod(0o755)
     log = tmp_path / "calls.json"
 
-    def run(script=None, **failures):
+    def run(script=None, build_args=None, **failures):
         command = (["sh", "-ec", script] if script is not None else
                    ["sh", str(ROOT / "container/install-snapshot-packages.sh"), "cmake", "libssl-dev"])
         result = subprocess.run(
             command,
             env={**os.environ, "PATH": f"{tmp_path}{os.pathsep}{os.environ['PATH']}",
                  "APT_TEST_LOG": str(log), "APT_TEST_FAILURES": json.dumps(failures),
-                 "DEBIAN_SNAPSHOT": "20260901T000000Z"},
+                 **(build_args or {})},
             capture_output=True, text=True, timeout=5,
         )
         return result, json.loads(log.read_text())
@@ -57,27 +57,56 @@ if attempt < failures.get(phase, 0):
     return run
 
 
-@pytest.mark.parametrize("dockerfile", [
-    "Dockerfile",
-    "proofs/acc-fmi/Dockerfile",
-    "proofs/adas-closed-loop/Dockerfile",
-    "proofs/adas-equivalence/Dockerfile",
-])
+HELPER = "container/install-snapshot-packages.sh"
+HELPER_COPY = f"COPY {HELPER} /tmp/install-snapshot-packages.sh"
+
+
+def snapshot_installs():
+    """Each RUN that configures snapshot sources, with its stage's state.
+
+    Yields (dockerfile, ordinal, script, helper copied in this stage, ARG
+    defaults). A helper copied in an earlier stage is not in this one.
+    """
+    dockerfiles = [ROOT / "Dockerfile", *sorted(
+        path for root in ("proofs", "models", "worker")
+        for path in (ROOT / root).rglob("Dockerfile*"))]
+    for dockerfile in dockerfiles:
+        instructions = dockerfile.read_text().replace("\\\n", " ").splitlines()
+        build_args, helper_copied, ordinal = {}, False, 0
+        for instruction in instructions:
+            if instruction.startswith("FROM "):
+                helper_copied = False
+            elif instruction.startswith("ARG ") and "=" in instruction:
+                name, value = instruction.removeprefix("ARG ").split("=", 1)
+                build_args[name] = value
+            elif instruction == HELPER_COPY:
+                helper_copied = True
+            elif instruction.startswith("RUN ") and "> /etc/apt/sources.list" in instruction:
+                ordinal += 1
+                yield (str(dockerfile.relative_to(ROOT)), ordinal,
+                       instruction.removeprefix("RUN "), helper_copied, dict(build_args))
+
+
+SNAPSHOT_INSTALLS = list(snapshot_installs())
+
+
+def test_snapshot_installs_are_found():
+    found = {(dockerfile, ordinal) for dockerfile, ordinal, *_ in SNAPSHOT_INSTALLS}
+    assert {("Dockerfile", 1), ("proofs/osmp-qualification/Dockerfile", 2),
+            ("proofs/libsafety/Dockerfile", 1)} <= found
+
+
+@pytest.mark.parametrize(
+    ("dockerfile", "ordinal", "script", "helper_copied", "build_args"),
+    SNAPSHOT_INSTALLS, ids=[f"{d}#{n}" for d, n, *_ in SNAPSHOT_INSTALLS],
+)
 @pytest.mark.parametrize("phase", ["update", "download"])
 def test_snapshot_build_recovers_at_the_dockerfile_call_site(
-    apt_build, tmp_path, dockerfile, phase,
+    apt_build, tmp_path, dockerfile, ordinal, script, helper_copied, build_args, phase,
 ):
-    instructions = (ROOT / dockerfile).read_text().replace("\\\n", " ").splitlines()
-    helper_copy = "COPY container/install-snapshot-packages.sh /tmp/install-snapshot-packages.sh"
+    assert helper_copied, f"{dockerfile} stage does not copy {HELPER} before its install"
     helper = tmp_path / "install-snapshot-packages.sh"
-    for instruction in instructions:
-        if instruction == helper_copy:
-            shutil.copyfile(ROOT / "container/install-snapshot-packages.sh", helper)
-        if instruction.startswith("RUN ") and "snapshot.debian.org" in instruction:
-            script = instruction.removeprefix("RUN ")
-            break
-    else:
-        pytest.fail(f"no snapshot package installation in {dockerfile}")
+    shutil.copyfile(ROOT / HELPER, helper)
     # Execute the Dockerfile's shell command with filesystem paths redirected
     # into the test workspace and failures injected only at the APT boundary.
     apt_dir = tmp_path / "apt"
@@ -85,11 +114,16 @@ def test_snapshot_build_recovers_at_the_dockerfile_call_site(
     script = script.replace("/etc/apt", shlex.quote(str(apt_dir)))
     script = script.replace("/tmp/install-snapshot-packages.sh", shlex.quote(str(helper)))
     script = script.replace("/var/lib/apt/lists", shlex.quote(str(tmp_path / "lists")))
-    result, calls = apt_build(script=script, **{phase: 2})
+    result, calls = apt_build(script=script, build_args=build_args, **{phase: 2})
     assert result.returncode == 0, result.stderr
-    assert sum(call["phase"] == phase for call in calls) == 3
-    assert calls[-1]["phase"] == "install"
-    assert "20260901T000000Z" in (apt_dir / "sources.list").read_text()
+    # Every APT call goes through the helper: no bare update or install.
+    expected = {"update": 1, "download": 1, phase: 3}
+    assert [call["phase"] for call in calls] == [
+        *["update"] * expected["update"], *["download"] * expected["download"], "install"]
+    assert not helper.exists()
+    sources = (apt_dir / "sources.list").read_text()
+    assert "http://snapshot.debian.org/archive/" in sources
+    assert "/20260901T000000Z " in sources
 
 
 @pytest.mark.parametrize("phase", ["update", "download"])

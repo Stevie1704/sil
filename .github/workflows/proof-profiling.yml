@@ -12,6 +12,7 @@ on:
       - 'proofs/profiling/**'
       - 'tests/test_profiling_proof.py'
       - '.github/workflows/proof-profiling.yml'
+      - 'container/install-snapshot-packages.sh'
   workflow_dispatch:
 
 jobs:

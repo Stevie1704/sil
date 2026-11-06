@@ -11,6 +11,7 @@ on:
       - 'python/src/sil/compare.py'
       - 'examples/fmu-coupling/**'
       - '.github/workflows/proof-acc-multirate.yml'
+      - 'container/install-snapshot-packages.sh'
 
 jobs:
   proof:

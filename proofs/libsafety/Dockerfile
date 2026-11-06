@@ -34,11 +34,12 @@ USER root
 # The library is built with UBSan, as upstream builds it, so it links
 # libubsan.so.1. Debian's package index is frozen like the runtime image's.
 ARG DEBIAN_SNAPSHOT=20260901T000000Z
+COPY container/install-snapshot-packages.sh /tmp/install-snapshot-packages.sh
 RUN rm -f /etc/apt/sources.list.d/*.sources \
     && echo "deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT} bookworm main" \
       > /etc/apt/sources.list \
-    && apt-get -o Acquire::Check-Valid-Until=false update \
-    && apt-get install -y --no-install-recommends libubsan1 \
+    && sh /tmp/install-snapshot-packages.sh libubsan1 \
+    && rm -f /tmp/install-snapshot-packages.sh \
     && rm -rf /var/lib/apt/lists/*
 
 # The #178 handoff as committed: the digests the acceptance pins.

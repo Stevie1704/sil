@@ -12,6 +12,7 @@ on:
       - 'proofs/libsafety/**'
       - 'proofs/public-workloads/**'
       - '.github/workflows/proof-libsafety.yml'
+      - 'container/install-snapshot-packages.sh'
   workflow_dispatch:
 
 jobs:
