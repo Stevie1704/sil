@@ -315,6 +315,26 @@ response wait. A missed deadline is a Run failure (exit 1), not a Manifest
 change: the option is absent from the Manifest and its hash. Omitting it keeps
 the existing unlimited-wait behavior.
 
+To hold a debugger stop in one Process participant without a deadline failure,
+start the Run with `sil-run-diagnostics` and name that participant (#367):
+
+```sh
+sil-run-diagnostics manifest.json --participant-timeout-ms 5000 \
+  --hold-deadline controller --launch-wrapper controller ./gdb-wrapper.sh
+```
+
+- The named participant has no response deadline, for `ready` and for every
+  `step_done`. Every other Process participant keeps
+  `--participant-timeout-ms`, so a hang there still fails the Run (exit 1).
+- The name must be a Process participant of the Manifest, else exit 2. One
+  FMU importer group is one Process participant. A Native participant has no
+  response deadline: a stop in it halts the whole runner, and no deadline can
+  detect a hang in another participant during that stop.
+- The option is diagnostics-only; `sil-run` rejects it (exit 2). The
+  Manifest, its hash, the Step protocol and the Recording do not change.
+- The report's `configuration.held_deadline_participant` names the
+  participant. The wall times of that Run are not performance evidence.
+
 The determinism check takes the same option and hands it to both of the runs
 it compares, so a stalled participant fails the check instead of hanging it:
 

@@ -148,6 +148,9 @@ def main(mode: str, observer: str | None = None) -> None:
                 else:
                     if mode == "slow":
                         time.sleep(0.03)
+                    if mode == "hold" and message["t"] == 0:
+                        # A debugger stop longer than a 1 s deadline.
+                        time.sleep(1.5)
                     print(json.dumps({"op": "step_done", "out": []}), flush=True)
             elif message["op"] == "shutdown":
                 return

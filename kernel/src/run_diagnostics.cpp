@@ -671,12 +671,18 @@ json report_json(const Collector &c, const RunFacts &facts) {
       {"recording", facts.recording},
       {"provenance_mode", facts.provenance_mode},
       {"participant_timeout_ms", nullptr},
+      {"held_deadline_participant", nullptr},
       {"max_protocol_line_bytes", facts.max_protocol_line_bytes},
       {"max_step_output_messages", facts.max_step_output_messages},
       {"max_step_inline_payload_bytes", facts.max_step_inline_payload_bytes},
   };
   if (facts.participant_timeout_ms)
     configuration["participant_timeout_ms"] = *facts.participant_timeout_ms;
+  // A held deadline means a debugger may have stopped the Run: its wall
+  // times are not performance evidence.
+  if (facts.held_deadline_participant)
+    configuration["held_deadline_participant"] =
+        *facts.held_deadline_participant;
 
   json artifacts = {{"recording", nullptr},
                     {"provenance", facts.provenance_path},
@@ -957,6 +963,11 @@ std::optional<LaunchWrapper> &launch_wrapper_setting() {
   return setting;
 }
 
+std::optional<std::string> &held_deadline_setting() {
+  static std::optional<std::string> participant;
+  return participant;
+}
+
 }  // namespace
 
 void wrap_launch(const std::string &participant, const fs::path &wrapper) {
@@ -967,6 +978,14 @@ const std::string *launch_wrapper(const std::string &participant) noexcept {
   const auto &setting = launch_wrapper_setting();
   if (!setting || setting->participant != participant) return nullptr;
   return &setting->path;
+}
+
+void hold_deadline(const std::string &participant) {
+  held_deadline_setting() = participant;
+}
+
+bool deadline_held(const std::string &participant) noexcept {
+  return held_deadline_setting() == participant;
 }
 
 }  // namespace sil::diagnostics

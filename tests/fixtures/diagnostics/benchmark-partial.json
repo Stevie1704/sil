@@ -407,6 +407,7 @@
           "max_step_output_messages": 1024,
           "measurement_mode": "diagnostics",
           "participant_timeout_ms": null,
+          "held_deadline_participant": null,
           "provenance_mode": "full",
           "recording": true
         },
@@ -871,6 +872,7 @@
           "max_step_output_messages": 1024,
           "measurement_mode": "diagnostics",
           "participant_timeout_ms": null,
+          "held_deadline_participant": null,
           "provenance_mode": "full",
           "recording": true
         },
@@ -1337,6 +1339,7 @@
           "max_step_output_messages": 1024,
           "measurement_mode": "diagnostics",
           "participant_timeout_ms": null,
+          "held_deadline_participant": null,
           "provenance_mode": "full",
           "recording": true
         },

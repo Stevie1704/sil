@@ -96,6 +96,20 @@ def test_run_report_shows_status_identity_and_terminal_values():
     assert "diagnostics" in text  # the measurement mode
 
 
+def test_a_held_deadline_says_the_wall_times_are_not_evidence():
+    report = json.loads(fixture_text("run-success.json"))
+    report["configuration"]["held_deadline_participant"] = "hazard"
+
+    text = Page(render(json.dumps(report))).text
+
+    assert "Held deadline hazard" in text
+    assert "wall times are not performance evidence" in text
+
+
+def test_a_report_without_a_held_deadline_names_none():
+    assert "Held deadline none" in page("run-success.json").text
+
+
 VALUE = re.compile(r"-?\d+(?:\.\d+)? (?:ns|us|ms|s|B|KiB|MiB|GiB)\b"
                    r"|\d+\.\d\dx|\d+\.\d\d/s")
 
