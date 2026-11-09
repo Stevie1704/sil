@@ -274,8 +274,9 @@ decision before it could be qualified.
 NAME` removes the Response deadline of one named Process participant, for
 `ready` and every `step_done`. Every other Process participant keeps
 `--participant-timeout-ms`. The acceptance needs a retained proof of held
-participants that complete, so the minimal option is built here and needs no
-separate ticket. Use and limits are in
+participants that complete, so the minimal option is built in the same change.
+Its implementation ticket is
+[#381](https://github.com/Stevie1704/sil/issues/381). Use and limits are in
 [docs/running.md](../../docs/running.md). `sil-run` has no new hook (ADR 0004).
 The Manifest, its hash, the Native ABI, the Step protocol, the Recording and
 Virtual time do not change. The report names the participant in
@@ -306,9 +307,12 @@ the same Manifest. The hang control adds the proof-owned `stall.py`
 participant, which never answers its 50 ms Step. Its Run is not compared with
 the ordinary Recordings.
 
-- **FMU group.** Grouped ADAS is still rejected by the group importer (above).
-  The held group is the supplemental BUS group. The single-FMU importer is
-  also one Process participant, so the option names it the same way.
+- **FMU group.** This is a revised acceptance criterion of #367. The group
+  importer rejects grouped ADAS before execution (above), and a grouped ADAS
+  workload is outside the scope of #367. Thus the held FMU group is the
+  supplemental BUS group, and ADAS supplies the Process and single-FMU forms.
+  To the runner, an FMU group and the single-FMU importer are each one Process
+  participant, so the option names them the same way.
 - **Native.** Not applicable. A Native participant has no Response deadline,
   so a stop never fails the Run by deadline. An all-stop breakpoint halts the
   whole runner, so no deadline can detect a hang in another participant
