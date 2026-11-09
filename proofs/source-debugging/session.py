@@ -165,15 +165,16 @@ while gdb.selected_inferior().pid:
         entry.enabled = False
         gdb.execute("signal SIGTERM")
         break
+    hold_s = int(os.environ["SIL_DEBUG_HOLD_NS"]) / 1e9
     if action == "deadline":
-        time.sleep(3)
+        time.sleep(hold_s)
         gdb.execute("continue")
         break
     if action in ("hold", "hold-hang"):
         # Longer than the explicit deadline; the runner holds no deadline
         # for this participant (#367). Then run to the end without stops.
         held_from = time.monotonic_ns()
-        time.sleep(3)
+        time.sleep(hold_s)
         marker = json.loads((dest / "action.json").read_text())
         marker["held_ns"] = time.monotonic_ns() - held_from
         (dest / "action.json").write_text(json.dumps(marker) + "\n")

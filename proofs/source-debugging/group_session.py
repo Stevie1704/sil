@@ -64,12 +64,13 @@ while gdb.selected_inferior().pid:
         "stack": gdb.execute("bt 16", to_string=True),
         "source": source.symtab.fullname(), "line": source.line})
     (dest / "stops.json").write_text(json.dumps(stops, indent=2) + "\n")
-    if os.environ.get("SIL_DEBUG_ACTION") == "hold" and len(stops) == 1:
-        # Longer than the explicit deadline of the held group (#367).
+    action = os.environ.get("SIL_DEBUG_ACTION", "resume")
+    if action in ("hold", "deadline") and len(stops) == 1:
+        # Longer than the explicit deadline: only a held group survives it (#367).
         held_from = time.monotonic_ns()
-        time.sleep(3)
+        time.sleep(int(os.environ["SIL_DEBUG_HOLD_NS"]) / 1e9)
         (dest / "action.json").write_text(json.dumps({
-            "action": "hold", "inferior_pid": inferior.pid, "index": entry.index,
+            "action": action, "inferior_pid": inferior.pid, "index": entry.index,
             "held_ns": time.monotonic_ns() - held_from}) + "\n")
     if len(stops) == 3:
         entry.enabled = False
