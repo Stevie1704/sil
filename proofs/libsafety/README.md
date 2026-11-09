@@ -100,7 +100,7 @@ fail for its reason:
 | `input-one-step-late` | `can.rx` Latency 1 ms | `sil compare`: no observation at any of the 6000 Slots (missing-actual from Slot 0) |
 | `timer-in-ns` | timer unit 1 ns instead of 1 µs | `sil compare`: `controls_allowed` diverges at event 100, where #178 found it |
 | `wrong-param` | param 73 + 256: opendbc's alternative-brake flag | `sil compare`: a state value diverges; the observation names the correct event |
-| `crash` | the library process gets SIGSEGV at event 100 | Run failure (exit 1): `'libsafety' exited unexpectedly` |
+| `crash` | the library process gets SIGSEGV at event 100 | Run failure (exit 1): `'libsafety' was terminated unexpectedly by signal 11` |
 | `hang` | the library call at event 100 never returns | Run failure (exit 1): the 5 s response deadline at event 100's Slot |
 
 `library_failures.py` injects the crash and the hang around the bound

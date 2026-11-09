@@ -318,7 +318,8 @@ def controls(setup: Setup, pins: dict) -> dict:
         "timer-in-ns": comparison_control(setup, "timer-in-ns", timer_in_ns),
         "wrong-param": comparison_control(setup, "wrong-param", wrong_param),
         "crash": run_failure_control(
-            setup, "crash", ("'libsafety' exited unexpectedly",)),
+            setup, "crash",
+            ("'libsafety' was terminated unexpectedly by signal 11",)),
         "hang": run_failure_control(
             setup, "hang", ("timeout", f"virtual time {failure_slot} ns"),
             HANG_TIMEOUT_MS),
