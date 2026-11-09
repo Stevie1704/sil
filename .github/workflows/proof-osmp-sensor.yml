@@ -10,6 +10,7 @@ on:
     paths:
       - 'proofs/osmp-sensor/**'
       - '.github/workflows/proof-osmp-sensor.yml'
+      - 'container/install-snapshot-packages.sh'
   workflow_dispatch:
 
 jobs:

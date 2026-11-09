@@ -4,11 +4,12 @@
 # the pinned OSMP checkout and fails unless commit, tree and submodules match.
 ARG PYTHON_IMAGE=python:3.13.7-slim-bookworm@sha256:adafcc17694d715c905b4c7bebd96907a1fd5cf183395f0ebc4d3428bd22d92d
 FROM ${PYTHON_IMAGE}
+COPY container/install-snapshot-packages.sh /tmp/install-snapshot-packages.sh
 RUN rm -f /etc/apt/sources.list.d/*.sources \
     && echo 'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260901T000000Z bookworm main' > /etc/apt/sources.list \
-    && apt-get -o Acquire::Check-Valid-Until=false update \
-    && apt-get install -y --no-install-recommends build-essential cmake ca-certificates git \
+    && sh /tmp/install-snapshot-packages.sh build-essential cmake ca-certificates git \
         libprotobuf-dev protobuf-compiler \
+    && rm -f /tmp/install-snapshot-packages.sh \
     && rm -rf /var/lib/apt/lists/*
 COPY proofs/osmp-sensor/requirements.lock /tmp/requirements.lock
 RUN pip install --no-cache-dir --require-hashes -r /tmp/requirements.lock

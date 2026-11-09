@@ -13,6 +13,7 @@ on:
       - 'proofs/adas-cost/**'
       - 'proofs/adas-equivalence/experiment.py'
       - '.github/workflows/proof-adas-cost.yml'
+      - 'container/install-snapshot-packages.sh'
   workflow_dispatch:
 
 jobs:

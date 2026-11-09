@@ -11,11 +11,12 @@ ARG DEBIAN_SNAPSHOT=http://snapshot.debian.org/archive/debian/20260901T000000Z
 
 FROM ${PYTHON_IMAGE} AS prepare
 ARG DEBIAN_SNAPSHOT
+COPY container/install-snapshot-packages.sh /tmp/install-snapshot-packages.sh
 RUN rm -f /etc/apt/sources.list.d/*.sources \
     && echo "deb [check-valid-until=no] ${DEBIAN_SNAPSHOT} bookworm main" > /etc/apt/sources.list \
-    && apt-get -o Acquire::Check-Valid-Until=false update \
-    && apt-get install -y --no-install-recommends build-essential cmake libssl-dev ca-certificates git \
+    && sh /tmp/install-snapshot-packages.sh build-essential cmake libssl-dev ca-certificates git \
         libprotobuf-dev protobuf-compiler \
+    && rm -f /tmp/install-snapshot-packages.sh \
     && rm -rf /var/lib/apt/lists/*
 # The OSMP build tools and Python Protobuf, pinned by hash, and the SiL
 # runtime closure for the preparation interpreter.
@@ -51,10 +52,11 @@ FROM ${PYTHON_IMAGE} AS runtime
 ARG DEBIAN_SNAPSHOT
 # The one system library the FMUs load beyond the C and C++ runtimes, from
 # the snapshot they were built against.
+COPY container/install-snapshot-packages.sh /tmp/install-snapshot-packages.sh
 RUN rm -f /etc/apt/sources.list.d/*.sources \
     && echo "deb [check-valid-until=no] ${DEBIAN_SNAPSHOT} bookworm main" > /etc/apt/sources.list \
-    && apt-get -o Acquire::Check-Valid-Until=false update \
-    && apt-get install -y --no-install-recommends libprotobuf32 \
+    && sh /tmp/install-snapshot-packages.sh libprotobuf32 \
+    && rm -f /tmp/install-snapshot-packages.sh \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=prepare /opt/sil/native /opt/sil/native
 COPY --from=prepare /opt/sil/python /opt/sil/python
