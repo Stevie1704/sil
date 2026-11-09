@@ -1,7 +1,9 @@
 # Source debugging at a selected Activation (#321)
 
 Phase 2 feasibility investigation under #313. All scripts are proof-owned;
-there is no supported debugger CLI, schema, ABI, protocol or kernel hook.
+there is no supported debugger CLI, schema, ABI or protocol. The only kernel
+hooks are the diagnostics-only `--launch-wrapper` (#317) and `--hold-deadline`
+([#367](#held-debugger-stops-367)).
 The workload is the unchanged ADAS reference C application in
 `examples/adas-reference/`. Only its build and external debugger differ.
 
@@ -265,6 +267,64 @@ No ABI, Step protocol, Manifest, report contract or ADR change is needed for
 the external-script candidate. ADR 0004's diagnostics boundary remains intact.
 The grouped-ADAS limitation would need a separately scoped importer/workload
 decision before it could be qualified.
+
+## Held debugger stops (#367)
+
+**Decision: build, in this change.** `sil-run-diagnostics --hold-deadline
+NAME` removes the Response deadline of one named Process participant, for
+`ready` and every `step_done`. Every other Process participant keeps
+`--participant-timeout-ms`. The acceptance needs a retained proof of held
+participants that complete, so the minimal option is built here and needs no
+separate ticket. Use and limits are in
+[docs/running.md](../../docs/running.md). `sil-run` has no new hook (ADR 0004).
+The Manifest, its hash, the Native ABI, the Step protocol, the Recording and
+Virtual time do not change. The report names the participant in
+`configuration.held_deadline_participant`; the wall times of that Run are not
+performance evidence.
+
+| Approach | Result |
+| --- | --- |
+| Explicit option for one named participant | Built. It is the same on every platform, and a hang elsewhere still fails the Run. |
+| Detect a ptrace stop of the child | Deferred. The runner's child is the `--launch-wrapper` GDB, not the inferior. The runner would have to scan its process group in `/proc` for a tracing stop: Linux only, and no `/proc` on macOS. The explicit option covers the qualified cases. |
+| No change, deadline policy only | Rejected. One deadline for the whole Run cannot hold one participant and still fail a hang in another. |
+
+[Linux qualification run 42709176512](https://github.com/Stevie1704/sil/actions/runs/42709176512)
+passed for branch head `5545a8b3e020ca263d0e836432d5d76d0a530ea7` on Linux
+7.0.0-1017-azure x86-64/glibc 2.39. All 52 experiments met their checks. Each
+hold and deadline control uses an explicit 2 s deadline and holds GDB at the
+selected stop for 3 s:
+
+| Form | Without `--hold-deadline` | With `--hold-deadline` | Unheld `stall` hang, with the hold |
+| --- | --- | --- | --- |
+| Process | `timeout`, `hazard`, 40 ms | exit 0, held 3.00 s, Recording equal | `timeout`, `stall`, 50 ms |
+| Single FMU | `timeout`, `hazard`, 40 ms | exit 0, held 3.00 s, Recording equal | `timeout`, `stall`, 50 ms |
+| Shimmed Process | `timeout`, `hazard`, 40 ms | exit 0, held 3.00 s, Recording equal | `timeout`, `stall`, 50 ms |
+| BUS group (three instances) | `timeout`, `bus_group`, 200 ms | exit 0, held 3.00 s, Recording equal | not run |
+
+"Recording equal" means byte-identical to the two ordinary `sil-run` Runs of
+the same Manifest. The hang control adds the proof-owned `stall.py`
+participant, which never answers its 50 ms Step. Its Run is not compared with
+the ordinary Recordings.
+
+- **FMU group.** Grouped ADAS is still rejected by the group importer (above).
+  The held group is the supplemental BUS group. The single-FMU importer is
+  also one Process participant, so the option names it the same way.
+- **Native.** Not applicable. A Native participant has no Response deadline,
+  so a stop never fails the Run by deadline. An all-stop breakpoint halts the
+  whole runner, so no deadline can detect a hang in another participant
+  during that stop.
+- **Sequential waits.** The runner waits for one Process participant at a
+  time. A hang in another participant is detected after the held stop ends,
+  as the 50 ms `stall` hang shows. `tests/test_hold_deadline.py` also covers a
+  hang in the same Slot as the held Step.
+- **Clock shim and `--launch-wrapper`.** Both are keyed by the participant
+  name and compose with the hold. The shim keeps the Virtual time of the
+  stop. The shimmed captures show the same results as the Process form.
+
+The [qualification artifact](https://github.com/Stevie1704/sil/actions/runs/42709176512/artifacts/13715046994)
+is named `source-debugging-evidence` and expires on 2026-12-09 at 22:11:33 UTC.
+Its published SHA-256 is
+`2cb8f0e73d1abaac6bfe709f4f45ddd80d20491f024f314535f13888d96fd60c`.
 
 Primary references: [GDB optimized variables](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Variables.html),
 [separate debug files](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Separate-Debug-Files.html),
