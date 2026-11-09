@@ -1,6 +1,8 @@
-"""Bounded external-GDB feasibility experiment for issue #321.
+"""Bounded external-GDB feasibility experiment for issues #321 and #367.
 
-No product command, Manifest field, ABI, protocol or kernel hook is added.
+No product command, Manifest field, ABI or protocol is added. #367 adds only
+the diagnostics-only `sil-run-diagnostics --hold-deadline` that the hold
+captures use.
 """
 from __future__ import annotations
 
@@ -32,6 +34,9 @@ EXAMPLE = ROOT / "examples/adas-reference"
 DEADLINE_MS = 30_000
 RUN_LIMIT_S = 60
 SHORT_DEADLINE_MS = 2_000
+# Actions that run against the short deadline instead of the batch one.
+SHORT_DEADLINE_ACTIONS = ("deadline", "hold", "hold-hang")
+HOLD_MIN_NS = 3_000_000_000
 
 
 def load(name, path):
@@ -152,9 +157,10 @@ def capture(out, manifest, form, label, *, selector=None, action="resume"):
     dest = out / "runs" / f"{form}-{label}"
     dest.mkdir(parents=True)
     diagnostic = selector is not None or label == "observations"
+    deadline_ms = SHORT_DEADLINE_MS if action in SHORT_DEADLINE_ACTIONS else DEADLINE_MS
+    participant = "bus_group" if form == "bus-group" else "hazard"
     command = [out / ("sil-run-diagnostics" if diagnostic else "sil-run"), manifest,
-               "-o", dest / "recording.mcap", "--participant-timeout-ms",
-               str(SHORT_DEADLINE_MS if action == "deadline" else DEADLINE_MS)]
+               "-o", dest / "recording.mcap", "--participant-timeout-ms", str(deadline_ms)]
     if diagnostic:
         command += ["--diagnostics-out", dest / "diagnostics.json",
                     "--activation-observations", dest / "observations.jsonl",
@@ -181,8 +187,9 @@ def capture(out, manifest, form, label, *, selector=None, action="resume"):
             command = ["gdb", *child_result, "-nx", "-q", "-batch", "-ix", logging,
                        "-x", commands, "--args", *command]
         else:
-            participant = "bus_group" if form == "bus-group" else "hazard"
             command += ["--launch-wrapper", participant, HERE / "launch.sh"]
+            if action in ("hold", "hold-hang"):
+                command += ["--hold-deadline", participant]
     started = time.monotonic_ns()
     timed_out = False
     with subprocess.Popen([str(x) for x in command], env=env,
@@ -207,7 +214,7 @@ def capture(out, manifest, form, label, *, selector=None, action="resume"):
     result = {"form": form, "label": label, "selector": selector, "action": action,
               "command": [str(x) for x in command], "exit_code": process.returncode,
               "elapsed_host_ns": time.monotonic_ns() - started,
-              "deadline_ms": SHORT_DEADLINE_MS if action == "deadline" else DEADLINE_MS,
+              "deadline_ms": deadline_ms,
               "manifest_sha256": digest(manifest)}
     result["supervisor_timeout"] = timed_out
     write(dest / "result.json", result)
@@ -223,7 +230,8 @@ def capture(out, manifest, form, label, *, selector=None, action="resume"):
                              {"exit_code": None, "reason": "runner report unavailable"})
     if selector and action != "resume":
         marker = json.loads((dest / "action.json").read_text())
-        if marker["action"] != action or marker["index"] != 4:
+        selected_index = 2 if form == "bus-group" else 4
+        if marker["action"] != action or marker["index"] != selected_index:
             raise ValueError("control action did not reach the selected Activation")
         log = (dest / "gdb.txt").read_text()
         if action == "debugger-error" and "deliberate debugger failure" not in log + stderr:
@@ -247,12 +255,24 @@ def capture(out, manifest, form, label, *, selector=None, action="resume"):
         if action == "signal" and form != "native" and (
                 failure.get("category") != "exit" or failure.get("virtual_time_ns") != 40_000_000):
             raise ValueError("Python SIGTERM did not fail the selected Step")
+        if action in ("hold", "hold-hang"):
+            report = json.loads(diagnostics_path.read_text())
+            if report["configuration"]["held_deadline_participant"] != participant:
+                raise ValueError("report does not name the held participant")
+            if marker["held_ns"] < HOLD_MIN_NS or HOLD_MIN_NS <= deadline_ms * 1_000_000:
+                raise ValueError("the hold did not outlast the explicit deadline")
+            result["held_ns"] = marker["held_ns"]
+        # The stall participant is not held: its hang fails at its deadline.
+        if action == "hold-hang" and (failure.get("category") != "timeout" or
+                failure.get("participant") != "stall" or
+                failure.get("virtual_time_ns") != 50_000_000):
+            raise ValueError("an unheld hang did not fail the Run at its deadline")
     # A reaped process must have no surviving observed inferior, including detach.
     for pid in {row["pid"] for row in stops}:
         if Path(f"/proc/{pid}").exists():
             raise ValueError(f"inferior survived Run cleanup: {pid}")
     result["observed_inferiors_reaped"] = True
-    if action in ("resume", "detach"):
+    if action in ("resume", "detach", "hold"):
         if process.returncode:
             raise ValueError(f"Run failed: {dest}: {stderr}")
         result["recording_sha256"] = digest(dest / "recording.mcap")
@@ -296,6 +316,12 @@ def experiment(out, build):
         m = manifest.reference_manifest(inputs, library, maneuvers=("hazard",), controller=controller)
         path = out / f"{form}.json"
         m.write(path)
+        # The hang control adds one unheld Process participant; its own
+        # Recording is not compared with the ordinary Runs.
+        m.add_process("stall", command=[sys.executable, str(HERE / "stall.py")],
+                      step_period_ns=10_000_000)
+        stall_path = out / f"{form}-stall.json"
+        m.write(stall_path)
         baseline = None
         for label, selector, action in (
             ("ordinary-0", None, "resume"), ("ordinary-1", None, "resume"),
@@ -303,8 +329,10 @@ def experiment(out, build):
             ("time", "time", "resume"), ("detach", "time", "detach"),
             ("kill", "time", "kill"), ("signal", "time", "signal"),
             ("debugger-error", "time", "debugger-error"),
-            *(([("deadline", "time", "deadline")]) if form != "native" else [])):
-            row = capture(out, path, form, label, selector=selector, action=action)
+            *(([("deadline", "time", "deadline"), ("hold", "time", "hold"),
+                ("hold-hang", "time", "hold-hang")]) if form != "native" else [])):
+            row = capture(out, stall_path if action == "hold-hang" else path, form,
+                          label, selector=selector, action=action)
             if "recording_sha256" in row:
                 baseline = baseline or row["recording_sha256"]
                 if baseline != row["recording_sha256"]:
@@ -354,15 +382,19 @@ def experiment(out, build):
     bus.add_process("bus_group", command=command, step_period_ns=100_000_000, publishes=channels)
     bus.write(out / "bus-group.json")
     baseline = None
-    for label, selector in (("ordinary-0", None), ("ordinary-1", None), ("index", "index"), ("time", "time")):
-        row = capture(out, out / "bus-group.json", "bus-group", label, selector=selector)
+    for label, selector, action in (("ordinary-0", None, "resume"), ("ordinary-1", None, "resume"),
+                                    ("index", "index", "resume"), ("time", "time", "resume"),
+                                    ("hold", "time", "hold")):
+        row = capture(out, out / "bus-group.json", "bus-group", label, selector=selector,
+                      action=action)
         baseline = baseline or row["recording_sha256"]
         if row["recording_sha256"] != baseline:
             raise ValueError("group Recording changed after debugging")
         row["recording_equal"] = True
         report["runs"].append(row)
         write(out / "report.json", report)
-    report["decision"] = "no-change: external scripts suffice for qualified forms; grouped ADAS deferred"
+    report["decision"] = ("no-change: external scripts suffice for qualified forms; grouped ADAS "
+                          "deferred. #367: --hold-deadline holds one Process participant")
     write(out / "report.json", report)
     paths = sorted(p for p in out.rglob("*") if p.is_file())
     (out / "digests.txt").write_text("".join(f"{digest(p)}  {p.relative_to(out)}\n" for p in paths))

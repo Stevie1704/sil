@@ -169,6 +169,17 @@ while gdb.selected_inferior().pid:
         time.sleep(3)
         gdb.execute("continue")
         break
+    if action in ("hold", "hold-hang"):
+        # Longer than the explicit deadline; the runner holds no deadline
+        # for this participant (#367). Then run to the end without stops.
+        held_from = time.monotonic_ns()
+        time.sleep(3)
+        marker = json.loads((dest / "action.json").read_text())
+        marker["held_ns"] = time.monotonic_ns() - held_from
+        (dest / "action.json").write_text(json.dumps(marker) + "\n")
+        entry.enabled = False
+        gdb.execute("continue")
+        break
     # Source anchors deliberately fail when this named workload changes.
     source = Path(os.environ["SIL_DEBUG_SOURCE"])
     lines = source.read_text().splitlines()
