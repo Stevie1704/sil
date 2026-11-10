@@ -453,7 +453,8 @@ def _payload():
     return module.payload
 
 
-def run_manifest(archive: Path, duration_ns: int = 100_000_000) -> Manifest:
+def run_manifest(archive: Path, duration_ns: int = 100_000_000,
+                 binds=BINDS) -> Manifest:
     """A binary stimulus feeding the OSMP FMU, which publishes it reversed."""
     m = Manifest(duration_ns=duration_ns)
     m.add_schemas(SCHEMAS)
@@ -468,7 +469,7 @@ def run_manifest(archive: Path, duration_ns: int = 100_000_000) -> Manifest:
     m.add_process(
         "osmp",
         command=[sys.executable, "-m", "sil.fmi", str(archive),
-                 *(argument for bind in BINDS for argument in ("--bind", bind))],
+                 *(argument for bind in binds for argument in ("--bind", bind))],
         step_period_ns=STEP_PERIOD_NS,
         subscribes=[SubscriberRoute("osmp.In", capacity=2)],
         publishes=["osmp.Out"], priority=1,
@@ -503,3 +504,15 @@ class TestRunBoundary:
         assert "participant 'osmp' failed" in proc.stderr
         assert "'OSMPOut'" in proc.stderr
         assert "2147483647 bytes" in proc.stderr
+
+    def test_a_bound_configuration_request_completes_with_a_warning(
+        self, fake, run_sil, tmp_path
+    ):
+        manifest = run_manifest(fake(rewrite=as_configuration_request),
+                                binds=CONFIG_BINDS)
+        proc = run_sil(manifest.write(tmp_path / "m.json").path)
+
+        assert proc.returncode == 0, proc.stderr
+        assert "sil.fmi: warning:" in proc.stderr
+        assert "'OSMPSensorViewInConfigRequest'" in proc.stderr
+        assert "#251" in proc.stderr
