@@ -308,9 +308,11 @@ participant, which never answers its 50 ms Step. Its Run is not compared with
 the ordinary Recordings.
 
 - **FMU group.** This is a revised acceptance criterion of #367. The group
-  importer rejects grouped ADAS before execution (above), and a grouped ADAS
-  workload is outside the scope of #367. Thus the held FMU group is the
-  supplemental BUS group, and ADAS supplies the Process and single-FMU forms.
+  importer rejects grouped ADAS before execution (above). Qualifying grouped
+  ADAS requires additional importer or workload development, which #367
+  explicitly defers. Thus the held FMU group is the supplemental BUS group,
+  and ADAS supplies the Process and single-FMU forms. Grouped ADAS remains
+  unqualified.
   To the runner, an FMU group and the single-FMU importer are each one Process
   participant, so the option names them the same way.
 - **Native.** Not applicable. A Native participant has no Response deadline,
