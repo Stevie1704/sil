@@ -11,6 +11,7 @@ scan of the source, never from the index or the controller under test.
 from __future__ import annotations
 
 import json
+import math
 import os
 import struct
 import subprocess
@@ -426,6 +427,44 @@ def test_pause_rate_and_invalid_requests_answer_the_actual_state(
     _, warning = client.wait_for(lambda f: f["op"] == "status"
                                  and "refused" in f["message"])
     assert warning["level"] == 1 and "rate" in warning["message"]
+    client.close()
+
+
+@pytest.mark.parametrize("speed", [0.0, -1.0, math.nan, math.inf])
+def test_pause_without_a_valid_speed_pauses_and_keeps_the_rate(
+        serve, qualification, speed):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play", PLAY, speed=2.0)
+    client.wait_for(lambda f: f["op"] == "message" and f["log_time"] > 200 * MS)
+
+    # Foxglove desktop 3.5.0 pauses with speed 0.0 and no seek time.
+    client.request("pause", PAUSE, speed=speed)
+    _, paused = client.wait_for(lambda f: f.get("request_id") == "pause")
+    time.sleep(0.3)
+    count = len(received(client))
+    time.sleep(0.5)
+
+    assert (paused["status"], paused["speed"]) == (PAUSED, 2.0)
+    assert len(received(client)) == count  # nothing arrives while paused
+    assert not any(f["op"] == "status" and "refused" in f["message"]
+                   for f in client.frames)
+    client.close()
+
+
+def test_play_without_a_valid_speed_is_refused(serve, qualification):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+
+    client.request("play", PLAY, speed=0.0)
+    _, refused = client.wait_for(lambda f: f.get("request_id") == "play")
+    _, warning = client.wait_for(lambda f: f["op"] == "status"
+                                 and "refused" in f["message"])
+
+    assert (refused["status"], refused["speed"]) == (PAUSED, 1.0)
+    assert "rate" in warning["message"]
     client.close()
 
 

@@ -12,6 +12,8 @@ Mapping:
 
 - A playback control request is one `Playback.configure`: Play/Pause sets
   the desired playing state, the speed sets the rate, a seek time seeks.
+  A Pause whose speed is not a positive number keeps the rate (Foxglove
+  desktop 3.5.0 pauses with speed 0.0).
   The answer is the actual state; a refused request answers the unchanged
   state and sends a warning status with the diagnostic.
 - Subscribe/unsubscribe set the controller's subscription to the union of
@@ -194,7 +196,7 @@ class Bridge:
                 claimed.request_id or f"{_ANONYMOUS}{next(self._anonymous)}",
                 position_ns=request.seek_time,
                 playing=request.playback_command == PlaybackCommand.Play,
-                rate=_rate(request.playback_speed))
+                rate=_rate(request.playback_command, request.playback_speed))
         except InvalidCommand as e:
             self._server.publish_status(f"SiL refused the playback request: {e}",
                                         StatusLevel.Warning)
@@ -473,11 +475,16 @@ def _foxglove_state(state: PlaybackState, *, did_seek: bool,
                          request_id=request_id)
 
 
-def _rate(speed: float) -> float:
-    """The rate of a request. The wire carries a 32-bit float, so an
-    accepted speed is shown with 6 significant digits (0.1, not
-    0.100000001). The range check uses the raw value: an out-of-range speed
-    goes to the controller unrounded, which refuses it."""
+def _rate(command: PlaybackCommand, speed: float) -> float | None:
+    """The rate of a request. A Pause with a speed that is not a finite
+    positive number keeps the rate (None): Foxglove desktop 3.5.0 pauses
+    with speed 0.0. The wire carries a 32-bit float, so an accepted speed is
+    shown with 6 significant digits (0.1, not 0.100000001). The range check
+    uses the raw value: an out-of-range speed goes to the controller
+    unrounded, which refuses it."""
+    if command == PlaybackCommand.Pause and not (math.isfinite(speed)
+                                                 and speed > 0):
+        return None
     if math.isfinite(speed) and MIN_RATE <= speed <= MAX_RATE:
         return float(f"{speed:.6g}")
     return speed
