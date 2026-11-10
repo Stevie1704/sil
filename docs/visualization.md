@@ -382,10 +382,6 @@ reads, so a new command can replace a reconstruction that is in progress.
 Foxglove playback bar (play, pause, seek, speed) controls SiL's headless
 playback. SiL supplies no panel and no viewer.
 
-Known problem: with Foxglove desktop 3.5.0, pause does not work, because
-SiL refuses the speed 0.0 that the pause request carries. See
-[Results with Foxglove desktop 3.5.0](#results-with-foxglove-desktop-350).
-
 The command needs the `foxglove` extra. Export and the other commands do not:
 
 ```sh
@@ -425,9 +421,9 @@ client of the printed address controls playback.
 
 | Foxglove | SiL |
 | --- | --- |
-| Play, Pause, speed | One `configure`: the desired playing state and the rate (0.1 to 10). The SDK request has no "no change" command, only Play and Pause, so every request sets the playing state. A speed change keeps the playing state only because the client sends its current command with it, as the Foxglove playback bar does. Foxglove 3.5.0 sends Pause with speed 0.0, which SiL refuses (known problem above). |
+| Play, Pause, speed | One `configure`: the desired playing state and the rate (0.1 to 10). The SDK request has no "no change" command, only Play and Pause, so every request sets the playing state. A speed change keeps the playing state only because the client sends its current command with it, as the Foxglove playback bar does. A Pause with a speed that is not a positive number keeps the rate: Foxglove 3.5.0 pauses with speed 0.0. A Play with such a speed is refused. |
 | Seek | `configure` with a position in the source's inclusive range. The answer reports `Buffering` until the reconstruction committed. |
-| Subscribe, unsubscribe a topic | The subscription is the set of the client's topics. A new topic gets the latest value at the cursor. |
+| Subscribe, unsubscribe a topic | The subscription is the set of the client's topics. A new topic gets the latest value at the cursor. That value shows at the current server time, because the server time goes back only at a seek. |
 | Disconnect | Playback pauses. The next client gets a new session ID, a reset and the latest values at the cursor. |
 
 Foxglove has no status for a failed session. When playback fails (the
@@ -440,10 +436,17 @@ Each answer is the actual state. A refused request (for example a speed of
 shows a warning with the reason. The server time and every Message log time
 are Virtual time in integer nanoseconds; time zero shows as the epoch.
 
+Foxglove shows a Message at the latest server time that it received, not
+at the log time. So the client gets a server time equal to the log time
+just before each Message (see [No silent loss](#no-silent-loss) for how).
+The server time goes back only after a playback state with `did_seek`.
+While paused or between Messages, the server time is the cursor.
+
 A seek sends, in this order: all data sent before it, a playback state with
 `did_seek` (Foxglove clears its panels), the latest Message per subscribed
-topic at or before the seek time with its original time and locator, then
-the committed state. A topic without a Message before the seek time stays
+topic at or before the seek time with its original time and locator, each
+shown at that time, then the committed state and the seek time as server
+time. A topic without a Message before the seek time stays
 empty; SiL sends no zero in its place. Play continues strictly after the
 seek time. `Ended` follows the final Message.
 
@@ -458,7 +461,10 @@ Message when it is full, without notice to the program. It also sends that
 queue and its control queue (playback states, time) in no fixed order. The
 adapter therefore puts a relay in front of the SDK server
 (`adapters/foxglove_relay.py`). The relay reports which barrier statuses and
-seek states the SDK actually wrote. The adapter keeps at most half the SDK
+seek states the SDK actually wrote. Because the relay sees the order in
+which the client gets the frames, it writes the time frame with a Message's
+log time just before that Message, and it drops an SDK time frame that is
+not later than the client's time, except after a `did_seek` state. The adapter keeps at most half the SDK
 queue unacknowledged, so the SDK never drops a Message for the relay's
 client. It also keeps at most `Bridge(window_bytes=32 MiB)` of encoded
 payloads unacknowledged; a single larger Message goes alone. The relay also marks its client's playback requests and
@@ -486,7 +492,7 @@ next connection starts with a reset and a fresh reconstruction.
 | WebSocket subprotocol | `foxglove.sdk.v1` | Yes | Scripted client in the tests |
 | WebSocket subprotocol | `foxglove.websocket.v1` | Refused by the SDK (HTTP 400) | Test `test_the_sdk_refuses_the_legacy_subprotocol` |
 | WebSocket subprotocol | `foxglove.sdk.v1.1` | Negotiated by Foxglove 3.5.0 | The application offers `foxglove.websocket.v1, foxglove.sdk.v1, foxglove.sdk.v1.1`; the SDK selects `foxglove.sdk.v1.1`. The relay reads no schema table; the results below were made with it. |
-| Foxglove desktop application | 3.5.0, macOS arm64 | Partly: pause fails | Manual procedure below, 2026-11-10 |
+| Foxglove desktop application | 3.5.0, macOS arm64 | Partly: pause failed on 2026-11-10; fixed in #383, not yet run again | Manual procedure below |
 | Foxglove web application | none | No | Not done |
 
 Verified with the scripted client against SDK 0.30.3: capabilities `time`
@@ -530,6 +536,11 @@ Verified:
   and 1000 Messages: the counts of the receipt. No Message was lost.
 - The source hash did not change.
 
+Changes after this run (issue #383), not yet verified with the
+application: the pause, the receive time and the "data went back in time"
+items below are fixed in the bridge and tested with the scripted client.
+Repeat the procedure to qualify them.
+
 Failed:
 
 - **Pause while playing.** Foxglove 3.5.0 sends `Pause` with
@@ -555,6 +566,18 @@ Differences from this document:
   1 s, Play and a refused Pause. The cause is not known, and logged
   sessions did not show the warning again. So it is not verified with the
   application that old values cannot reappear after a seek.
+
+  Probable cause (#383): the SDK sends Messages and time frames in no
+  fixed order. With the bridge of this run, a Message could reach the
+  client after a `did_seek` state and before the next time frame; a replay
+  of this sequence with the scripted client showed this in 2 of 30 runs.
+  Foxglove then gives that Message a time that is not its own: the time
+  from before the seek, or zero if it has no time. The warning itself did
+  not reproduce, so the cause is not proven. Stale data is not the cause:
+  `test_queued_values_from_before_a_seek_never_follow_its_reset` shows that
+  no value from before a seek follows its reset. The relay now writes a
+  time frame with the log time before each Message, so this window no
+  longer exists.
 
 Not verified:
 

@@ -28,7 +28,8 @@ Mapping:
   client, then the Backfill follows. So no value from before the seek
   arrives after the client cleared its history.
 - `Commit` and `StateChanged` are broadcast as playback states; the cursor
-  is broadcast as server time.
+  is broadcast as server time. The relay puts each Message's log time in
+  front of it as server time (see `foxglove_relay`).
 - `Refused` and payloads above `max_message_bytes` are sent as warning
   statuses, never as data.
 - A drained notification that a later seek, disconnect or unsubscribe
@@ -130,7 +131,6 @@ class Bridge:
         self._anonymous = itertools.count()
         self._changed = threading.Condition()
         self._next_barrier = 0
-        self._latest_logged: int | None = None
         self._reset_accounting()
         self._codecs = {c.name: ChannelCodec(c.schema_name, c.schema)
                         for c in described.channels}
@@ -237,22 +237,23 @@ class Bridge:
             if room <= 0:
                 self._await_acknowledgement()
                 continue
-            self._latest_logged = None
+            # Every Message up to this cursor is in the controller's queue,
+            # so after an empty drain no Message before it can follow.
+            cursor = self._playback.status().cursor_ns
             notifications = self._playback.drain(max_items=room, timeout=_POLL_S)
             for notification in notifications:
                 if self._closed:
                     return
                 self._handle(notification)
-            self._advance_time(self._latest_logged)
             if self._unacknowledged():
                 self._barrier()
             elif not notifications:  # idle and delivered: show the cursor
-                self._advance_time(self._playback.status().cursor_ns)
+                self._advance_time(cursor)
 
-    def _advance_time(self, time_ns: int | None, *, jump: bool = False) -> None:
-        """Broadcast the server time: forward only, except at a seek."""
-        if time_ns is None or (not jump and self._time is not None
-                               and time_ns <= self._time):
+    def _advance_time(self, time_ns: int | None) -> None:
+        """Broadcast the server time, forward only. The relay puts the log
+        time in front of each Message."""
+        if time_ns is None or (self._time is not None and time_ns <= self._time):
             return
         self._time = time_ns
         self._server.broadcast_time(time_ns)
@@ -302,7 +303,6 @@ class Bridge:
         with self._changed:
             self._logged += 1
             self._logged_bytes += size
-        self._latest_logged = message.publication_time_ns
 
     def _reset(self, reset: Reset) -> None:
         """Clear the client's history after everything logged before."""
@@ -319,7 +319,9 @@ class Bridge:
                             position_ns=reset.position_ns)
             if self._wait(lambda: self._relay.seek_states_seen > seen,
                           connection):
-                self._advance_time(reset.position_ns, jump=True)
+                # The Backfill sets the client's time; the Commit sets the
+                # cursor after it.
+                self._time = None
                 return
             if not self._live(connection):
                 return

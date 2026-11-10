@@ -356,6 +356,53 @@ def test_play_delivers_every_message_in_order_with_its_time_then_ends(
     client.close()
 
 
+def shown_times(client):
+    """(log time, server time) of each received Message. With the `time`
+    capability, Foxglove shows a Message at the latest server time it
+    received before it."""
+    shown, now = [], None
+    for frame in client.frames:
+        if frame["op"] == "time":
+            now = frame["time"]
+        elif frame["op"] == "message":
+            shown.append((frame["log_time"], now))
+    return shown
+
+
+def time_steps_back(client):
+    """Server times that go back without a did_seek state before them."""
+    back, now = [], None
+    for frame in client.frames:
+        if frame["op"] == "playbackState" and frame["did_seek"]:
+            now = None
+        elif frame["op"] == "time":
+            if now is not None and frame["time"] < now:
+                back.append((now, frame["time"]))
+            now = frame["time"]
+    return back
+
+
+def test_the_client_sees_each_messages_log_time_as_server_time(
+        serve, qualification):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play", PLAY, speed=10.0)
+    client.wait_for(lambda f: f["op"] == "message" and f["log_time"] > 3 * S)
+    client.reading.clear()  # a slow client: data piles up in the queues
+    time.sleep(0.3)
+    client.reading.set()
+    client.wait_for(lambda f: f["op"] == "message" and f["log_time"] > 6 * S)
+    client.request("seek", PLAY, speed=10.0, seek=995_625_000)
+    client.wait_for(lambda f: f.get("status") == ENDED, timeout=20)
+
+    shown = shown_times(client)
+    assert len(shown) > 1000
+    assert [(log, now) for log, now in shown if now != log] == []
+    assert time_steps_back(client) == []
+    client.close()
+
+
 def after_last_seek(client, position_ns):
     """Messages after the last did_seek state at `position_ns`."""
     seeks = [i for i, f in enumerate(client.frames) if f["op"] == "playbackState"
