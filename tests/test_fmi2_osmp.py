@@ -257,6 +257,24 @@ class TestMapping:
         with pytest.raises(ManifestError, match="bounded 'u8' array"):
             participant(fake(), init=init)
 
+    def test_a_bound_configuration_request_is_warned_about(self, fake, capsys):
+        rewrite = lambda text: text.replace(  # noqa: E731
+            "OSMPOut", "OSMPSensorViewInConfigRequest")
+        participant(fake(rewrite=rewrite), binds=[
+            "osmp.In:payload=OSMPIn",
+            "osmp.Out:payload=OSMPSensorViewInConfigRequest",
+        ]).close()
+
+        warning = capsys.readouterr().err
+        assert "sil.fmi: warning:" in warning
+        assert "'OSMPSensorViewInConfigRequest'" in warning
+        assert "#251" in warning
+
+    def test_an_ordinary_binary_output_is_not_warned_about(self, fake, capsys):
+        participant(fake()).close()
+
+        assert "warning" not in capsys.readouterr().err
+
     def test_a_bound_above_the_fmi2_integer_range_is_refused(self, fake):
         capacity = 2**31
         init = {**INIT, "schemas": {"osmp.Payload": {"fields": [
