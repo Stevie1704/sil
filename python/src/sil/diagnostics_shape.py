@@ -182,7 +182,8 @@ RUN_REPORT = members({
     "configuration": members({"measurement_mode": TEXT, "recording": FLAG,
                               "participant_timeout_ms": maybe(COUNT),
                               **{guard: COUNT for guard in SIZE_GUARDS}},
-                             {"provenance_mode": one_of(PROVENANCE_MODES)}),
+                             {"provenance_mode": one_of(PROVENANCE_MODES),
+                              "held_deadline_participant": maybe(TEXT)}),
     "run": members({"exit_code": INTEGER, "status": TEXT,
                     "failure": maybe(members({
                         "message": TEXT, "category": TEXT,

@@ -87,8 +87,12 @@ void Engine::setup() {
     } else {
       diagnostics::participant(p.name, diagnostics::ParticipantKind::Process);
       const auto &spec = std::get<PreparedProcessSpec>(p.impl);
+      // A debugger may hold this one participant at a stop (#367).
       auto proc = std::make_unique<ProcessParticipant>(
-          *this, p.name, spec, participant_timeout_, limits_);
+          *this, p.name, spec,
+          diagnostics::deadline_held(p.name) ? std::nullopt
+                                             : participant_timeout_,
+          limits_);
       ProcessParticipant *raw = proc.get();
       add_task(p.name, "step", diagnostics::TaskKind::ProcessStep,
                spec.authored.step_period_ns, 0, spec.authored.priority,

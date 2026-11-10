@@ -52,7 +52,8 @@ using sil::kExitRunFailure;
   " [--diagnostics-out <report.json>] [--retain-run-directory <path>]" \
   " [--activation-observations <path>" \
   " [--activation-observations-limit-bytes <N>]]" \
-  " [--launch-wrapper <participant> <executable>]"
+  " [--launch-wrapper <participant> <executable>]" \
+  " [--hold-deadline <participant>]"
 #else
 #define SIL_RUNNER_NAME "sil-run"
 #define SIL_DIAGNOSTICS_USAGE ""
@@ -258,6 +259,7 @@ sil::diagnostics::RunFacts run_facts(
     int exit_code, const std::optional<FirstFailure> &failure,
     const RunOutputs &outputs, sil::ProvenanceMode provenance_mode,
     const std::optional<std::chrono::milliseconds> &participant_timeout,
+    const char *held_deadline_participant,
     const sil::RunBoundaryLimits &limits) {
   sil::diagnostics::RunFacts facts;
   facts.manifest_path = manifest_path;
@@ -287,21 +289,24 @@ sil::diagnostics::RunFacts run_facts(
   facts.provenance_mode = sil::provenance_mode_name(provenance_mode);
   if (participant_timeout)
     facts.participant_timeout_ms = uint64_t(participant_timeout->count());
+  if (held_deadline_participant)
+    facts.held_deadline_participant = held_deadline_participant;
   facts.max_protocol_line_bytes = limits.max_protocol_line_bytes;
   facts.max_step_output_messages = limits.max_step_output_messages;
   facts.max_step_inline_payload_bytes = limits.max_step_inline_payload_bytes;
   return facts;
 }
 
-// The launch wrapper names one Process participant; any other name is a
-// usage error before a Participant starts.
-void require_process(const sil::Manifest &manifest, const char *name) {
+// The launch wrapper and a held deadline each name one Process participant;
+// any other name is a usage error before a Participant starts.
+void require_process(const sil::Manifest &manifest, const char *option,
+                     const char *name) {
   for (const sil::ParticipantSpec &participant : manifest.participants)
     if (participant.name == name &&
         std::holds_alternative<sil::ProcessSpec>(participant.impl))
       return;
-  throw sil::ManifestError(
-      std::string("--launch-wrapper: no Process participant '") + name + "'");
+  throw sil::ManifestError(std::string(option) +
+                           ": no Process participant '" + name + "'");
 }
 
 void write_diagnostics(const std::filesystem::path &path,
@@ -344,6 +349,7 @@ int run(int argc, char **argv) {
   bool observations_limit_given = false;
   const char *wrapped_participant_arg = nullptr;
   const char *launch_wrapper_arg = nullptr;
+  const char *held_deadline_arg = nullptr;
 #endif
   // Running without a Recording is what separates the cost of routing to
   // subscribers from the cost of Recording I/O (issue #61). The engine already
@@ -452,6 +458,13 @@ int run(int argc, char **argv) {
       }
       wrapped_participant_arg = argv[++i];
       launch_wrapper_arg = argv[++i];
+    } else if (std::strcmp(argv[i], "--hold-deadline") == 0 &&
+               i + 1 < argc) {
+      if (held_deadline_arg) {
+        usage();
+        return kExitConfigError;
+      }
+      held_deadline_arg = argv[++i];
 #endif
     } else if (std::strcmp(argv[i], "--no-recording") == 0) {
       recording = false;
@@ -559,7 +572,11 @@ int run(int argc, char **argv) {
     prepared.emplace(sil::prepare_run(manifest.value(), *provenance));
 #ifdef SIL_RUN_DIAGNOSTICS
     if (wrapped_participant_arg)
-      require_process(*manifest, wrapped_participant_arg);
+      require_process(*manifest, "--launch-wrapper", wrapped_participant_arg);
+    if (held_deadline_arg) {
+      require_process(*manifest, "--hold-deadline", held_deadline_arg);
+      sil::diagnostics::hold_deadline(held_deadline_arg);
+    }
 #endif
 
     // Selecting the recording format is a manifest/config concern: an
@@ -622,7 +639,7 @@ int run(int argc, char **argv) {
   write_diagnostics(diagnostics_path,
                     run_facts(manifest_path, manifest, exit_code, failure,
                               outputs, provenance_mode, participant_timeout,
-                              limits));
+                              held_deadline_arg, limits));
 #endif
 
   if (exit_code == kExitOk && manifest)

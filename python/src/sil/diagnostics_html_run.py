@@ -111,6 +111,7 @@ def _identity_section(report: dict) -> Html:
                 ("Recording", plain(configuration["recording"])),
                 ("Provenance mode", provenance_mode_text(configuration)),
                 *guard_items(configuration),
+                ("Held deadline", held_deadline_text(configuration)),
                 ("Collector", f"{collector['name']} version "
                               f"{collector['collector_version']}"),
                 ("Clock", collector["clock"]),
@@ -121,6 +122,15 @@ def _identity_section(report: dict) -> Html:
                 ("Failure report", code(artifacts["failure_report"])),
             ])),
             class_="grid-2"))
+
+
+def held_deadline_text(configuration: dict) -> str:
+    """The participant whose Response deadline a debugger could hold."""
+    held = configuration.get("held_deadline_participant")
+    if held is None:
+        return "none"
+    return f"{held} (a debugger can stop the Run: wall times are not " \
+           "performance evidence)"
 
 
 def guard_items(values: dict) -> list[tuple[str, Html]]:

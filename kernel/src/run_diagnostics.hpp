@@ -61,6 +61,7 @@ struct RunFacts {
   std::string provenance_mode;
   std::optional<std::string> failure_report_path;
   std::optional<uint64_t> participant_timeout_ms;
+  std::optional<std::string> held_deadline_participant;
   uint64_t max_protocol_line_bytes = 0;
   uint64_t max_step_output_messages = 0;
   uint64_t max_step_inline_payload_bytes = 0;
@@ -114,6 +115,14 @@ void wrap_launch(const std::string &participant,
                  const std::filesystem::path &wrapper);
 // The wrapper of `participant`, or null.
 const std::string *launch_wrapper(const std::string &participant) noexcept;
+
+// Removes the Response deadline of the Process participant `participant`
+// (#367), so a debugger can hold it at a stop. Every other Process
+// participant keeps `--participant-timeout-ms`. The Manifest, its hash and
+// the Step protocol do not change.
+void hold_deadline(const std::string &participant);
+// True when `participant` has no Response deadline.
+bool deadline_held(const std::string &participant) noexcept;
 
 // Writes the report as a new file through a temporary sibling. Throws on any
 // write error; the caller reports it without changing the Run's exit code.
@@ -197,6 +206,8 @@ inline void process_reaped(const std::string &, pid_t,
 inline const std::string *launch_wrapper(const std::string &) noexcept {
   return nullptr;
 }
+// No held deadline: every Process participant keeps the run boundary's.
+inline bool deadline_held(const std::string &) noexcept { return false; }
 
 class Activation {
  public:
