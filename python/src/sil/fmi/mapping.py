@@ -59,6 +59,10 @@ _LENGTH_CEILINGS = {
 # fmi2Integer, a signed 32-bit C `int`.
 _OSMP_SIZE_CEILING = 0x7FFF_FFFF
 
+# How OSMP names the binary variable through which a sensor model requests
+# its configuration: `<prefix>InConfigRequest`.
+_OSMP_CONFIGURATION_REQUEST = "InConfigRequest"
+
 
 def channel_fields(init: dict) -> dict[str, dict[str, dict]]:
     """Each Channel's declared schema fields, by name, in declaration order."""
@@ -248,6 +252,25 @@ def _osmp_problem(variable: Variable) -> str | None:
             f"it; this importer passes no address as a number"
         )
     return None
+
+
+def configuration_request_warning(variable: Variable) -> str | None:
+    """Why a bound OSMP configuration request publishes no request, or None.
+
+    The binding is accepted, because the bytes do cross. What does not happen
+    is the exchange OSMP defines for them, so a Run says so rather than
+    publish an empty payload without a word.
+    """
+    if (variable.osmp is None
+            or not variable.name.endswith(_OSMP_CONFIGURATION_REQUEST)):
+        return None
+    return (
+        f"OSMP binary variable {variable.name!r} is a configuration request; "
+        f"the Importer reads it after each Step, not in initialization mode, "
+        f"and sets no configuration in reply, so an FMU that builds its "
+        f"request only in initialization mode publishes an empty payload "
+        f"(#251)"
+    )
 
 
 def unmappable(variable: Variable) -> str | None:

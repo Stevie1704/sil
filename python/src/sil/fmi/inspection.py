@@ -59,7 +59,7 @@ from sil.fmi.mapping import start_values, unclockable, unmappable
 from sil.fmi.single import bind_channels
 from sil.fmi.terminals import Instance
 
-REPORT_VERSION = 2
+REPORT_VERSION = 3
 MAPPING_VERSION = 1
 
 # The exit status is the verdict. 2 is also what argparse exits with on a
@@ -399,12 +399,14 @@ def _mapping(mapping: dict, description: ModelDescription) -> dict:
         "schemas": mapping["schemas"], "channels": mapping["channels"],
     }
     try:
-        bind_channels(init, mapping.get("bind", []), description)
+        bound = bind_channels(init, mapping.get("bind", []), description)
         start_values(mapping.get("start", []), description)
     except ManifestError as error:
-        return {"accepted": False, "rejection": str(error), "unbound": None}
+        return {"accepted": False, "rejection": str(error), "unbound": None,
+                "warnings": None}
     return {"accepted": True, "rejection": None,
-            "unbound": _unbound(mapping, description)}
+            "unbound": _unbound(mapping, description),
+            "warnings": bound.warnings}
 
 
 def _unbound(mapping: dict, description: ModelDescription) -> list[str]:
@@ -557,6 +559,7 @@ def render(report: dict) -> str:
         if mapping["accepted"]:
             lines.append("mapping: accepted")
             lines += _section("left unbound by the mapping", mapping["unbound"])
+            lines += _section("warnings", mapping["warnings"])
         else:
             lines.append(f"mapping: rejected: {mapping['rejection']}")
     lines += _section("not verified statically", report["unverified"])

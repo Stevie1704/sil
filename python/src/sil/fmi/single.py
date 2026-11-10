@@ -10,6 +10,7 @@ owns the instants between two Slots.
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from collections.abc import Sequence
@@ -26,6 +27,7 @@ from sil.fmi.mapping import (
     declared_bindings,
     derived_bindings,
     start_values,
+    configuration_request_warning,
 )
 from sil.fmi.runtime import NS_PER_S, CoSimulation
 from sil.fmi.runtime2 import CoSimulation2
@@ -132,11 +134,13 @@ class ChannelMapping:
 
     `clocked` holds the Channels whose Messages are Clock activations, split
     by direction; `inputs` and `outputs` hold the ones a Step writes and reads.
+    `warnings` names each binding that holds but does less than it suggests.
     """
 
     inputs: dict[str, ChannelBinding]
     outputs: dict[str, ChannelBinding]
     clocked: dict[str, dict[str, ClockedPayload]]
+    warnings: list[str]
 
 
 def bind_channels(
@@ -161,7 +165,7 @@ def bind_channels(
         if binds
         else derived_bindings(init, fields_by_channel, description)
     )
-    mapping = ChannelMapping({}, {}, {"in": {}, "out": {}})
+    mapping = ChannelMapping({}, {}, {"in": {}, "out": {}}, [])
     for channel, declaration in init["channels"].items():
         direction = declaration["direction"]
         fields = fields_by_channel[channel]
@@ -176,6 +180,11 @@ def bind_channels(
             channel, direction, fields, bound[channel],
             description.fmi_version,
         )
+    for variables in bound.values():
+        for variable in variables.values():
+            warning = configuration_request_warning(variable)
+            if warning is not None:
+                mapping.warnings.append(warning)
     return mapping
 
 
@@ -237,6 +246,8 @@ class FmuParticipant(StepParticipant):
         """Bind the declared Channels to FMU variables, in both directions."""
         mapping = bind_channels(init, self._binds, description)
         self._inputs, self._outputs = mapping.inputs, mapping.outputs
+        for warning in mapping.warnings:
+            print(f"sil.fmi: warning: {warning}", file=sys.stderr)
         if mapping.clocked["in"] or mapping.clocked["out"]:
             self._events = _Events(mapping.clocked["out"], mapping.clocked["in"])
 

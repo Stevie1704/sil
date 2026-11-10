@@ -23,7 +23,9 @@ from pathlib import Path
 
 import pytest
 from conftest import ROOT
-from osmp_fixture import MIME_TYPE, annotation, osmp_fmu, variable
+from osmp_fixture import (
+    MIME_TYPE, VARIABLES, annotation, osmp_fmu, variable,
+)
 from sil.fmi import FmuParticipant, ModelDescription
 from sil.fmi.description import fmi2_platform_directory, library_suffix
 from sil.fmi.inspection import inspect
@@ -94,6 +96,23 @@ def with_unannotated(*names: str):
     )
     return replace("  </ModelVariables>", f"{declared}\n  </ModelVariables>")
 
+
+def as_configuration_request(text: str) -> str:
+    """The output binary variable renamed and declared as OSMP declares a
+    configuration request: a fixed calculated parameter."""
+    for role in ("base.lo", "base.hi", "size"):
+        reference = VARIABLES[f"OSMPOut.{role}"][0]
+        text = replace(
+            f'valueReference="{reference}" causality="output" '
+            f'variability="discrete">\n      <Integer start="0"/>',
+            f'valueReference="{reference}" causality="calculatedParameter" '
+            f'variability="fixed" initial="calculated">\n      <Integer/>',
+        )(text)
+    return text.replace("OSMPOut", "OSMPSensorViewInConfigRequest")
+
+
+CONFIG_BINDS = ["osmp.In:payload=OSMPIn",
+                "osmp.Out:payload=OSMPSensorViewInConfigRequest"]
 
 INT_INIT = {**INIT, "schemas": {
     "osmp.Int": {"fields": [{"name": "v", "type": "i32"}]}},
@@ -257,6 +276,20 @@ class TestMapping:
         with pytest.raises(ManifestError, match="bounded 'u8' array"):
             participant(fake(), init=init)
 
+    def test_a_bound_configuration_request_is_warned_about(self, fake, capsys):
+        participant(fake(rewrite=as_configuration_request),
+                    binds=CONFIG_BINDS).close()
+
+        warning = capsys.readouterr().err
+        assert "sil.fmi: warning:" in warning
+        assert "'OSMPSensorViewInConfigRequest'" in warning
+        assert "#251" in warning
+
+    def test_an_ordinary_binary_output_is_not_warned_about(self, fake, capsys):
+        participant(fake()).close()
+
+        assert "sil.fmi: warning:" not in capsys.readouterr().err
+
     def test_a_bound_above_the_fmi2_integer_range_is_refused(self, fake):
         capacity = 2**31
         init = {**INIT, "schemas": {"osmp.Payload": {"fields": [
@@ -393,6 +426,22 @@ class TestInspection:
 
         assert report["mapping"]["unbound"] == ["OSMPIn"]
 
+    def test_a_bound_configuration_request_is_warned_about(self, fake):
+        mapping = {"sil_fmi_mapping": 1, "schemas": SCHEMAS,
+                   "channels": INIT["channels"], "bind": CONFIG_BINDS}
+        report = inspect(fake(rewrite=as_configuration_request), mapping)
+
+        assert report["mapping"]["accepted"], report["mapping"]
+        [warning] = report["mapping"]["warnings"]
+        assert "'OSMPSensorViewInConfigRequest'" in warning
+        assert "#251" in warning
+
+    def test_an_ordinary_mapping_has_no_warning(self, fake):
+        mapping = {"sil_fmi_mapping": 1, "schemas": SCHEMAS,
+                   "channels": INIT["channels"], "bind": BINDS}
+
+        assert inspect(fake(), mapping)["mapping"]["warnings"] == []
+
 
 STIMULUS = ROOT / "tests" / "participants" / "binary_stimulus.py"
 
@@ -404,7 +453,8 @@ def _payload():
     return module.payload
 
 
-def run_manifest(archive: Path, duration_ns: int = 100_000_000) -> Manifest:
+def run_manifest(archive: Path, duration_ns: int = 100_000_000,
+                 binds=BINDS) -> Manifest:
     """A binary stimulus feeding the OSMP FMU, which publishes it reversed."""
     m = Manifest(duration_ns=duration_ns)
     m.add_schemas(SCHEMAS)
@@ -419,7 +469,7 @@ def run_manifest(archive: Path, duration_ns: int = 100_000_000) -> Manifest:
     m.add_process(
         "osmp",
         command=[sys.executable, "-m", "sil.fmi", str(archive),
-                 *(argument for bind in BINDS for argument in ("--bind", bind))],
+                 *(argument for bind in binds for argument in ("--bind", bind))],
         step_period_ns=STEP_PERIOD_NS,
         subscribes=[SubscriberRoute("osmp.In", capacity=2)],
         publishes=["osmp.Out"], priority=1,
@@ -454,3 +504,15 @@ class TestRunBoundary:
         assert "participant 'osmp' failed" in proc.stderr
         assert "'OSMPOut'" in proc.stderr
         assert "2147483647 bytes" in proc.stderr
+
+    def test_a_bound_configuration_request_completes_with_a_warning(
+        self, fake, run_sil, tmp_path
+    ):
+        manifest = run_manifest(fake(rewrite=as_configuration_request),
+                                binds=CONFIG_BINDS)
+        proc = run_sil(manifest.write(tmp_path / "m.json").path)
+
+        assert proc.returncode == 0, proc.stderr
+        assert "sil.fmi: warning:" in proc.stderr
+        assert "'OSMPSensorViewInConfigRequest'" in proc.stderr
+        assert "#251" in proc.stderr
