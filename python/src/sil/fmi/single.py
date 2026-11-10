@@ -27,7 +27,7 @@ from sil.fmi.mapping import (
     declared_bindings,
     derived_bindings,
     start_values,
-    unexchanged_configuration,
+    configuration_request_warning,
 )
 from sil.fmi.runtime import NS_PER_S, CoSimulation
 from sil.fmi.runtime2 import CoSimulation2
@@ -182,7 +182,7 @@ def bind_channels(
         )
     for variables in bound.values():
         for variable in variables.values():
-            warning = unexchanged_configuration(variable)
+            warning = configuration_request_warning(variable)
             if warning is not None:
                 mapping.warnings.append(warning)
     return mapping

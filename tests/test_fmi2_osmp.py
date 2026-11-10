@@ -23,7 +23,9 @@ from pathlib import Path
 
 import pytest
 from conftest import ROOT
-from osmp_fixture import MIME_TYPE, annotation, osmp_fmu, variable
+from osmp_fixture import (
+    MIME_TYPE, VARIABLES, annotation, osmp_fmu, variable,
+)
 from sil.fmi import FmuParticipant, ModelDescription
 from sil.fmi.description import fmi2_platform_directory, library_suffix
 from sil.fmi.inspection import inspect
@@ -94,6 +96,23 @@ def with_unannotated(*names: str):
     )
     return replace("  </ModelVariables>", f"{declared}\n  </ModelVariables>")
 
+
+def as_configuration_request(text: str) -> str:
+    """The output binary variable renamed and declared as OSMP declares a
+    configuration request: a fixed calculated parameter."""
+    for role in ("base.lo", "base.hi", "size"):
+        reference = VARIABLES[f"OSMPOut.{role}"][0]
+        text = replace(
+            f'valueReference="{reference}" causality="output" '
+            f'variability="discrete">\n      <Integer start="0"/>',
+            f'valueReference="{reference}" causality="calculatedParameter" '
+            f'variability="fixed" initial="calculated">\n      <Integer/>',
+        )(text)
+    return text.replace("OSMPOut", "OSMPSensorViewInConfigRequest")
+
+
+CONFIG_BINDS = ["osmp.In:payload=OSMPIn",
+                "osmp.Out:payload=OSMPSensorViewInConfigRequest"]
 
 INT_INIT = {**INIT, "schemas": {
     "osmp.Int": {"fields": [{"name": "v", "type": "i32"}]}},
@@ -258,12 +277,8 @@ class TestMapping:
             participant(fake(), init=init)
 
     def test_a_bound_configuration_request_is_warned_about(self, fake, capsys):
-        rewrite = lambda text: text.replace(  # noqa: E731
-            "OSMPOut", "OSMPSensorViewInConfigRequest")
-        participant(fake(rewrite=rewrite), binds=[
-            "osmp.In:payload=OSMPIn",
-            "osmp.Out:payload=OSMPSensorViewInConfigRequest",
-        ]).close()
+        participant(fake(rewrite=as_configuration_request),
+                    binds=CONFIG_BINDS).close()
 
         warning = capsys.readouterr().err
         assert "sil.fmi: warning:" in warning
@@ -273,7 +288,7 @@ class TestMapping:
     def test_an_ordinary_binary_output_is_not_warned_about(self, fake, capsys):
         participant(fake()).close()
 
-        assert "warning" not in capsys.readouterr().err
+        assert "sil.fmi: warning:" not in capsys.readouterr().err
 
     def test_a_bound_above_the_fmi2_integer_range_is_refused(self, fake):
         capacity = 2**31
@@ -410,6 +425,22 @@ class TestInspection:
         report = inspect(fake(), mapping)
 
         assert report["mapping"]["unbound"] == ["OSMPIn"]
+
+    def test_a_bound_configuration_request_is_warned_about(self, fake):
+        mapping = {"sil_fmi_mapping": 1, "schemas": SCHEMAS,
+                   "channels": INIT["channels"], "bind": CONFIG_BINDS}
+        report = inspect(fake(rewrite=as_configuration_request), mapping)
+
+        assert report["mapping"]["accepted"], report["mapping"]
+        [warning] = report["mapping"]["warnings"]
+        assert "'OSMPSensorViewInConfigRequest'" in warning
+        assert "#251" in warning
+
+    def test_an_ordinary_mapping_has_no_warning(self, fake):
+        mapping = {"sil_fmi_mapping": 1, "schemas": SCHEMAS,
+                   "channels": INIT["channels"], "bind": BINDS}
+
+        assert inspect(fake(), mapping)["mapping"]["warnings"] == []
 
 
 STIMULUS = ROOT / "tests" / "participants" / "binary_stimulus.py"

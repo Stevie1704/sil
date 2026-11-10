@@ -254,7 +254,7 @@ def _osmp_problem(variable: Variable) -> str | None:
     return None
 
 
-def unexchanged_configuration(variable: Variable) -> str | None:
+def configuration_request_warning(variable: Variable) -> str | None:
     """Why a bound OSMP configuration request publishes no request, or None.
 
     The binding is accepted, because the bytes do cross. What does not happen
