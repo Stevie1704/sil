@@ -382,6 +382,10 @@ reads, so a new command can replace a reconstruction that is in progress.
 Foxglove playback bar (play, pause, seek, speed) controls SiL's headless
 playback. SiL supplies no panel and no viewer.
 
+Known problem: with Foxglove desktop 3.5.0, pause does not work, because
+SiL refuses the speed 0.0 that the pause request carries. See
+[Results with Foxglove desktop 3.5.0](#results-with-foxglove-desktop-350).
+
 The command needs the `foxglove` extra. Export and the other commands do not:
 
 ```sh
@@ -421,7 +425,7 @@ client of the printed address controls playback.
 
 | Foxglove | SiL |
 | --- | --- |
-| Play, Pause, speed | One `configure`: the desired playing state and the rate (0.1 to 10). The SDK request has no "no change" command, only Play and Pause, so every request sets the playing state. A speed change keeps the playing state only because the client sends its current command with it, as the Foxglove playback bar does. |
+| Play, Pause, speed | One `configure`: the desired playing state and the rate (0.1 to 10). The SDK request has no "no change" command, only Play and Pause, so every request sets the playing state. A speed change keeps the playing state only because the client sends its current command with it, as the Foxglove playback bar does. Foxglove 3.5.0 sends Pause with speed 0.0, which SiL refuses (known problem above). |
 | Seek | `configure` with a position in the source's inclusive range. The answer reports `Buffering` until the reconstruction committed. |
 | Subscribe, unsubscribe a topic | The subscription is the set of the client's topics. A new topic gets the latest value at the cursor. |
 | Disconnect | Playback pauses. The next client gets a new session ID, a reset and the latest values at the cursor. |
@@ -481,8 +485,9 @@ next connection starts with a reset and a fresh reconstruction.
 | foxglove-sdk (Python) | 0.30.3, pinned in the `foxglove` extra | Yes | `tests/test_visualization_foxglove.py` against the SDK server |
 | WebSocket subprotocol | `foxglove.sdk.v1` | Yes | Scripted client in the tests |
 | WebSocket subprotocol | `foxglove.websocket.v1` | Refused by the SDK (HTTP 400) | Test `test_the_sdk_refuses_the_legacy_subprotocol` |
-| WebSocket subprotocol | `foxglove.sdk.v1.1` | No | The relay reads no schema table; not exercised |
-| Foxglove desktop or web application | none | No | Manual procedure below |
+| WebSocket subprotocol | `foxglove.sdk.v1.1` | Negotiated by Foxglove 3.5.0 | The application offers `foxglove.websocket.v1, foxglove.sdk.v1, foxglove.sdk.v1.1`; the SDK selects `foxglove.sdk.v1.1`. The relay reads no schema table; the results below were made with it. |
+| Foxglove desktop application | 3.5.0, macOS arm64 | Partly: pause fails | Manual procedure below, 2026-11-10 |
+| Foxglove web application | none | No | Not done |
 
 Verified with the scripted client against SDK 0.30.3: capabilities `time`
 and `playbackControl`, the data range, the export's schemas, exact 64-bit
@@ -495,17 +500,70 @@ loss, a stall timeout, reconnect with a new session, a refused second
 client, a direct connection to the SDK port without control, oversize
 payloads and an unchanged source.
 
-Not verified, because no Foxglove application is installed here:
+#### Results with Foxglove desktop 3.5.0
 
-- that the application offers `foxglove.sdk.v1` or `foxglove.sdk.v1.1`
-  and connects;
-- that its playback bar sends the requests above and shows the range, the
-  time and the states;
-- that `did_seek` clears its panels, also a Raw Messages panel on a topic
-  without a value before the seek time;
-- how it shows times near 2^32 s, equal-time Messages and `null` floats.
+The procedure below was done on 2026-11-10 with Foxglove desktop 3.5.0
+(macOS arm64) and foxglove-sdk 0.30.3. The requests were read from the
+bridge with a logging wrapper.
 
-Procedure for these items:
+Verified:
+
+- **Open connection**, **Foxglove WebSocket** connects. The source shows
+  as `ws://127.0.0.1:8765 sil playback`, the range as 0.000000000 to
+  9.990000000. Playback starts paused at 0 with empty panels and no
+  problems.
+- Play at 1x: 2.0 s of Virtual time in 2.0 s. Play at 2x: 4.0 s in 2.0 s.
+  A speed change sends the current command with the new speed: `Pause`
+  while paused, `Play` while playing. SiL accepts both.
+- A seek-bar seek sends `seek_time`, paused or while playing. `did_seek`
+  clears the Plot and the Raw Messages panels, then the latest values
+  show. After a seek to 6 s and then to 2.025 s, `sparse` is empty and
+  `counter` shows `fields.count` `"9007199254741192"`.
+- 64-bit integers show exactly as strings, for example
+  `"18446744073709551615"` in `arrays`.
+- A `null` float shows as `null`, with the `nonfinite` annotation.
+- Playback stops at 9.99 s. Play at the end sends a seek to 0 and Play.
+- After the source is closed (not the application) and connected again,
+  playback is paused at the old cursor and the panels show the latest
+  values; `sparse` stays empty before 5 s.
+- After play from 0 to the end, the Topics tab counts 10, 30, 100, 100, 1
+  and 1000 Messages: the counts of the receipt. No Message was lost.
+- The source hash did not change.
+
+Failed:
+
+- **Pause while playing.** Foxglove 3.5.0 sends `Pause` with
+  `playback_speed` 0.0, at 1x and at 2x. SiL refuses the request ("rate
+  must be a finite number in 0.1..10.0, not 0.0"), the state stays
+  `Playing` and playback continues to the end. A seek while playing sends
+  `Play` and does not stop playback either. Until this is fixed, running
+  playback stops only at the end.
+
+Differences from this document:
+
+- **Receive time.** Foxglove shows and orders a Message at the latest
+  server time, not at its log time. The bridge sends the server time after
+  each batch of Messages, so a Message often shows the previous tick: the
+  9.9 s `counter` Message shows `@ 9.870000000 sec`, the 5 s `sparse`
+  Message `@ 4.990000000 sec`. The equal-time grouping of Raw Messages
+  also follows this time: during play it once showed `2 / 2` for a
+  three-Message Burst, although the counts show no loss. After a seek,
+  backfilled values show the seek time.
+- **"Data went back in time".** Two warnings occurred in a first session
+  without a request log: a `vehicle/speed` Message at 0.000000000 after
+  Messages at 0.995625000 and 3.060000000. They followed a seek to about
+  1 s, Play and a refused Pause. The cause is not known, and logged
+  sessions did not show the warning again. So it is not verified with the
+  application that old values cannot reappear after a seek.
+
+Not verified:
+
+- times near 2^32 s (the fixture holds 10 s);
+- a slow client, a second client and oversize Messages with the
+  application (only with the scripted client);
+- the web application.
+
+Procedure:
 
 1. `python tests/visualization_fixture.py qualification.mcap`
 2. `sil playback serve qualification.mcap --adapter foxglove`
@@ -514,8 +572,9 @@ Procedure for these items:
 4. Play at 1x and 2x; pause; seek to 6 s, then to 2 s. Make sure that
    `sparse` is empty after the seek to 2 s (its only Message is at 5 s), and
    that `counter` shows `fields.count` `"9007199254741192"` at 2 s.
-5. Close the application, connect again and make sure that the panels start
-   empty and paused at the old cursor.
+5. Close the source or the application, connect again and make sure that
+   playback is paused at the old cursor and that the panels show only the
+   latest values at the cursor.
 6. Record the application version and the results in this matrix.
 
 ## Open the output in Foxglove
@@ -541,18 +600,38 @@ or web application. It needs no SiL server.
 3. Add a **Plot** panel with the field `fields.speed_mps` of the topic
    `vehicle/speed`. Use play, pause, the seek bar, the speed selection and
    loop.
-4. Add a **Raw Messages** panel on `/counter`. Make sure that
-   `fields.count` shows `"9007199254741492"` at 5 s, exactly.
-5. Add a **Raw Messages** panel on `/sensor` and `/burst`. Record how the
+4. Add a **Raw Messages** panel on `counter`. Make sure that
+   `fields.count` shows `"9007199254741492"` at 5 s, exactly. The topic
+   names have no leading slash.
+5. Add a **Raw Messages** panel on `sensor` and `burst`. Record how the
    viewer shows `null` readings and the three Messages at one time.
 6. Record the application version and the results with the evidence.
 
 ### Qualification status
 
-No Foxglove application version is qualified yet. The output is verified
-with the `mcap` Python reader: indexed time-range reads, schemas, metadata,
-payloads and hashes. Steps 2 to 6 have not been done. Until they are done,
-compatibility with Foxglove is the documented capability of its MCAP file
-player with `json` and `jsonschema`, not a tested result. One open question
-is how Foxglove treats `"type": ["number", "null"]` in a float field's
-schema; record it during qualification.
+Foxglove desktop 3.5.0 (macOS arm64) is qualified for the export, on
+2026-11-10. The output is also verified with the `mcap` Python reader:
+indexed time-range reads, schemas, metadata, payloads and hashes.
+
+Results of steps 2 to 5:
+
+- The file opens without problems. The Topics tab shows the six topics
+  with their schema names and the counts of the receipt. The range is
+  0.000000000 to 9.990000000.
+- Play, pause, seek-bar seeks, speed (1x: 2.1 s in 2.1 s; 2x: 4.0 s in
+  2.0 s) and loop work. With loop off, playback stops at 9.99 s; with loop
+  on, it continues from 0.
+- The Plot shows the full range, also ahead of the playhead.
+- At 5.000000000 s (reached with **Seek to next message** on `sparse`),
+  `counter` shows `fields.count` `"9007199254741492"`, exactly. `arrays`
+  shows `"18446744073709551615"` for 2^64 − 1.
+- Foxglove accepts `"type": ["number", "null"]`. Raw Messages shows a
+  non-finite reading as `null` with its `nonfinite` annotation, for
+  example `"-Infinity"`. The Plot omits the `null` points and draws its
+  line across them, without a gap; the legend shows the last finite value.
+- Raw Messages shows the three equal-time `burst` Messages as `1 / 3` to
+  `3 / 3`, in `record_index` order.
+- A base64 byte array shows as `Uint8Array`, for example
+  `Uint8Array(4) [0, 1, 2, 255]`.
+- The time display shows Virtual time zero as the epoch in the local time
+  zone. Its **Seconds** format shows Virtual time directly.
