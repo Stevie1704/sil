@@ -461,10 +461,11 @@ Message when it is full, without notice to the program. It also sends that
 queue and its control queue (playback states, time) in no fixed order. The
 adapter therefore puts a relay in front of the SDK server
 (`adapters/foxglove_relay.py`). The relay reports which barrier statuses and
-seek states the SDK actually wrote. Because the relay sees the order in
-which the client gets the frames, it writes the time frame with a Message's
-log time just before that Message, and it drops an SDK time frame that is
-not later than the client's time, except after a `did_seek` state. The adapter keeps at most half the SDK
+seek states the SDK actually wrote. The relay also sees the order in which
+the client gets the frames. So it writes the time frame with a Message's log
+time just before that Message. It drops an SDK time frame that is not later
+than the client's time; after a `did_seek` state, any time is accepted.
+The adapter keeps at most half the SDK
 queue unacknowledged, so the SDK never drops a Message for the relay's
 client. It also keeps at most `Bridge(window_bytes=32 MiB)` of encoded
 payloads unacknowledged; a single larger Message goes alone. The relay also marks its client's playback requests and
@@ -539,7 +540,10 @@ Verified:
 Changes after this run (issue #383), not yet verified with the
 application: the pause, the receive time and the "data went back in time"
 items below are fixed in the bridge and tested with the scripted client.
-Repeat the procedure to qualify them.
+Repeat the procedure to qualify them. Also make sure that after a seek the
+playback bar does not jump back while the Backfill shows at its own log
+times, and that the `current_time` of a playback state does not change the
+time at which a Message shows.
 
 Failed:
 
@@ -547,8 +551,8 @@ Failed:
   `playback_speed` 0.0, at 1x and at 2x. SiL refuses the request ("rate
   must be a finite number in 0.1..10.0, not 0.0"), the state stays
   `Playing` and playback continues to the end. A seek while playing sends
-  `Play` and does not stop playback either. Until this is fixed, running
-  playback stops only at the end.
+  `Play` and does not stop playback either. In this run, running playback
+  stopped only at the end.
 
 Differences from this document:
 

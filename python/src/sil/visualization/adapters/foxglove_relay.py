@@ -14,13 +14,13 @@ SDK actually wrote, in order:
 - `seek_states_seen`: how many playback states with `did_seek` it wrote.
 
 Server time: with the `time` capability, Foxglove shows a Message at the
-latest server time that it received, not at its log time. Because the two
-SDK queues are not ordered, the relay sets the order itself: it writes a
-time frame with a Message's log time just before that Message, unless the
-client already has that time. A time frame of the SDK that is not later
-than the client's time is dropped. So the server time goes back only after
-a playback state with `did_seek`, and the Backfill after a seek shows at
-its own log times.
+latest server time that it received, not at its log time. The two SDK
+queues are not ordered, so the relay sets the order itself. Before a
+Message, it writes a time frame with the Message's log time, if the client
+does not have that time yet. It drops an SDK time frame that is not later
+than the client's time. So the server time goes back only after a playback
+state with `did_seek`. The Backfill after a seek shows at its own log
+times.
 
 The adapter keeps fewer Messages unacknowledged than the SDK queue holds, so
 the SDK never drops a Message. The relay forwards with blocking writes: a slow
@@ -62,6 +62,8 @@ _CONTINUATION, _TEXT, _BINARY, _CONTROL = 0x0, 0x1, 0x2, 0x8
 _PLAYBACK_CONTROL = 3  # client to server
 _MESSAGE_DATA, _TIME, _PLAYBACK_STATE = 1, 2, 5  # server to client
 _LOG_TIME_OFFSET = 1 + 4  # opcode, subscription ID
+_TIME_OFFSET = 1  # opcode
+_FINAL_BINARY = 0x80 | _BINARY
 _DID_SEEK_OFFSET = 1 + 1 + 8 + 4  # opcode, status, current_time, speed
 # Both playback messages have a u32 length and the request ID at these offsets.
 _REQUEST_ID_LENGTH_OFFSET = _DID_SEEK_OFFSET + 1
@@ -271,9 +273,9 @@ class Relay:
             forwarded = self._observe(head, payload)
             if forwarded is None:
                 continue
-            before = clock.before(head, payload)
-            if before is not None:
-                client.sendall(before + forwarded)
+            prefix = clock.prefix_or_drop(head, payload)
+            if prefix is not None:
+                client.sendall(prefix + forwarded)
 
     def _observe(self, head: bytes, payload: bytes) -> bytes | None:
         """Count what the SDK wrote and return the frame for the client:
@@ -312,18 +314,19 @@ class _ClientClock:
     def __init__(self):
         self._now: int | None = None
 
-    def before(self, head: bytes, payload: bytes) -> bytes | None:
-        """What to write before a frame of the SDK: a time frame or
-        nothing, or None to drop the frame."""
-        if head[0] != 0x80 | _BINARY or not payload:
+    def prefix_or_drop(self, head: bytes, payload: bytes) -> bytes | None:
+        """What to write before a frame of the SDK: a time frame or b"".
+        None means: drop the frame."""
+        if head[0] != _FINAL_BINARY or not payload:
             return b""
         kind = payload[0]
         if kind == _MESSAGE_DATA and len(payload) >= _LOG_TIME_OFFSET + 8:
             (log_time,) = struct.unpack_from("<Q", payload, _LOG_TIME_OFFSET)
             if self._advance(log_time):
                 return _frame(_BINARY, struct.pack("<BQ", _TIME, log_time))
-        elif kind == _TIME and len(payload) >= 9:
-            if not self._advance(struct.unpack_from("<Q", payload, 1)[0]):
+        elif kind == _TIME and len(payload) >= _TIME_OFFSET + 8:
+            (time_ns,) = struct.unpack_from("<Q", payload, _TIME_OFFSET)
+            if not self._advance(time_ns):
                 return None
         elif kind == _PLAYBACK_STATE and len(payload) > _DID_SEEK_OFFSET \
                 and payload[_DID_SEEK_OFFSET]:

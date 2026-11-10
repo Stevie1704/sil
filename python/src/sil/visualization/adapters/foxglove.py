@@ -478,16 +478,19 @@ def _foxglove_state(state: PlaybackState, *, did_seek: bool,
 
 
 def _rate(command: PlaybackCommand, speed: float) -> float | None:
-    """The rate of a request. A Pause with a speed that is not a finite
-    positive number keeps the rate (None): Foxglove desktop 3.5.0 pauses
-    with speed 0.0. The wire carries a 32-bit float, so an accepted speed is
-    shown with 6 significant digits (0.1, not 0.100000001). The range check
-    uses the raw value: an out-of-range speed goes to the controller
-    unrounded, which refuses it."""
-    if command == PlaybackCommand.Pause and not (math.isfinite(speed)
-                                                 and speed > 0):
+    """The rate of a request.
+
+    A Pause with a speed that is not a finite positive number keeps the
+    rate (None). Foxglove desktop 3.5.0 pauses with speed 0.0.
+
+    The wire carries a 32-bit float. So an accepted speed is shown with 6
+    significant digits (0.1, not 0.100000001). The range check uses the raw
+    value: an out-of-range speed goes to the controller unrounded, and the
+    controller refuses it."""
+    valid = math.isfinite(speed)
+    if command == PlaybackCommand.Pause and not (valid and speed > 0):
         return None
-    if math.isfinite(speed) and MIN_RATE <= speed <= MAX_RATE:
+    if valid and MIN_RATE <= speed <= MAX_RATE:
         return float(f"{speed:.6g}")
     return speed
 
