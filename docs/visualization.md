@@ -422,7 +422,7 @@ client of the printed address controls playback.
 | Foxglove | SiL |
 | --- | --- |
 | Play, Pause, speed | One `configure`: the desired playing state and the rate (0.1 to 10). The SDK request has no "no change" command, only Play and Pause, so every request sets the playing state. A speed change keeps the playing state only because the client sends its current command with it, as the Foxglove playback bar does. A Pause with a speed that is not a positive number keeps the rate: Foxglove 3.5.0 pauses with speed 0.0. A Play with such a speed is refused. |
-| Seek | `configure` with a position in the source's inclusive range. The answer reports `Buffering` until the reconstruction committed. |
+| Seek | `configure` with a position in the source's inclusive range. While the reconstruction is pending, the answer and the `did_seek` state report the desired status (`Playing` or `Paused`), not `Buffering`: Foxglove 3.5.0 sends no request while the state is `Buffering`, so the next seek of a seek-bar drag would fail with "without a valid connection". A slow client still causes `Buffering`. |
 | Subscribe, unsubscribe a topic | The subscription is the set of the client's topics. A new topic gets the latest value at the cursor. That value shows at the current server time, because the server time goes back only at a seek. |
 | Disconnect | Playback pauses. The next client gets a new session ID, a reset and the latest values at the cursor. |
 
@@ -439,8 +439,13 @@ are Virtual time in integer nanoseconds; time zero shows as the epoch.
 Foxglove shows a Message at the latest server time that it received, not
 at the log time. So the client gets a server time equal to the log time
 just before each Message (see [No silent loss](#no-silent-loss) for how).
-The server time goes back only after a playback state with `did_seek`.
-While paused or between Messages, the server time is the cursor.
+Foxglove 3.5.0 also takes the `current_time` of each playback state as
+its server time. A time frame that goes back makes Foxglove clear its
+buffered Messages, as for a seek. So a time frame goes back only before the
+first Message after a `did_seek` state. While paused or between Messages,
+the server time is the cursor. A Message that arrives after an answer with
+a later time (a Pause while Messages are still queued) shows at that later
+time.
 
 A seek sends, in this order: all data sent before it, a playback state with
 `did_seek` (Foxglove clears its panels), the latest Message per subscribed
@@ -464,7 +469,8 @@ adapter therefore puts a relay in front of the SDK server
 seek states the SDK actually wrote. The relay also sees the order in which
 the client gets the frames. So it writes the time frame with a Message's log
 time just before that Message. It drops an SDK time frame that is not later
-than the client's time; after a `did_seek` state, any time is accepted.
+than the client's time. It counts the `current_time` of a playback state
+as the client's time, as Foxglove does.
 The adapter keeps at most half the SDK
 queue unacknowledged, so the SDK never drops a Message for the relay's
 client. It also keeps at most `Bridge(window_bytes=32 MiB)` of encoded
@@ -542,8 +548,8 @@ application: the pause, the receive time and the "data went back in time"
 items below are fixed in the bridge and tested with the scripted client.
 Repeat the procedure to qualify them. Also make sure that after a seek the
 playback bar does not jump back while the Backfill shows at its own log
-times, and that the `current_time` of a playback state does not change the
-time at which a Message shows.
+times, and that a seek-bar drag shows no "without a valid connection"
+problem.
 
 Failed:
 

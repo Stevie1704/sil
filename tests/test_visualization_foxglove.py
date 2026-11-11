@@ -356,30 +356,30 @@ def test_play_delivers_every_message_in_order_with_its_time_then_ends(
     client.close()
 
 
-def shown_times(client):
-    """(log time, server time) of each received Message. With the `time`
-    capability, Foxglove shows a Message at the latest server time it
-    received before it."""
-    shown, now = [], None
-    for frame in client.frames:
-        if frame["op"] == "time":
-            now = frame["time"]
-        elif frame["op"] == "message":
-            shown.append((frame["log_time"], now))
-    return shown
+class FoxgloveTime:
+    """The server time as Foxglove desktop 3.5.0 keeps it: a time frame
+    and the `current_time` of a playback state set it, and a Message
+    shows at it. A time frame that goes back clears Foxglove's buffered
+    Messages and counts as a seek; only right after a did_seek state is
+    that expected."""
 
+    def __init__(self, client):
+        self.shown = []  # (log time, server time) of each Message
+        self.steps_back = []  # (from, to) of unexpected time frames
+        now, after_seek = None, False
+        for frame in client.frames:
+            if frame["op"] == "playbackState":
+                now, after_seek = frame["time"], frame["did_seek"] or after_seek
+            elif frame["op"] == "time":
+                if now is not None and frame["time"] < now and not after_seek:
+                    self.steps_back.append((now, frame["time"]))
+                now = frame["time"]
+            elif frame["op"] == "message":
+                self.shown.append((frame["log_time"], now))
+                after_seek = False
 
-def time_steps_back(client):
-    """Server times that go back without a did_seek state before them."""
-    back, now = [], None
-    for frame in client.frames:
-        if frame["op"] == "playbackState" and frame["did_seek"]:
-            now = None
-        elif frame["op"] == "time":
-            if now is not None and frame["time"] < now:
-                back.append((now, frame["time"]))
-            now = frame["time"]
-    return back
+    def not_at_log_time(self):
+        return [(log, now) for log, now in self.shown if now != log]
 
 
 def test_the_client_sees_each_messages_log_time_as_server_time(
@@ -396,10 +396,30 @@ def test_the_client_sees_each_messages_log_time_as_server_time(
     client.request("seek", PLAY, speed=10.0, seek=995_625_000)
     client.wait_for(lambda f: f.get("status") == ENDED, timeout=20)
 
-    shown = shown_times(client)
-    assert len(shown) > 1000
-    assert [(log, now) for log, now in shown if now != log] == []
-    assert time_steps_back(client) == []
+    foxglove = FoxgloveTime(client)
+    assert len(foxglove.shown) > 1000
+    assert foxglove.not_at_log_time() == []
+    assert foxglove.steps_back == []
+    client.close()
+
+
+def test_a_pause_while_playing_never_moves_the_time_back(
+        serve, qualification):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play", PLAY, speed=10.0)
+    client.wait_for(lambda f: f["op"] == "message" and f["log_time"] > 3 * S)
+    client.reading.clear()  # Messages wait in the queues during the pause
+    client.request("pause", PAUSE, speed=0.0)
+    time.sleep(0.3)
+    client.reading.set()
+    client.wait_for(lambda f: f.get("request_id") == "pause")
+    time.sleep(0.3)
+
+    foxglove = FoxgloveTime(client)
+    assert foxglove.steps_back == []
+    assert [(log, now) for log, now in foxglove.shown if now < log] == []
     client.close()
 
 

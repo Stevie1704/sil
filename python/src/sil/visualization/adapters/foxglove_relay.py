@@ -16,11 +16,15 @@ SDK actually wrote, in order:
 Server time: with the `time` capability, Foxglove shows a Message at the
 latest server time that it received, not at its log time. The two SDK
 queues are not ordered, so the relay sets the order itself. Before a
-Message, it writes a time frame with the Message's log time, if the client
-does not have that time yet. It drops an SDK time frame that is not later
-than the client's time. So the server time goes back only after a playback
-state with `did_seek`. The Backfill after a seek shows at its own log
-times.
+Message, it writes a time frame with the Message's log time, if that time
+is later than the client's time. It drops an SDK time frame that is not
+later than the client's time. Foxglove 3.5.0 also takes the `current_time`
+of a playback state as its server time, so the relay does the same. A time
+frame that goes back makes Foxglove clear its buffered Messages, as for a
+seek. So the time frames go back only before the first Message after a
+`did_seek` state: the Backfill after a seek shows at its own log times. A
+Message that arrives after an answer with a later `current_time` (a Pause
+while Messages are still queued) shows at that later time.
 
 The adapter keeps fewer Messages unacknowledged than the SDK queue holds, so
 the SDK never drops a Message. The relay forwards with blocking writes: a slow
@@ -64,6 +68,7 @@ _MESSAGE_DATA, _TIME, _PLAYBACK_STATE = 1, 2, 5  # server to client
 _LOG_TIME_OFFSET = 1 + 4  # opcode, subscription ID
 _TIME_OFFSET = 1  # opcode
 _FINAL_BINARY = 0x80 | _BINARY
+_CURRENT_TIME_OFFSET = 1 + 1  # opcode, status
 _DID_SEEK_OFFSET = 1 + 1 + 8 + 4  # opcode, status, current_time, speed
 # Both playback messages have a u32 length and the request ID at these offsets.
 _REQUEST_ID_LENGTH_OFFSET = _DID_SEEK_OFFSET + 1
@@ -308,11 +313,11 @@ class Relay:
 
 
 class _ClientClock:
-    """The server time that the client received last (see the module
-    docstring)."""
+    """The server time that the client has (see the module docstring)."""
 
     def __init__(self):
         self._now: int | None = None
+        self._after_seek = False  # no Message since a did_seek state
 
     def prefix_or_drop(self, head: bytes, payload: bytes) -> bytes | None:
         """What to write before a frame of the SDK: a time frame or b"".
@@ -322,22 +327,21 @@ class _ClientClock:
         kind = payload[0]
         if kind == _MESSAGE_DATA and len(payload) >= _LOG_TIME_OFFSET + 8:
             (log_time,) = struct.unpack_from("<Q", payload, _LOG_TIME_OFFSET)
-            if self._advance(log_time):
+            rewind, self._after_seek = self._after_seek, False
+            if self._now is None or log_time > self._now \
+                    or (rewind and log_time < self._now):
+                self._now = log_time
                 return _frame(_BINARY, struct.pack("<BQ", _TIME, log_time))
         elif kind == _TIME and len(payload) >= _TIME_OFFSET + 8:
             (time_ns,) = struct.unpack_from("<Q", payload, _TIME_OFFSET)
-            if not self._advance(time_ns):
+            if self._now is not None and time_ns <= self._now:
                 return None
-        elif kind == _PLAYBACK_STATE and len(payload) > _DID_SEEK_OFFSET \
-                and payload[_DID_SEEK_OFFSET]:
-            self._now = None
+            self._now = time_ns
+        elif kind == _PLAYBACK_STATE and len(payload) > _DID_SEEK_OFFSET:
+            # Foxglove takes current_time as its server time.
+            (self._now,) = struct.unpack_from("<Q", payload, _CURRENT_TIME_OFFSET)
+            self._after_seek |= bool(payload[_DID_SEEK_OFFSET])
         return b""
-
-    def _advance(self, time_ns: int) -> bool:
-        if self._now is not None and time_ns <= self._now:
-            return False
-        self._now = time_ns
-        return True
 
 
 class _Reader:
