@@ -750,16 +750,15 @@ void ProcessParticipant::step(uint64_t now_ns) {
   const json done = exchange(step.dump(), now_ns);
 
   for (StepOutput &output : decode_step_done(done, now_ns))
-    publish(output);
+    publish_output(output);
 }
 
-void ProcessParticipant::publish(const StepOutput &output) {
+void ProcessParticipant::publish_output(const StepOutput &output) {
   try {
     engine_.publish(name_, output.channel, output.bytes.data(),
                     output.bytes.size());
-  } catch (const RunError &e) {
-    // A wrong-size output or a full route with policy `fail`. The Engine
-    // does not know the Step, so add this participant's facts here.
+  } catch (const PublishError &e) {
+    // The Engine does not know the Step, so add this participant's facts.
     throw failure(FailureCategory::Run, e.what() + step_context());
   }
 }

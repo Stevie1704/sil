@@ -160,10 +160,10 @@ class ProcessParticipant {
   std::vector<StepOutput> decode_step_done(const nlohmann::json &done,
                                            uint64_t now_ns);
 
-  // Publishes one decoded output. An Engine failure (a wrong-size output or
-  // a full route with policy `fail`) keeps the `run` category but gets this
+  // Publishes one decoded output. A PublishError (a wrong-size output or a
+  // full route with policy `fail`) keeps the `run` category but gets this
   // Participant and its Step in the failure report.
-  void publish(const StepOutput &output);
+  void publish_output(const StepOutput &output);
 
   // Private step-scoped codec seam (issue #41), with inline and Arena as
   // adapters behind it. `encode_inputs` receives the complete input set

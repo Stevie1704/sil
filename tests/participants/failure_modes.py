@@ -14,6 +14,7 @@ Init modes answer `init` with a malformed `ready` line:
   ready_array   an empty JSON array
   ready_op      an `op` that is not a string
   ready_reason  a `fail` line whose `reason` is not a string
+  ready_failure a `fail` line whose `failure` is not a string
 """
 
 import base64
@@ -28,6 +29,7 @@ READY_LINES = {
     "ready_array": [],
     "ready_op": {"op": 7},
     "ready_reason": {"op": "fail", "reason": 7},
+    "ready_failure": {"op": "fail", "failure": 7, "reason": "no"},
 }
 
 
@@ -73,4 +75,5 @@ def main(mode: str, fail_at_ns: int, channel: str) -> None:
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], int(sys.argv[2]), sys.argv[3] if len(sys.argv) > 3 else "")
+    channel = sys.argv[3] if len(sys.argv) > 3 else ""
+    main(sys.argv[1], int(sys.argv[2]), channel)
