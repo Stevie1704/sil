@@ -723,7 +723,7 @@ std::string errno_text(int error) { return std::strerror(error); }
 // sees a partial report and a prior report is never replaced.
 void publish_new_file(const fs::path &path, const std::string &content) {
   std::string name = path.string() + ".tmp-XXXXXX";
-  const int fd = mkstemp(name.data());
+  const int fd = mkostemp(name.data(), O_CLOEXEC);
   if (fd < 0)
     throw std::runtime_error("cannot create a temporary file beside '" +
                              path.string() + "': " + errno_text(errno));
