@@ -157,11 +157,19 @@ ResolvedExecutable path_from_path_environment(
                            "' was not found on PATH");
 }
 
+// The one test for a command word that names a path: it has a directory
+// component, as `./x` or `dir/x` does, or it is absolute. Command[0] and every
+// later argument use it. A bare word names no path, so no file of that name
+// beside the Manifest can change it.
+bool names_path(const fs::path &word) {
+  return word.is_absolute() || word.has_parent_path();
+}
+
 ResolvedExecutable resolve_executable(
     const std::string &command, const fs::path &manifest_directory) {
   if (command.empty()) throw std::runtime_error("executable name is empty");
   fs::path argument(command);
-  if (argument.is_absolute() || argument.has_parent_path()) {
+  if (names_path(argument)) {
     fs::path launch_path = argument.is_absolute()
                                ? argument
                                : (manifest_directory / argument).lexically_normal();
@@ -170,6 +178,9 @@ ResolvedExecutable resolve_executable(
   return path_from_path_environment(command, manifest_directory);
 }
 
+// A relative path argument that names an existing entry beside the Manifest is
+// resolved there. Every other argument reaches the participant unchanged, so a
+// relative output path is created in the participant's own directory.
 std::vector<std::string> resolve_command(
     const std::vector<std::string> &command,
     const fs::path &manifest_directory,
@@ -177,9 +188,8 @@ std::vector<std::string> resolve_command(
   std::vector<std::string> resolved = command;
   resolved.at(0) = executable.launch_path.string();
   for (size_t index = 1; index < resolved.size(); ++index) {
-    if (resolved[index].empty()) continue;
-    fs::path argument(resolved[index]);
-    if (argument.is_absolute()) continue;
+    const fs::path argument(resolved[index]);
+    if (argument.is_absolute() || !names_path(argument)) continue;
     const fs::path candidate = manifest_directory / argument;
     std::error_code error;
     if (fs::exists(candidate, error) && !error)
@@ -192,8 +202,8 @@ std::vector<std::string> resolve_command(
 // loaded, so it is digested. The rule is deliberately about files rather than
 // about any one foreign standard: an imported FMU archive is covered because it
 // is a file the command names, and the kernel never learns FMI exists. An
-// argument that names no file — a channel name, a flag, a numeric literal — is
-// not an artifact and is left alone.
+// argument that names no path — a channel name, a flag, a numeric literal — is
+// not an artifact and is left alone, as resolve_command leaves it alone.
 std::vector<std::string> command_file_arguments(
     const std::vector<std::string> &command, const fs::path &base) {
   std::vector<std::string> result;
@@ -201,8 +211,9 @@ std::vector<std::string> command_file_arguments(
   // Index 0 is the executable, which is resolved and digested on its own.
   for (size_t index = 1; index < command.size(); ++index) {
     const std::string &argument = command[index];
-    if (argument.empty()) continue;
-    fs::path candidate(argument);
+    const fs::path word(argument);
+    if (!names_path(word)) continue;
+    fs::path candidate = word;
     if (candidate.is_relative()) candidate = base / candidate;
     std::error_code error;
     if (!fs::is_regular_file(candidate, error) || error) continue;

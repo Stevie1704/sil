@@ -419,7 +419,7 @@ def _check_process(c: _Checker, participant, path, channels) -> list[str]:
     if command is not None and c.array(command, path + ("command",)) is not None:
         if not command:
             c.add(path + ("command",), "command must be a non-empty array",
-                  "Name the executable first: [\"python3\", \"participant.py\"].")
+                  "Name the executable first: [\"python3\", \"./participant.py\"].")
         items = [c.string(item, path + ("command", index))
                  for index, item in enumerate(command)]
         if items and items[0] is not None:
@@ -582,9 +582,13 @@ def _check_readable(c: _Checker, file: Path, path, what: str) -> bool:
 
 
 def _check_command_files(c: _Checker, arguments, path) -> None:
-    """A command argument that names a file is an artifact of the Run."""
+    """A command argument with a `/` that names a file is an artifact of the Run.
+
+    The kernel reads a bare word as a literal, so only a word with a `/` can name
+    a file beside the Manifest.
+    """
     for index, argument in enumerate(arguments, start=1):
-        if argument and (c.base_dir / argument).is_file():
+        if argument and "/" in argument and (c.base_dir / argument).is_file():
             _check_readable(c, c.base_dir / argument, path + (index,),
                             "command file")
 

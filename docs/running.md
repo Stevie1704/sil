@@ -432,9 +432,11 @@ participant command:
 The runner starts the file that it found. The provenance side-car records the
 command with the path of that file. The side-car also records the SHA-256 of
 the file after symbolic links. For a venv `python3`, that file is the base
-interpreter. The runner does not search `PATH` for the other arguments. If a
-relative argument names a file in the Manifest directory, the runner and the
-side-car use the absolute path of that file.
+interpreter. The runner does not search `PATH` for the other arguments. A later
+argument with a `/` that names a file in the Manifest directory, such as
+`./data.csv`, is replaced by the absolute path of that file, and the side-car
+records that path. A bare word, such as `data.csv`, reaches the participant
+unchanged.
 
 In `full` mode, `sil-run` digests each distinct input file once for each Run.
 Participants that name the same file, directly or through a symbolic link, share
@@ -904,7 +906,7 @@ m = Manifest(duration_ns=30_000_000, epoch_ns=1_700_000_000_000_000_000)
 m.add_channel("readings", schema="toy.Counter")
 m.add_process(
     "vecu",
-    command=[sys.executable, "vecu.py"],
+    command=[sys.executable, "./vecu.py"],
     step_period_ns=10_000_000,
     publishes=["readings"],
     shim=True,           # this participant sees virtual time; others do not
