@@ -467,11 +467,20 @@ def _current_time(state: PlaybackState) -> int | None:
         else state.cursor_ns
 
 
+def _status(state: PlaybackState) -> FoxgloveStatus:
+    """The Foxglove status of `state`. A pending seek shows the desired
+    status, not Buffering: Foxglove 3.5.0 sends no request while the state
+    is Buffering, so a second seek of a drag would fail."""
+    if state.pending and state.status == Status.BUFFERING:
+        return FoxgloveStatus.Playing if state.playing else FoxgloveStatus.Paused
+    return _STATUS[state.status]
+
+
 def _foxglove_state(state: PlaybackState, *, did_seek: bool,
                     request_id: str | None,
                     position_ns: int | None = None) -> FoxgloveState:
     now = position_ns if position_ns is not None else _current_time(state)
-    return FoxgloveState(status=_STATUS[state.status],
+    return FoxgloveState(status=_status(state),
                          current_time=now if now is not None else 0,
                          playback_speed=state.rate, did_seek=did_seek,
                          request_id=request_id)

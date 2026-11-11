@@ -421,14 +421,32 @@ def test_seek_backward_while_playing_clears_then_backfills_without_stale_values(
     client.request("seek", PLAY, speed=10.0, seek=2 * S)
     _, answer = client.wait_for(lambda f: f.get("request_id") == "seek"
                                 and not f["did_seek"])
-    assert answer["status"] == BUFFERING and answer["time"] == 2 * S
+    # Foxglove 3.5.0 sends no request while the state is Buffering.
+    assert answer["status"] == PLAYING and answer["time"] == 2 * S
     client.wait_for(lambda f: f.get("status") == ENDED, timeout=20)
+    assert BUFFERING not in {f["status"] for f in client.frames
+                             if f["op"] == "playbackState"}
     messages = exported_messages(qualification, tmp_path)
     expected = latest_at(messages, set(client.channels), 2 * S) + sorted(
         (m for m in messages if m[1] > 2 * S), key=key)
     assert after_last_seek(client, 2 * S) == expected
     backfill = latest_at(messages, set(client.channels), 2 * S)
     assert "sparse" not in {topic for topic, _, _ in backfill}
+    client.close()
+
+
+def test_a_seek_while_paused_answers_paused(serve, qualification):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+
+    client.request("seek", PAUSE, speed=1.0, seek=2 * S)
+    _, answer = client.wait_for(lambda f: f.get("request_id") == "seek")
+    client.wait_for(lambda f: f["op"] == "playbackState" and f["did_seek"])
+
+    assert (answer["status"], answer["time"]) == (PAUSED, 2 * S)
+    assert BUFFERING not in {f["status"] for f in client.frames
+                             if f["op"] == "playbackState"}
     client.close()
 
 
@@ -782,8 +800,8 @@ def test_subscription_changes_backfill_added_and_stop_removed_topics(
     client = connect_subscribed(bridge, "counter")
     initial_state(client)
     client.request("seek", PAUSE, speed=1.0, seek=4 * S)
-    client.wait_for(lambda f: f.get("request_id") == "seek" and f["status"] == PAUSED
-                    and not f["did_seek"] and f["time"] == 4 * S)
+    client.wait_for(lambda f: f["op"] == "message" and f["topic"] == "counter"
+                    and f["log_time"] == 4 * S)  # the Backfill of the seek
     start = len(client.frames)
     client.subscribe("sparse", "vehicle/speed")
     client.unsubscribe("counter")
