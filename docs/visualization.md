@@ -431,7 +431,8 @@ source changed or the index became unusable), the playback bar shows
 `Paused`, and the Problems panel shows an error with the diagnostic. SiL
 then refuses all requests; restart the command to continue.
 
-Each answer is the actual state. A refused request (for example a speed of
+Each answer is the actual state; only its time can be earlier (see
+below). A refused request (for example a speed of
 50) answers the unchanged state, with the request ID, and the Problems panel
 shows a warning with the reason. The server time and every Message log time
 are Virtual time in integer nanoseconds; time zero shows as the epoch.
@@ -443,9 +444,11 @@ Foxglove 3.5.0 also takes the `current_time` of each playback state as
 its server time. A time frame that goes back makes Foxglove clear its
 buffered Messages, as for a seek. So a time frame goes back only before the
 first Message after a `did_seek` state. While paused or between Messages,
-the server time is the cursor. A Message that arrives after an answer with
-a later time (a Pause while Messages are still queued) shows at that later
-time.
+the server time is the cursor. An answer carries the cursor, which can be
+ahead of Messages that are still queued for a slow client. So the time of
+an answer is never later than the last Message that the client has; the
+queued Messages then move the time forward. The answer to a seek keeps the
+seek time.
 
 A seek sends, in this order: all data sent before it, a playback state with
 `did_seek` (Foxglove clears its panels), the latest Message per subscribed
@@ -470,7 +473,9 @@ seek states the SDK actually wrote. The relay also sees the order in which
 the client gets the frames. So it writes the time frame with a Message's log
 time just before that Message. It drops an SDK time frame that is not later
 than the client's time. It counts the `current_time` of a playback state
-as the client's time, as Foxglove does.
+as the client's time, as Foxglove does, and it replaces a `current_time`
+that is later than the client's time with the client's time (not in a
+`did_seek` state or the answer to a seek).
 The adapter keeps at most half the SDK
 queue unacknowledged, so the SDK never drops a Message for the relay's
 client. It also keeps at most `Bridge(window_bytes=32 MiB)` of encoded
@@ -561,6 +566,11 @@ issue #383. All items passed:
   and 1000 Messages.
 - A seek-bar drag shows no "without a valid connection" problem. In the
   first re-run, before the seek answer was changed, it did.
+
+After this re-run, the time of an answer was changed: it is no longer later
+than the last Message of the client (see the server time above). The
+scripted client tests this with a slow client; the application was not
+run again for it.
 
 The items below are the results of the run on 2026-11-10, before the
 fixes.

@@ -501,14 +501,16 @@ def test_pause_rate_and_invalid_requests_answer_the_actual_state(
     count = len(received(client))
     time.sleep(0.5)
     assert len(received(client)) == count  # nothing arrives while paused
+    # An answer carries the client's time: the last Message it has.
+    shown = [f for f in client.frames if f["op"] == "time"][-1]["time"]
     client.request("faster", PAUSE, speed=2.0)
     _, faster = client.wait_for(lambda f: f.get("request_id") == "faster")
     assert (faster["status"], faster["speed"], faster["time"]) == (
-        PAUSED, 2.0, paused["time"])
+        PAUSED, 2.0, shown)
     client.request("too-fast", PLAY, speed=50.0)
     _, refused = client.wait_for(lambda f: f.get("request_id") == "too-fast")
     assert (refused["status"], refused["speed"], refused["time"]) == (
-        PAUSED, 2.0, paused["time"])
+        PAUSED, 2.0, shown)
     _, warning = client.wait_for(lambda f: f["op"] == "status"
                                  and "refused" in f["message"])
     assert warning["level"] == 1 and "rate" in warning["message"]
@@ -630,6 +632,31 @@ def test_a_stalled_client_buffers_and_then_receives_every_message(
     client.wait_for(lambda f: f.get("status") == ENDED, timeout=30)
     assert numbers(received(client)) == list(range(200))
     assert any(f.get("status") == BUFFERING for f in client.frames)
+    client.close()
+
+
+@pytest.mark.parametrize("command, speed", [(PLAY, 2.0), (PAUSE, 0.0)])
+def test_queued_messages_show_at_their_log_time_after_a_request(
+        serve, blobs, command, speed):
+    bridge = serve(blobs, backlog=16)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play", PLAY, speed=10.0)
+    client.wait_for(lambda f: f["op"] == "message")
+    client.reading.clear()  # Messages queue up behind the cursor
+    time.sleep(0.3)
+    client.request("request", command, speed=speed)  # answers the cursor
+    client.reading.set()
+    client.wait_for(lambda f: f.get("request_id") == "request")
+    if command == PLAY:
+        client.wait_for(lambda f: f.get("status") == ENDED, timeout=30)
+    else:
+        time.sleep(1.0)  # the queued Messages arrive while paused
+
+    foxglove = FoxgloveTime(client)
+    assert len(foxglove.shown) > 20
+    assert foxglove.not_at_log_time() == []
+    assert foxglove.steps_back == []
     client.close()
 
 

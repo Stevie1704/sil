@@ -22,9 +22,11 @@ later than the client's time. Foxglove 3.5.0 also takes the `current_time`
 of a playback state as its server time, so the relay does the same. A time
 frame that goes back makes Foxglove clear its buffered Messages, as for a
 seek. So the time frames go back only before the first Message after a
-`did_seek` state: the Backfill after a seek shows at its own log times. A
-Message that arrives after an answer with a later `current_time` (a Pause
-while Messages are still queued) shows at that later time.
+`did_seek` state: the Backfill after a seek shows at its own log times.
+An answer to a request carries the cursor, which can be ahead of queued
+Messages (a slow client). So the relay replaces a `current_time` that is
+later than the client's time with the client's time, except in a
+`did_seek` state and in the answer to a seek request.
 
 The adapter keeps fewer Messages unacknowledged than the SDK queue holds, so
 the SDK never drops a Message. The relay forwards with blocking writes: a slow
@@ -67,8 +69,8 @@ _PLAYBACK_CONTROL = 3  # client to server
 _MESSAGE_DATA, _TIME, _PLAYBACK_STATE = 1, 2, 5  # server to client
 _LOG_TIME_OFFSET = 1 + 4  # opcode, subscription ID
 _TIME_OFFSET = 1  # opcode
-_FINAL_BINARY = 0x80 | _BINARY
 _CURRENT_TIME_OFFSET = 1 + 1  # opcode, status
+_HAS_SEEK_OFFSET = 1 + 1 + 4  # opcode, command, speed
 _DID_SEEK_OFFSET = 1 + 1 + 8 + 4  # opcode, status, current_time, speed
 # Both playback messages have a u32 length and the request ID at these offsets.
 _REQUEST_ID_LENGTH_OFFSET = _DID_SEEK_OFFSET + 1
@@ -120,6 +122,7 @@ class Relay:
         self._sockets: list[socket.socket] = []
         self._tokens: dict[str, ClientRequest | Subscription] = {}
         self._answers: dict[str, str | None] = {}  # token -> answer request ID
+        self._seeks: set[str] = set()  # tokens of requests with a seek time
         self._listener = socket.create_server((host, port))
         self.port = self._listener.getsockname()[1]
         self._accepting = threading.Thread(target=self._accept, daemon=True,
@@ -215,6 +218,7 @@ class Relay:
         """Requests of an earlier connection claim nothing (lock held)."""
         self._tokens.clear()
         self._answers.clear()
+        self._seeks.clear()
 
     def _client_to_server(self, reader: _Reader, client: socket.socket,
                           upstream: socket.socket) -> None:
@@ -253,6 +257,9 @@ class Relay:
             except UnicodeDecodeError:
                 return [(opcode, data)]  # unclaimed: the SDK refuses it
             token = self._token(ClientRequest(request_id), request_id)
+            if data[_HAS_SEEK_OFFSET]:
+                with self.changed:
+                    self._seeks.add(token)
             return [(opcode, _with_request_id(data, token))]
         if opcode == _TEXT and _track(data, subscriptions):
             fence = self._token(Subscription(frozenset(subscriptions.values())),
@@ -276,19 +283,17 @@ class Relay:
         while True:
             head, payload = reader.frame()
             forwarded = self._observe(head, payload)
-            if forwarded is None:
-                continue
-            prefix = clock.prefix_or_drop(head, payload)
-            if prefix is not None:
-                client.sendall(prefix + forwarded)
+            if forwarded is not None:
+                client.sendall(clock.frames(head, *forwarded))
 
-    def _observe(self, head: bytes, payload: bytes) -> bytes | None:
-        """Count what the SDK wrote and return the frame for the client:
-        None for a barrier or the answer to a fence, and an answer with the
-        request ID that the client sent."""
+    def _observe(self, head: bytes, payload: bytes) -> tuple[bytes, bool] | None:
+        """Count what the SDK wrote and return the payload for the client,
+        and whether it answers a seek request. None for a barrier or the
+        answer to a fence; an answer gets the request ID that the client
+        sent."""
         opcode, final = head[0] & 0x0F, bool(head[0] & 0x80)
         if not final:
-            return head + payload
+            return payload, False
         if opcode == _BINARY and payload[:1] == bytes([_PLAYBACK_STATE]) \
                 and len(payload) >= _REQUEST_ID_OFFSET:
             token = _read_request_id(payload).decode(errors="replace")
@@ -297,11 +302,13 @@ class Relay:
                     self.seek_states_seen += 1
                     self.changed.notify_all()
                 if token not in self._answers:
-                    return head + payload
+                    return payload, False
                 answer_id = self._answers.pop(token)
+                seek = token in self._seeks
+                self._seeks.discard(token)
             if answer_id is None:
                 return None
-            return _frame(opcode, _with_request_id(payload, answer_id))
+            return _with_request_id(payload, answer_id), seek
         if opcode == _TEXT and BARRIER_ID.encode() in payload[:256]:
             identifier = json.loads(payload).get("id", "")
             if identifier.startswith(BARRIER_ID):
@@ -309,7 +316,7 @@ class Relay:
                     self.barrier_seen = int(identifier[len(BARRIER_ID):])
                     self.changed.notify_all()
                 return None
-        return head + payload
+        return payload, False
 
 
 class _ClientClock:
@@ -319,29 +326,51 @@ class _ClientClock:
         self._now: int | None = None
         self._after_seek = False  # no Message since a did_seek state
 
-    def prefix_or_drop(self, head: bytes, payload: bytes) -> bytes | None:
-        """What to write before a frame of the SDK: a time frame or b"".
-        None means: drop the frame."""
-        if head[0] != _FINAL_BINARY or not payload:
-            return b""
-        kind = payload[0]
+    def frames(self, head: bytes, payload: bytes, seek_answer: bool) -> bytes:
+        """The bytes to write for a frame of the SDK: the frame, maybe with
+        a time frame before it or with the client's time in it, or nothing
+        for a time frame that the client must not get."""
+        if not head[0] & 0x80:
+            return head + payload  # a fragment: as it is
+        opcode, prefix = head[0] & 0x0F, b""
+        kind = payload[0] if opcode == _BINARY and payload else None
         if kind == _MESSAGE_DATA and len(payload) >= _LOG_TIME_OFFSET + 8:
-            (log_time,) = struct.unpack_from("<Q", payload, _LOG_TIME_OFFSET)
-            rewind, self._after_seek = self._after_seek, False
-            if self._now is None or log_time > self._now \
-                    or (rewind and log_time < self._now):
-                self._now = log_time
-                return _frame(_BINARY, struct.pack("<BQ", _TIME, log_time))
+            prefix = self._before_message(payload)
         elif kind == _TIME and len(payload) >= _TIME_OFFSET + 8:
             (time_ns,) = struct.unpack_from("<Q", payload, _TIME_OFFSET)
             if self._now is not None and time_ns <= self._now:
-                return None
+                return b""
             self._now = time_ns
         elif kind == _PLAYBACK_STATE and len(payload) > _DID_SEEK_OFFSET:
-            # Foxglove takes current_time as its server time.
-            (self._now,) = struct.unpack_from("<Q", payload, _CURRENT_TIME_OFFSET)
-            self._after_seek |= bool(payload[_DID_SEEK_OFFSET])
-        return b""
+            payload = self._state(payload, seek_answer)
+        return prefix + _frame(opcode, payload)
+
+    def _before_message(self, payload: bytes) -> bytes:
+        """A time frame with the Message's log time, or b"" when the client
+        has that time or a later one."""
+        (log_time,) = struct.unpack_from("<Q", payload, _LOG_TIME_OFFSET)
+        rewind, self._after_seek = self._after_seek, False
+        if self._now is not None and log_time <= self._now \
+                and not (rewind and log_time < self._now):
+            return b""
+        self._now = log_time
+        return _frame(_BINARY, struct.pack("<BQ", _TIME, log_time))
+
+    def _state(self, payload: bytes, seek_answer: bool) -> bytes:
+        """A playback state for the client. Foxglove takes its current_time
+        as server time. That time must not pass the Messages that the
+        client has: their queued successors would show at it. So a later
+        current_time becomes the client's time, except in a did_seek state
+        and in the answer to a seek (Foxglove shows its target; the
+        did_seek state clears the Messages from before the seek)."""
+        (current,) = struct.unpack_from("<Q", payload, _CURRENT_TIME_OFFSET)
+        if payload[_DID_SEEK_OFFSET]:
+            self._after_seek = True
+        elif not seek_answer and self._now is not None and current > self._now:
+            return (payload[:_CURRENT_TIME_OFFSET] + struct.pack("<Q", self._now)
+                    + payload[_CURRENT_TIME_OFFSET + 8:])
+        self._now = current
+        return payload
 
 
 class _Reader:
