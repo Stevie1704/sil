@@ -47,7 +47,8 @@ sil manifest validate manifest.json
 sil manifest validate manifest.json --json
 ```
 
-It applies the rules of `sil-run`: keys, types, ranges, references between
+It applies the rules of `sil-run`: keys (a key must not repeat in one
+object), types, ranges, references between
 Schemas, Channels and Participants, and one publisher for each Channel. It
 also reads the files that the Manifest names, and it compares the Channels
 and Schemas of a replayed Recording with the Manifest. Paths resolve against

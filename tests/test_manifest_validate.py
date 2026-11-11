@@ -264,7 +264,34 @@ def _doc_text(mutate) -> str:
     return json.dumps(doc)
 
 
+def _repeated_key(path, key, first) -> str:
+    """The base Manifest text with `key` written twice in the object at `path`.
+
+    The first definition is `first`; the second is the valid one of the base.
+    A JSON parser that keeps the last value accepts the text."""
+    doc = _base()
+    parent = doc
+    for token in path:
+        parent = parent[token]
+    rest = dict(parent)
+    parent.clear()
+    parent.update({"REPEATED": first, **rest})
+    return json.dumps(doc).replace('"REPEATED"', json.dumps(key), 1)
+
+
+REPEATED_KEY_CASES = {
+    "repeated top-level key": ((), "duration_ns", 0),
+    "repeated participant": ((P,), "echo", {
+        "type": "process", "command": ["/nonexistent/x"],
+        "step_period_ns": 10_000_000}),
+    "repeated channel": ((C,), "ticks", {"schema": "toy.Missing"}),
+    "repeated schema": ((S,), "toy.Accum", {"fields": []}),
+    "repeated field key": ((S, "toy.Accum", "fields", 0), "type", "u128"),
+    "repeated native config key": ((P, "producer", "config"), "channel", "x"),
+}
+
 TEXT_CASES = {
+    **{case: _repeated_key(*args) for case, args in REPEATED_KEY_CASES.items()},
     "invalid JSON": '{"sil_manifest": 1,',
     "NaN": '{"sil_manifest": 1, "duration_ns": NaN}',
     "number overflow": '{"sil_manifest": 1, "duration_ns": 1e400}',
@@ -322,6 +349,32 @@ def test_validate_rejects_what_sil_run_rejects(case, sil_run, tmp_path):
 
     assert run.returncode == 2, run.stderr
     assert problems, run.stderr
+
+
+@pytest.mark.parametrize("path, key, pointer", [
+    ((P,), "echo", "/participants/echo"),
+    ((S, "toy.Accum", "fields", 0), "type",
+     "/schemas/toy.Accum/fields/0/type"),
+])
+def test_a_repeated_key_is_named_with_its_object(path, key, pointer, sil_run,
+                                                 tmp_path):
+    problems, run = _both_verdicts(sil_run, tmp_path,
+                                   _repeated_key(path, key, None))
+
+    object_pointer = pointer.rsplit("/", 1)[0]
+    assert (f"manifest error: object '{object_pointer}' repeats key '{key}'"
+            in run.stderr)
+    assert [(p.path, p.message) for p in problems] == [
+        (pointer, f"object '{object_pointer}' repeats key '{key}'")]
+
+
+def test_a_repeat_inside_a_dropped_definition_reports_the_outer_repeat(
+        tmp_path, capsys):
+    code, report = _validate(tmp_path, '{"a": {"x": 1, "x": 2}, "a": {}}',
+                             capsys)
+
+    assert code == 2
+    assert [error["path"] for error in report["errors"]] == ["/a"]
 
 
 @pytest.mark.parametrize("change, valid", [
