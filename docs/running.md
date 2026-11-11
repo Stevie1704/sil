@@ -310,8 +310,10 @@ sil-run manifest.json --participant-timeout-ms 5000 -o out.mcap
 ```
 
 The value is a positive wall-clock duration in milliseconds. It applies
-independently to each Process participant's complete `ready` and `step_done`
-response wait. A missed deadline is a Run failure (exit 1), not a Manifest
+independently to each Process participant's complete exchange of a request and
+its `ready` or `step_done` response. The deadline starts before the runner
+writes the request, so it also bounds a write to a child that stops reading its
+stdin. A missed deadline is a Run failure (exit 1), not a Manifest
 change: the option is absent from the Manifest and its hash. Omitting it keeps
 the existing unlimited-wait behavior.
 
@@ -413,8 +415,8 @@ participant and its descendants at Run shutdown, as for a direct `sil-run`.
 When you omit the keyword, the wait stays unlimited and the Manifest hash, exit
 codes, and Recording bytes do not change.
 
-The deadline is not a bound on the whole job. It covers only the response wait
-of each Process participant. Native participants run in the runner process, so
+The deadline is not a bound on the whole job. It covers only the exchange of
+each request and response of each Process participant. Native participants run in the runner process, so
 a Native callback that does not return is not bounded by this option. Give the
 CI job its own overall timeout (for example `timeout-minutes` in GitHub
 Actions). That timeout bounds this case and all other waits.
