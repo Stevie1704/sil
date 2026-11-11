@@ -121,12 +121,16 @@ bool close_on_exec_pipe(int fds[2]) {
 #ifdef __linux__
   return pipe2(fds, O_CLOEXEC) == 0;
 #else
-  // macOS has no pipe2. The kernel forks only from this thread, so no fork
-  // of the kernel can occur between pipe and fcntl.
+  // macOS has no pipe2. Kernel code forks only from this thread, so a fork
+  // between pipe and fcntl can come only from a thread of a Native
+  // participant.
   if (pipe(fds) != 0) return false;
-  (void)fcntl(fds[0], F_SETFD, FD_CLOEXEC);
-  (void)fcntl(fds[1], F_SETFD, FD_CLOEXEC);
-  return true;
+  if (fcntl(fds[0], F_SETFD, FD_CLOEXEC) == 0 &&
+      fcntl(fds[1], F_SETFD, FD_CLOEXEC) == 0)
+    return true;
+  close(fds[0]);
+  close(fds[1]);
+  return false;
 #endif
 }
 

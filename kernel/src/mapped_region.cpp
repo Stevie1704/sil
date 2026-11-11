@@ -49,7 +49,7 @@ MappedRegion MappedRegion::create(const std::string &prefix, size_t size,
   // descriptor.
   region.fd_ = mkostemp(path.data(), O_CLOEXEC);
   if (region.fd_ < 0) {
-    error = "mkstemp failed";
+    error = "mkostemp failed";
     return region;
   }
   region.path_ = path.data();

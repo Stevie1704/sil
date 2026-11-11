@@ -21,9 +21,10 @@ names are runtime state: they are absent from the Manifest, its hash, and the
 init line.
 
 The child gets three descriptors from the runner: stdin, stdout and stderr.
-All descriptors that the runner opens close on exec. Thus the child does not get
-the Recording, the pipes of other participants, the Arena and clock-region
-files, or the diagnostics outputs. The child opens an Arena or the clock
+All descriptors that the runner holds while it starts a participant close on
+exec. Thus the child does not get the Recording, the pipes of other
+participants, the Arena and clock-region files, or the diagnostics outputs.
+The child opens an Arena or the clock
 region by its path.
 
 Changing directory must not strand commands written for the earlier launch

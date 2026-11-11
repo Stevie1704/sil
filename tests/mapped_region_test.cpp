@@ -86,7 +86,7 @@ void test_failed_create_reports_and_leaves_nothing() {
   if (previous.empty()) unsetenv("TMPDIR");
   else setenv("TMPDIR", previous.c_str(), 1);
   check(!region, "create succeeded in a directory that does not exist");
-  check(error == "mkstemp failed", "unexpected failure reason: " + error);
+  check(error == "mkostemp failed", "unexpected failure reason: " + error);
   check(region.path().empty(), "a failed create still claims a path");
 
   std::string huge_error;
