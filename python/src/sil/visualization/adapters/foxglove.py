@@ -12,6 +12,8 @@ Mapping:
 
 - A playback control request is one `Playback.configure`: Play/Pause sets
   the desired playing state, the speed sets the rate, a seek time seeks.
+  A Pause whose speed is not a positive number keeps the rate (Foxglove
+  desktop 3.5.0 pauses with speed 0.0).
   The answer is the actual state; a refused request answers the unchanged
   state and sends a warning status with the diagnostic.
 - Subscribe/unsubscribe set the controller's subscription to the union of
@@ -26,7 +28,8 @@ Mapping:
   client, then the Backfill follows. So no value from before the seek
   arrives after the client cleared its history.
 - `Commit` and `StateChanged` are broadcast as playback states; the cursor
-  is broadcast as server time.
+  is broadcast as server time. The relay puts each Message's log time in
+  front of it as server time (see `foxglove_relay`).
 - `Refused` and payloads above `max_message_bytes` are sent as warning
   statuses, never as data.
 - A drained notification that a later seek, disconnect or unsubscribe
@@ -128,7 +131,6 @@ class Bridge:
         self._anonymous = itertools.count()
         self._changed = threading.Condition()
         self._next_barrier = 0
-        self._latest_logged: int | None = None
         self._reset_accounting()
         self._codecs = {c.name: ChannelCodec(c.schema_name, c.schema)
                         for c in described.channels}
@@ -194,7 +196,7 @@ class Bridge:
                 claimed.request_id or f"{_ANONYMOUS}{next(self._anonymous)}",
                 position_ns=request.seek_time,
                 playing=request.playback_command == PlaybackCommand.Play,
-                rate=_rate(request.playback_speed))
+                rate=_rate(request.playback_command, request.playback_speed))
         except InvalidCommand as e:
             self._server.publish_status(f"SiL refused the playback request: {e}",
                                         StatusLevel.Warning)
@@ -235,22 +237,23 @@ class Bridge:
             if room <= 0:
                 self._await_acknowledgement()
                 continue
-            self._latest_logged = None
+            # Every Message up to this cursor is in the controller's queue,
+            # so after an empty drain no Message before it can follow.
+            cursor = self._playback.status().cursor_ns
             notifications = self._playback.drain(max_items=room, timeout=_POLL_S)
             for notification in notifications:
                 if self._closed:
                     return
                 self._handle(notification)
-            self._advance_time(self._latest_logged)
             if self._unacknowledged():
                 self._barrier()
             elif not notifications:  # idle and delivered: show the cursor
-                self._advance_time(self._playback.status().cursor_ns)
+                self._advance_time(cursor)
 
-    def _advance_time(self, time_ns: int | None, *, jump: bool = False) -> None:
-        """Broadcast the server time: forward only, except at a seek."""
-        if time_ns is None or (not jump and self._time is not None
-                               and time_ns <= self._time):
+    def _advance_time(self, time_ns: int | None) -> None:
+        """Broadcast the server time, forward only. The relay puts the log
+        time in front of each Message."""
+        if time_ns is None or (self._time is not None and time_ns <= self._time):
             return
         self._time = time_ns
         self._server.broadcast_time(time_ns)
@@ -300,7 +303,6 @@ class Bridge:
         with self._changed:
             self._logged += 1
             self._logged_bytes += size
-        self._latest_logged = message.publication_time_ns
 
     def _reset(self, reset: Reset) -> None:
         """Clear the client's history after everything logged before."""
@@ -317,7 +319,9 @@ class Bridge:
                             position_ns=reset.position_ns)
             if self._wait(lambda: self._relay.seek_states_seen > seen,
                           connection):
-                self._advance_time(reset.position_ns, jump=True)
+                # The Backfill sets the client's time; the Commit sets the
+                # cursor after it.
+                self._time = None
                 return
             if not self._live(connection):
                 return
@@ -463,22 +467,39 @@ def _current_time(state: PlaybackState) -> int | None:
         else state.cursor_ns
 
 
+def _status(state: PlaybackState) -> FoxgloveStatus:
+    """The Foxglove status of `state`. A pending seek shows the desired
+    status, not Buffering: Foxglove 3.5.0 sends no request while the state
+    is Buffering, so a second seek of a drag would fail."""
+    if state.pending and state.status == Status.BUFFERING:
+        return FoxgloveStatus.Playing if state.playing else FoxgloveStatus.Paused
+    return _STATUS[state.status]
+
+
 def _foxglove_state(state: PlaybackState, *, did_seek: bool,
                     request_id: str | None,
                     position_ns: int | None = None) -> FoxgloveState:
     now = position_ns if position_ns is not None else _current_time(state)
-    return FoxgloveState(status=_STATUS[state.status],
+    return FoxgloveState(status=_status(state),
                          current_time=now if now is not None else 0,
                          playback_speed=state.rate, did_seek=did_seek,
                          request_id=request_id)
 
 
-def _rate(speed: float) -> float:
-    """The rate of a request. The wire carries a 32-bit float, so an
-    accepted speed is shown with 6 significant digits (0.1, not
-    0.100000001). The range check uses the raw value: an out-of-range speed
-    goes to the controller unrounded, which refuses it."""
-    if math.isfinite(speed) and MIN_RATE <= speed <= MAX_RATE:
+def _rate(command: PlaybackCommand, speed: float) -> float | None:
+    """The rate of a request.
+
+    A Pause with a speed that is not a finite positive number keeps the
+    rate (None). Foxglove desktop 3.5.0 pauses with speed 0.0.
+
+    The wire carries a 32-bit float. So an accepted speed is shown with 6
+    significant digits (0.1, not 0.100000001). The range check uses the raw
+    value: an out-of-range speed goes to the controller unrounded, and the
+    controller refuses it."""
+    valid = math.isfinite(speed)
+    if command == PlaybackCommand.Pause and not (valid and speed > 0):
+        return None
+    if valid and MIN_RATE <= speed <= MAX_RATE:
         return float(f"{speed:.6g}")
     return speed
 

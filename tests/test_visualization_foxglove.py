@@ -11,6 +11,7 @@ scan of the source, never from the index or the controller under test.
 from __future__ import annotations
 
 import json
+import math
 import os
 import struct
 import subprocess
@@ -355,6 +356,73 @@ def test_play_delivers_every_message_in_order_with_its_time_then_ends(
     client.close()
 
 
+class FoxgloveTime:
+    """The server time as Foxglove desktop 3.5.0 keeps it: a time frame
+    and the `current_time` of a playback state set it, and a Message
+    shows at it. A time frame that goes back clears Foxglove's buffered
+    Messages and counts as a seek; only right after a did_seek state is
+    that expected."""
+
+    def __init__(self, client):
+        self.shown = []  # (log time, server time) of each Message
+        self.steps_back = []  # (from, to) of unexpected time frames
+        now, after_seek = None, False
+        for frame in client.frames:
+            if frame["op"] == "playbackState":
+                now, after_seek = frame["time"], frame["did_seek"] or after_seek
+            elif frame["op"] == "time":
+                if now is not None and frame["time"] < now and not after_seek:
+                    self.steps_back.append((now, frame["time"]))
+                now = frame["time"]
+            elif frame["op"] == "message":
+                self.shown.append((frame["log_time"], now))
+                after_seek = False
+
+    def not_at_log_time(self):
+        return [(log, now) for log, now in self.shown if now != log]
+
+
+def test_the_client_sees_each_messages_log_time_as_server_time(
+        serve, qualification):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play", PLAY, speed=10.0)
+    client.wait_for(lambda f: f["op"] == "message" and f["log_time"] > 3 * S)
+    client.reading.clear()  # a slow client: data piles up in the queues
+    time.sleep(0.3)
+    client.reading.set()
+    client.wait_for(lambda f: f["op"] == "message" and f["log_time"] > 6 * S)
+    client.request("seek", PLAY, speed=10.0, seek=995_625_000)
+    client.wait_for(lambda f: f.get("status") == ENDED, timeout=20)
+
+    foxglove = FoxgloveTime(client)
+    assert len(foxglove.shown) > 1000
+    assert foxglove.not_at_log_time() == []
+    assert foxglove.steps_back == []
+    client.close()
+
+
+def test_a_pause_while_playing_never_moves_the_time_back(
+        serve, qualification):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play", PLAY, speed=10.0)
+    client.wait_for(lambda f: f["op"] == "message" and f["log_time"] > 3 * S)
+    client.reading.clear()  # Messages wait in the queues during the pause
+    client.request("pause", PAUSE, speed=0.0)
+    time.sleep(0.3)
+    client.reading.set()
+    client.wait_for(lambda f: f.get("request_id") == "pause")
+    time.sleep(0.3)
+
+    foxglove = FoxgloveTime(client)
+    assert foxglove.steps_back == []
+    assert [(log, now) for log, now in foxglove.shown if now < log] == []
+    client.close()
+
+
 def after_last_seek(client, position_ns):
     """Messages after the last did_seek state at `position_ns`."""
     seeks = [i for i, f in enumerate(client.frames) if f["op"] == "playbackState"
@@ -373,14 +441,32 @@ def test_seek_backward_while_playing_clears_then_backfills_without_stale_values(
     client.request("seek", PLAY, speed=10.0, seek=2 * S)
     _, answer = client.wait_for(lambda f: f.get("request_id") == "seek"
                                 and not f["did_seek"])
-    assert answer["status"] == BUFFERING and answer["time"] == 2 * S
+    # Foxglove 3.5.0 sends no request while the state is Buffering.
+    assert answer["status"] == PLAYING and answer["time"] == 2 * S
     client.wait_for(lambda f: f.get("status") == ENDED, timeout=20)
+    assert BUFFERING not in {f["status"] for f in client.frames
+                             if f["op"] == "playbackState"}
     messages = exported_messages(qualification, tmp_path)
     expected = latest_at(messages, set(client.channels), 2 * S) + sorted(
         (m for m in messages if m[1] > 2 * S), key=key)
     assert after_last_seek(client, 2 * S) == expected
     backfill = latest_at(messages, set(client.channels), 2 * S)
     assert "sparse" not in {topic for topic, _, _ in backfill}
+    client.close()
+
+
+def test_a_seek_while_paused_answers_paused(serve, qualification):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+
+    client.request("seek", PAUSE, speed=1.0, seek=2 * S)
+    _, answer = client.wait_for(lambda f: f.get("request_id") == "seek")
+    client.wait_for(lambda f: f["op"] == "playbackState" and f["did_seek"])
+
+    assert (answer["status"], answer["time"]) == (PAUSED, 2 * S)
+    assert BUFFERING not in {f["status"] for f in client.frames
+                             if f["op"] == "playbackState"}
     client.close()
 
 
@@ -415,17 +501,57 @@ def test_pause_rate_and_invalid_requests_answer_the_actual_state(
     count = len(received(client))
     time.sleep(0.5)
     assert len(received(client)) == count  # nothing arrives while paused
+    # An answer carries the client's time: the last Message it has.
+    shown = [f for f in client.frames if f["op"] == "time"][-1]["time"]
     client.request("faster", PAUSE, speed=2.0)
     _, faster = client.wait_for(lambda f: f.get("request_id") == "faster")
     assert (faster["status"], faster["speed"], faster["time"]) == (
-        PAUSED, 2.0, paused["time"])
+        PAUSED, 2.0, shown)
     client.request("too-fast", PLAY, speed=50.0)
     _, refused = client.wait_for(lambda f: f.get("request_id") == "too-fast")
     assert (refused["status"], refused["speed"], refused["time"]) == (
-        PAUSED, 2.0, paused["time"])
+        PAUSED, 2.0, shown)
     _, warning = client.wait_for(lambda f: f["op"] == "status"
                                  and "refused" in f["message"])
     assert warning["level"] == 1 and "rate" in warning["message"]
+    client.close()
+
+
+@pytest.mark.parametrize("speed", [0.0, -1.0, math.nan, math.inf])
+def test_pause_without_a_valid_speed_pauses_and_keeps_the_rate(
+        serve, qualification, speed):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play", PLAY, speed=2.0)
+    client.wait_for(lambda f: f["op"] == "message" and f["log_time"] > 200 * MS)
+
+    # Foxglove desktop 3.5.0 pauses with speed 0.0 and no seek time.
+    client.request("pause", PAUSE, speed=speed)
+    _, paused = client.wait_for(lambda f: f.get("request_id") == "pause")
+    time.sleep(0.3)
+    count = len(received(client))
+    time.sleep(0.5)
+
+    assert (paused["status"], paused["speed"]) == (PAUSED, 2.0)
+    assert len(received(client)) == count  # nothing arrives while paused
+    assert not any(f["op"] == "status" and "refused" in f["message"]
+                   for f in client.frames)
+    client.close()
+
+
+def test_play_without_a_valid_speed_is_refused(serve, qualification):
+    bridge = serve(qualification)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+
+    client.request("play", PLAY, speed=0.0)
+    _, refused = client.wait_for(lambda f: f.get("request_id") == "play")
+    _, warning = client.wait_for(lambda f: f["op"] == "status"
+                                 and "refused" in f["message"])
+
+    assert (refused["status"], refused["speed"]) == (PAUSED, 1.0)
+    assert "rate" in warning["message"]
     client.close()
 
 
@@ -506,6 +632,31 @@ def test_a_stalled_client_buffers_and_then_receives_every_message(
     client.wait_for(lambda f: f.get("status") == ENDED, timeout=30)
     assert numbers(received(client)) == list(range(200))
     assert any(f.get("status") == BUFFERING for f in client.frames)
+    client.close()
+
+
+@pytest.mark.parametrize("command, speed", [(PLAY, 2.0), (PAUSE, 0.0)])
+def test_queued_messages_show_at_their_log_time_after_a_request(
+        serve, blobs, command, speed):
+    bridge = serve(blobs, backlog=16)
+    client = connect_subscribed(bridge)
+    initial_state(client)
+    client.request("play", PLAY, speed=10.0)
+    client.wait_for(lambda f: f["op"] == "message")
+    client.reading.clear()  # Messages queue up behind the cursor
+    time.sleep(0.3)
+    client.request("request", command, speed=speed)  # answers the cursor
+    client.reading.set()
+    client.wait_for(lambda f: f.get("request_id") == "request")
+    if command == PLAY:
+        client.wait_for(lambda f: f.get("status") == ENDED, timeout=30)
+    else:
+        time.sleep(1.0)  # the queued Messages arrive while paused
+
+    foxglove = FoxgloveTime(client)
+    assert len(foxglove.shown) > 20
+    assert foxglove.not_at_log_time() == []
+    assert foxglove.steps_back == []
     client.close()
 
 
@@ -696,8 +847,8 @@ def test_subscription_changes_backfill_added_and_stop_removed_topics(
     client = connect_subscribed(bridge, "counter")
     initial_state(client)
     client.request("seek", PAUSE, speed=1.0, seek=4 * S)
-    client.wait_for(lambda f: f.get("request_id") == "seek" and f["status"] == PAUSED
-                    and not f["did_seek"] and f["time"] == 4 * S)
+    client.wait_for(lambda f: f["op"] == "message" and f["topic"] == "counter"
+                    and f["log_time"] == 4 * S)  # the Backfill of the seek
     start = len(client.frames)
     client.subscribe("sparse", "vehicle/speed")
     client.unsubscribe("counter")
