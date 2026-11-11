@@ -37,6 +37,15 @@ One run = `sil-run manifest.json -o out.mcap`:
 Exit codes: `0` ok, `1` run/test failure, `2` Manifest error, `3` determinism
 violation (sil check).
 
+A Run does not write over its own stimulus. The runner writes the Recording
+(`-o`), the provenance record (`--provenance`) and the failure report in
+place. If one of these paths is the same file as the Recording of a Replay
+participant, the Run is a Manifest error (exit `2`). The runner compares
+files by identity, so a relative path, a symlink or a hard link to the
+Replay input also matches. The runner stops before it opens an output, so
+the Replay input stays unchanged and the Run writes no Recording, no
+provenance record and no failure report.
+
 ## Validate a Manifest
 
 `sil-run` stops at the first Manifest error. `sil manifest validate` checks a
@@ -98,7 +107,8 @@ include directory, set `CFLAGS=-I<dir>`.
 Each Run that has loaded its Manifest writes a deterministic JSON record next
 to its Recording: `<recording>.provenance.json`. `--provenance PATH` selects
 another path. With `--no-recording`, the record goes next to the default
-`out.mcap` location.
+`out.mcap` location. A Run that has an output on a Replay input writes no
+record ([Run contract](#run-contract)).
 
 ### Provenance mode
 
@@ -259,8 +269,10 @@ gains only if it already has these identities.
 
 When `sil-run` has accepted its command line, a Run that ends with exit `1` or
 `2` writes a failure report next to its Recording: `<recording>.failure.json`.
-A usage error writes no report. With `--no-recording`, the report goes
-next to the default `out.mcap` location, like the provenance side-car. A
+A usage error writes no report, and an output on a Replay input
+([Run contract](#run-contract)) writes no report. With `--no-recording`, the
+report goes next to the default `out.mcap` location, like the provenance
+side-car. A
 successful Run writes no report, and it removes a report that an earlier
 failed Run left at the same path. The report adds facts to the diagnostic
 line. It does not change the exit code.
