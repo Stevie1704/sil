@@ -551,6 +551,11 @@ playback bar does not jump back while the Backfill shows at its own log
 times, and that a seek-bar drag shows no "without a valid connection"
 problem.
 
+Re-run on 2026-11-11 with Foxglove desktop 3.5.0:
+
+- A seek-bar drag shows no "without a valid connection" problem. In the
+  first re-run, before the fix of the seek answer, it did.
+
 Failed:
 
 - **Pause while playing.** Foxglove 3.5.0 sends `Pause` with
