@@ -302,13 +302,13 @@ line. It does not change the exit code.
 | --- | --- |
 | `manifest` | the Run was rejected before any Participant was stepped (exit `2`) |
 | `spawn` | the runner could not create the pipes or the process for a Process participant. A command that cannot be executed exits with status `127`, and the report gives `exit` with no Step |
-| `protocol` | a Participant broke the Step protocol, for example a wrong `op` or a line that is not JSON |
+| `protocol` | a Participant broke the Step protocol, for example a wrong `op`, a line that is not JSON, or a `ready` line that is not a JSON object |
 | `timeout` | a Participant missed its response deadline (`--participant-timeout-ms`) |
 | `exit` | a Process participant exited or was killed by a signal before the runner shut it down, or exited non-zero at shutdown |
 | `guard` | a Participant exceeded a Step-protocol size guard |
 | `participant` | a Participant reported its own failure (`fail`, or a failed test assertion) |
 | `interrupted` | `sil-run` received a termination signal |
-| `run` | any other Run failure, for example a full subscriber route |
+| `run` | any other Run failure, for example a full subscriber route. When a Process participant published the Message, the report gives that Participant and its Step |
 
 The runner reads the stderr of each Process participant through a pipe. It
 writes what it reads to its own stderr unchanged, and keeps only the tail for

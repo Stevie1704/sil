@@ -86,7 +86,8 @@ FMI diagnostic instead of turning it into a generic child-exited message.
 Only that deliberate line is a Manifest error. Any other answer to
 `init`, and a child that dies while initializing without answering at all,
 stays a run failure — a participant that breaks on the way up is not a bad
-Manifest.
+Manifest. An answer that is not a JSON object, or that has an `op`, `reason`
+or `failure` that is not a string, is a `protocol` failure (exit 1).
 
 The run boundary may be given `--participant-timeout-ms N`. When present, the
 kernel gives each Process participant an independent `N`-millisecond,

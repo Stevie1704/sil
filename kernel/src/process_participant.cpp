@@ -678,37 +678,8 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
                  {"protocol", offered_protocol},
                  {"channels", channels},
                  {"schemas", schemas}};
-    json ready = exchange(init.dump(), std::nullopt);
-    const std::string op = ready.value("op", "");
-    // `fail` in answer to `init` is a Manifest error (exit 2), unless the child
-    // explicitly marks a failure from its own initialization work as a Run
-    // failure (exit 1). The same line after a Step is always a Run failure.
-    // See docs/step-protocol.md.
-    if (op == "fail") {
-      const std::string reason =
-          ready.value("reason", "rejected its init line");
-      if (ready.value("failure", "") == "run")
-        throw failure(FailureCategory::Participant,
-                      "participant '" + name + "' failed: " + reason);
-      throw ManifestError("participant '" + name + "': " + reason);
-    }
-    if (op != "ready")
-      throw failure(FailureCategory::Protocol,
-                    "participant '" + name + "': expected ready, got " +
-                        ready.dump());
-    int announced_protocol = kSingleSlotProtocol;
-    if (ready.contains("protocol")) {
-      const json &value = ready.at("protocol");
-      if (!value.is_number_integer())
-        throw ManifestError("participant '" + name +
-                            "': ready protocol must be a positive integer");
-      const int64_t announced = value.get<int64_t>();
-      if (announced < 1 || announced > std::numeric_limits<int>::max())
-        throw ManifestError("participant '" + name +
-                            "': ready protocol must be a positive integer");
-      announced_protocol = static_cast<int>(announced);
-    }
-    protocol_ = std::min(offered_protocol, announced_protocol);
+    const json ready = exchange(init.dump(), std::nullopt);
+    protocol_ = std::min(offered_protocol, decode_ready(ready));
     codec_ = std::make_unique<StepCodec>(arenas_, protocol_);
   } catch (...) {
     // This intentionally covers every init-path throw, not only timeouts: an
@@ -717,6 +688,42 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     // used for every later Run failure here.
     (void)terminate_child();
     throw;
+  }
+}
+
+int ProcessParticipant::decode_ready(const json &ready) {
+  try {
+    const std::string op = ready.value("op", "");
+    // `fail` in answer to `init` is a Manifest error (exit 2), unless the
+    // child explicitly marks a failure from its own initialization work as a
+    // Run failure (exit 1). The same line after a Step is always a Run
+    // failure. See docs/step-protocol.md.
+    if (op == "fail") {
+      const std::string reason =
+          ready.value("reason", "rejected its init line");
+      if (ready.value("failure", "") == "run")
+        throw failure(FailureCategory::Participant,
+                      "participant '" + name_ + "' failed: " + reason);
+      throw ManifestError("participant '" + name_ + "': " + reason);
+    }
+    if (op != "ready")
+      throw failure(FailureCategory::Protocol,
+                    "participant '" + name_ + "': expected ready, got " +
+                        ready.dump());
+    if (!ready.contains("protocol")) return kSingleSlotProtocol;
+    const json &value = ready.at("protocol");
+    if (!value.is_number_integer())
+      throw ManifestError("participant '" + name_ +
+                          "': ready protocol must be a positive integer");
+    const int64_t announced = value.get<int64_t>();
+    if (announced < 1 || announced > std::numeric_limits<int>::max())
+      throw ManifestError("participant '" + name_ +
+                          "': ready protocol must be a positive integer");
+    return static_cast<int>(announced);
+  } catch (const json::exception &e) {
+    throw failure(FailureCategory::Protocol,
+                  "participant '" + name_ + "': malformed ready" +
+                      step_context() + ": " + e.what());
   }
 }
 
@@ -758,8 +765,17 @@ void ProcessParticipant::step(uint64_t now_ns) {
   const json done = exchange(step.dump(), now_ns);
 
   for (StepOutput &output : decode_step_done(done, now_ns))
+    publish_output(output);
+}
+
+void ProcessParticipant::publish_output(const StepOutput &output) {
+  try {
     engine_.publish(name_, output.channel, output.bytes.data(),
                     output.bytes.size());
+  } catch (const PublishError &e) {
+    // The Engine does not know the Step, so add this participant's facts.
+    throw failure(FailureCategory::Run, e.what() + step_context());
+  }
 }
 
 std::vector<ProcessParticipant::StepOutput>
