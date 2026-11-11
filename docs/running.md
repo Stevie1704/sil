@@ -47,14 +47,19 @@ sil manifest validate manifest.json
 sil manifest validate manifest.json --json
 ```
 
-It applies the rules of `sil-run`: keys (a key must not repeat in one
-object), types, ranges, references between
+It applies the rules of `sil-run`: keys, types, ranges, references between
 Schemas, Channels and Participants, and one publisher for each Channel. It
 also reads the files that the Manifest names, and it compares the Channels
 and Schemas of a replayed Recording with the Manifest. Paths resolve against
 the Manifest directory, as in a Run. A bare Process participant command is looked up on the `PATH` of
 the check, and `sil-run` uses its own `PATH`. The check needs only the wheel,
 not `sil-run`.
+
+A key must not repeat in one object. `sil-run` stops at the first repeated
+key. The check lists every repeated key, and then it stops: it does not check
+a Manifest that has a repeated key for other errors. A repeat inside an
+earlier definition of a repeated key is not in the list, because the repeat
+of the outer key is an error already.
 
 Only a Run finds the Manifest errors that come from the code of a
 Participant or from the system: a Native library that does not load, does not

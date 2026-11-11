@@ -136,7 +136,8 @@ class RepeatedKeyCheck {
   void add_key(const std::string &key) {
     Container &object = containers_.back();
     if (!object.keys.insert(key).second)
-      fail("object '" + open_object_pointer() + "' repeats key '" + key + "'");
+      fail("object '" + innermost_object_pointer() + "' repeats key '" + key +
+           "'");
     object.key = key;
   }
 
@@ -146,7 +147,7 @@ class RepeatedKeyCheck {
   }
 
   // RFC 6901 pointer of the innermost open container.
-  std::string open_object_pointer() const {
+  std::string innermost_object_pointer() const {
     json::json_pointer pointer;
     for (size_t i = 0; i + 1 < containers_.size(); ++i) {
       if (containers_[i].is_object)
