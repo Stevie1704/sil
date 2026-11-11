@@ -23,7 +23,7 @@ init line.
 Changing directory must not strand commands written for the earlier launch
 contract. Before the fork, the kernel resolves a relative `command[0]` that
 contains a directory component, and every argument that names an existing
-relative filesystem entry, against the runner's invocation directory. A bare
+relative filesystem entry, against the Manifest directory. A bare
 executable name still uses `PATH`. Other relative arguments stay unchanged and
 are therefore interpreted by the participant from its private directory; this
 is where a relative output path naturally creates Run-scoped state.

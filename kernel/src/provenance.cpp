@@ -131,7 +131,7 @@ bool executable_file(const fs::path &path) {
 }
 
 ResolvedExecutable path_from_path_environment(
-    const std::string &command, const fs::path &invocation_directory) {
+    const std::string &command, const fs::path &manifest_directory) {
   const char *environment = std::getenv("PATH");
   std::string path = environment ? environment : "";
   if (path.empty()) path = "/usr/local/bin:/usr/bin:/bin";
@@ -142,8 +142,8 @@ ResolvedExecutable path_from_path_environment(
     const std::string entry = path.substr(
         start, separator == std::string::npos ? std::string::npos
                                               : separator - start);
-    fs::path directory = entry.empty() ? invocation_directory : fs::path(entry);
-    if (directory.is_relative()) directory = invocation_directory / directory;
+    fs::path directory = entry.empty() ? manifest_directory : fs::path(entry);
+    if (directory.is_relative()) directory = manifest_directory / directory;
     fs::path candidate = directory / command;
     std::error_code error;
     if (fs::is_regular_file(candidate, error) && !error &&
@@ -158,21 +158,21 @@ ResolvedExecutable path_from_path_environment(
 }
 
 ResolvedExecutable resolve_executable(
-    const std::string &command, const fs::path &invocation_directory) {
+    const std::string &command, const fs::path &manifest_directory) {
   if (command.empty()) throw std::runtime_error("executable name is empty");
   fs::path argument(command);
   if (argument.is_absolute() || argument.has_parent_path()) {
     fs::path launch_path = argument.is_absolute()
                                ? argument
-                               : (invocation_directory / argument).lexically_normal();
+                               : (manifest_directory / argument).lexically_normal();
     return {launch_path, canonical_file(launch_path, {})};
   }
-  return path_from_path_environment(command, invocation_directory);
+  return path_from_path_environment(command, manifest_directory);
 }
 
 std::vector<std::string> resolve_command(
     const std::vector<std::string> &command,
-    const fs::path &invocation_directory,
+    const fs::path &manifest_directory,
     const ResolvedExecutable &executable) {
   std::vector<std::string> resolved = command;
   resolved.at(0) = executable.launch_path.string();
@@ -180,7 +180,7 @@ std::vector<std::string> resolve_command(
     if (resolved[index].empty()) continue;
     fs::path argument(resolved[index]);
     if (argument.is_absolute()) continue;
-    const fs::path candidate = invocation_directory / argument;
+    const fs::path candidate = manifest_directory / argument;
     std::error_code error;
     if (fs::exists(candidate, error) && !error)
       resolved[index] = candidate.lexically_normal().string();
