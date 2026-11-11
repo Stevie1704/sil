@@ -499,7 +499,7 @@ next connection starts with a reset and a fresh reconstruction.
 | WebSocket subprotocol | `foxglove.sdk.v1` | Yes | Scripted client in the tests |
 | WebSocket subprotocol | `foxglove.websocket.v1` | Refused by the SDK (HTTP 400) | Test `test_the_sdk_refuses_the_legacy_subprotocol` |
 | WebSocket subprotocol | `foxglove.sdk.v1.1` | Negotiated by Foxglove 3.5.0 | The application offers `foxglove.websocket.v1, foxglove.sdk.v1, foxglove.sdk.v1.1`; the SDK selects `foxglove.sdk.v1.1`. The relay reads no schema table; the results below were made with it. |
-| Foxglove desktop application | 3.5.0, macOS arm64 | Partly: pause failed on 2026-11-10; fixed in #383, not yet run again | Manual procedure below |
+| Foxglove desktop application | 3.5.0, macOS arm64 | Yes, on 2026-11-11 (pause failed on 2026-11-10, fixed in #383) | Manual procedure below |
 | Foxglove web application | none | No | Not done |
 
 Verified with the scripted client against SDK 0.30.3: capabilities `time`
@@ -543,18 +543,27 @@ Verified:
   and 1000 Messages: the counts of the receipt. No Message was lost.
 - The source hash did not change.
 
-Changes after this run (issue #383), not yet verified with the
-application: the pause, the receive time and the "data went back in time"
-items below are fixed in the bridge and tested with the scripted client.
-Repeat the procedure to qualify them. Also make sure that after a seek the
-playback bar does not jump back while the Backfill shows at its own log
-times, and that a seek-bar drag shows no "without a valid connection"
-problem.
+Re-run on 2026-11-11 with Foxglove desktop 3.5.0, after the fixes of
+issue #383. All items passed:
 
-Re-run on 2026-11-11 with Foxglove desktop 3.5.0:
-
+- Pause while playing, at 1x and at 2x: playback stops, the speed stays,
+  and no "refused" problem shows.
+- Receive time: the 9.9 s `counter` Message shows `@ 9.900000000 sec`, the
+  5 s `sparse` Message `@ 5.000000000 sec`, and the `burst` Messages show
+  as `1 / 3` to `3 / 3`.
+- After a seek, the playback bar does not jump back. A seek to about 1 s,
+  Play and Pause show no "data went back in time" warning.
+- After a seek to 6 s and then to 2.025 s, `sparse` is empty and `counter`
+  shows `fields.count` `"9007199254741192"`.
+- After a reconnect, playback is paused at the old cursor and the panels
+  show only the latest values.
+- After play from 0 to the end, the Topics tab counts 10, 30, 100, 100, 1
+  and 1000 Messages.
 - A seek-bar drag shows no "without a valid connection" problem. In the
-  first re-run, before the fix of the seek answer, it did.
+  first re-run, before the seek answer was changed, it did.
+
+The items below are the results of the run on 2026-11-10, before the
+fixes.
 
 Failed:
 
