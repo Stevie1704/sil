@@ -4,6 +4,9 @@
 // recording, reader for the replayer); every other TU includes the headers
 // for declarations only.
 #define MCAP_IMPLEMENTATION
+#include <fcntl.h>
+#include <unistd.h>
+
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
@@ -19,6 +22,22 @@
 
 namespace sil {
 
+namespace {
+
+// fopen(path, "wb") with a descriptor that closes on exec, so no Process
+// participant can write into the Recording. The "e" mode of fopen is
+// glibc-only.
+std::FILE *open_recording_file(const std::string &path) {
+  const int fd = ::open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC,
+                        0666);
+  if (fd < 0) return nullptr;
+  std::FILE *file = ::fdopen(fd, "wb");
+  if (!file) ::close(fd);
+  return file;
+}
+
+}  // namespace
+
 // The one place where Recording bytes reach the file. It digests what fwrite
 // accepted, in file order, so the digest covers every record of the format: the
 // MCAP writer sends all of them here, also its indexes, footer and final magic.
@@ -31,7 +50,7 @@ class RecordingFileOutput final : public mcap::IWritable {
   RecordingFileOutput(const std::filesystem::path &path, ProvenanceMode mode)
       : path_(path.string()) {
     if (mode == ProvenanceMode::Full) start_digest();
-    file_ = std::fopen(path_.c_str(), "wb");
+    file_ = open_recording_file(path_);
   }
   ~RecordingFileOutput() override { end(); }
 

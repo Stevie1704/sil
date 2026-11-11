@@ -115,6 +115,25 @@ std::string participant_directory_name(const std::string &name) {
   return encoded;
 }
 
+// A pipe whose two ends close on exec. A child keeps only the ends that it
+// moves onto stdin, stdout and stderr with dup2. No later sibling gets them.
+bool close_on_exec_pipe(int fds[2]) {
+#ifdef __linux__
+  return pipe2(fds, O_CLOEXEC) == 0;
+#else
+  // macOS has no pipe2. Kernel code forks only from this thread, so a fork
+  // between pipe and fcntl can come only from a thread of a Native
+  // participant.
+  if (pipe(fds) != 0) return false;
+  if (fcntl(fds[0], F_SETFD, FD_CLOEXEC) == 0 &&
+      fcntl(fds[1], F_SETFD, FD_CLOEXEC) == 0)
+    return true;
+  close(fds[0]);
+  close(fds[1]);
+  return false;
+#endif
+}
+
 // The failure report keeps the last lines of a child's stderr. The byte
 // bound keeps a child that never writes a newline from growing the buffer.
 constexpr size_t kStderrTailLines = 20;
@@ -553,14 +572,10 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     const int offered_protocol = protocol_;
 
     int to_child[2], from_child[2], child_errors[2], group_ready[2];
-    if (pipe(to_child) != 0 || pipe(from_child) != 0 ||
-        pipe(child_errors) != 0 || pipe(group_ready) != 0)
+    if (!close_on_exec_pipe(to_child) || !close_on_exec_pipe(from_child) ||
+        !close_on_exec_pipe(child_errors) || !close_on_exec_pipe(group_ready))
       throw failure(FailureCategory::Spawn,
                     "participant '" + name + "': pipe failed");
-    // Only this child may hold the write end. A child that another thread
-    // forks and execs at this time must not keep the parent's read open.
-    (void)fcntl(group_ready[0], F_SETFD, FD_CLOEXEC);
-    (void)fcntl(group_ready[1], F_SETFD, FD_CLOEXEC);
 
     const diagnostics::SpawnTime forked;
     pid_ = fork();
