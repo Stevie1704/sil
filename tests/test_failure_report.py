@@ -7,8 +7,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from conftest import ROOT
-from toys import toy_manifest
+from toys import add_slow_subscriber, toy_manifest
 
 
 FAILURE_MODES = ROOT / "tests" / "participants" / "failure_modes.py"
@@ -93,6 +95,73 @@ def test_protocol_violation_is_reported_as_protocol(sil_run, tmp_path):
     assert report["virtual_time_ns"] == FAIL_AT_NS
     assert report["step_index"] == 3
     assert "expected step_done" in report["message"]
+
+
+def publishing_manifest(tmp_path: Path, mode: str) -> Path:
+    """A controller that publishes on `ticks` to a subscriber of capacity 1."""
+    manifest = toy_manifest(duration_ns=100_000_000)
+    manifest.add_channel("ticks", schema="toy.Counter")
+    manifest.add_process(
+        "controller",
+        command=[
+            sys.executable, str(FAILURE_MODES), mode, str(FAIL_AT_NS), "ticks"
+        ],
+        step_period_ns=STEP_PERIOD_NS,
+        publishes=["ticks"],
+    )
+    add_slow_subscriber(manifest, capacity=1)
+    return manifest.write(tmp_path / f"{mode}.json").path
+
+
+def test_wrong_size_output_names_the_participant_and_step(sil_run, tmp_path):
+    proc, report_path = run(sil_run, publishing_manifest(tmp_path, "wrong_size"))
+
+    assert proc.returncode == 1, proc.stderr
+    report = json.loads(report_path.read_text())
+    assert report["category"] == "run"
+    assert report["participant"] == "controller"
+    assert report["virtual_time_ns"] == FAIL_AT_NS
+    assert report["step_index"] == 3
+    assert report["message"] == (
+        "participant 'controller' published 5 bytes on 'ticks' but schema "
+        "'toy.Counter' is 16 bytes during Step 3 at virtual time 30000000 ns"
+    )
+
+
+def test_route_overflow_names_the_publisher_and_step(sil_run, tmp_path):
+    proc, report_path = run(sil_run, publishing_manifest(tmp_path, "burst"))
+
+    assert proc.returncode == 1, proc.stderr
+    report = json.loads(report_path.read_text())
+    assert report["category"] == "run"
+    assert report["participant"] == "controller"
+    assert report["virtual_time_ns"] == FAIL_AT_NS
+    assert report["step_index"] == 3
+    assert "publisher 'controller'" in report["message"]
+    assert "policy 'fail'" in report["message"]
+    assert report["message"].endswith(
+        " during Step 3 at virtual time 30000000 ns"
+    )
+
+
+@pytest.mark.parametrize(
+    "mode", ["ready_number", "ready_array", "ready_op", "ready_reason"]
+)
+def test_malformed_ready_is_a_protocol_failure_of_the_participant(
+    sil_run, tmp_path, mode
+):
+    proc, report_path = run(sil_run, failing_manifest(tmp_path, mode))
+
+    assert proc.returncode == 1, proc.stderr
+    report = json.loads(report_path.read_text())
+    assert report["category"] == "protocol"
+    assert report["participant"] == "controller"
+    assert report["virtual_time_ns"] is None
+    assert report["step_index"] is None
+    assert report["message"].startswith(
+        "participant 'controller': malformed ready during initialization: "
+    )
+    assert report["message"] in proc.stderr
 
 
 def test_response_deadline_is_reported_as_timeout(sil_run, tmp_path):
