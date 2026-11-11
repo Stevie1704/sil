@@ -1724,9 +1724,9 @@ class TestProcessParticipant:
         )
         observer = run_dir / "observer"
         observer.mkdir()
-        # An existing invocation-relative entry with the same name must not
+        # An existing Manifest-relative entry with the same name must not
         # capture a bare executable; only command[0] values containing a path
-        # component resolve against the invocation directory.
+        # component resolve against the Manifest directory.
         run_dir.joinpath("python3").write_text("not an executable")
 
         m = toy_manifest(duration_ns=1)
