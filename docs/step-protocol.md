@@ -83,9 +83,11 @@ Manifest.
 
 The run boundary may be given `--participant-timeout-ms N`. When present, the
 kernel gives each Process participant an independent `N`-millisecond,
-wall-clock deadline for the complete wait for this `ready` response. The
-deadline starts with the `init` request and is not extended by receiving only a
-partial response line. A missed initialization deadline is a Run failure (exit
+wall-clock deadline for the complete exchange of `init` and `ready`. The
+deadline starts before the kernel writes the `init` request, so it covers the
+write of the request and the wait for the response. It is not extended by
+receiving only a partial response line. A missed initialization deadline is a
+Run failure (exit
 1) naming the participant and initialization phase. Without the option, the
 wait remains unlimited for compatibility.
 
@@ -127,12 +129,20 @@ protocol 2. The representation present on the line is authoritative. A child
 failure at Step time is a run failure, not a Manifest error; only a `fail`
 answering `init` is a Manifest error.
 
-The same `--participant-timeout-ms N` deadline starts anew with every `step`
-request and covers the complete wait for its `step_done` response. It is a
-wall-clock guard: partial line reads do not reset it, and it is independent of
-the Step's virtual time. A missed deadline is a Run failure (exit 1) whose
-diagnostic names the Process participant, the Step phase, and that Step's
-virtual time. The option is a run-boundary argument, not Manifest data, so it
+The same `--participant-timeout-ms N` deadline starts anew before the kernel
+writes every `step` request. It covers the write of the request and the
+complete wait for its `step_done` response. A child that stops reading its
+stdin therefore cannot hold the kernel in the write: when the `step` line does
+not fit in the pipe, the kernel waits for the pipe under the same deadline. It
+is a wall-clock guard: partial line reads and partial writes do not reset it,
+and it is independent of the Step's virtual time. A missed deadline is a Run
+failure (exit 1) whose diagnostic names the Process participant, the Step
+phase, and that Step's virtual time. This is also true when the kernel has not
+written the complete `step` line yet.
+
+Without the option, the write and the wait have no limit. SIGINT, SIGTERM, and
+SIGHUP end the Run (exit 1) also while the kernel waits to write a `step` line
+that the child does not read. The option is a run-boundary argument, not Manifest data, so it
 does not change the Manifest hash, protocol messages, or Recording bytes of a
 Run that completes before all deadlines.
 
