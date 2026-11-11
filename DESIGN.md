@@ -119,6 +119,9 @@ Manifest objects are closed: unknown keys are rejected at load time. The one
 intentional extension point is a native participant's `config` object; its
 contents are participant-specific and are passed through as JSON to the native
 participant, while the `config` container itself must still be an object.
+A key must not repeat in one object, at any level and also in `config`. The
+JSON parser keeps only the last value of a repeated key, so the loader
+rejects the repeat with a Manifest error that names the object and the key.
 
 ### 13. Recording: MCAP native; record/replay inside stepped virtual time
 Recorder and replayer live inside the stepped virtual-time world, so both are
