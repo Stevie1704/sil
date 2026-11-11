@@ -131,20 +131,21 @@ answering `init` is a Manifest error.
 
 The same `--participant-timeout-ms N` deadline starts anew before the kernel
 writes every `step` request. It covers the write of the request and the
-complete wait for its `step_done` response. A child that stops reading its
-stdin therefore cannot hold the kernel in the write: when the `step` line does
-not fit in the pipe, the kernel waits for the pipe under the same deadline. It
-is a wall-clock guard: partial line reads and partial writes do not reset it,
-and it is independent of the Step's virtual time. A missed deadline is a Run
-failure (exit 1) whose diagnostic names the Process participant, the Step
-phase, and that Step's virtual time. This is also true when the kernel has not
-written the complete `step` line yet.
+complete wait for its `step_done` response. A `step` line can be larger than
+the pipe buffer. Then the kernel waits for space in the pipe under the same
+deadline. Thus a child that stops reading its stdin cannot hold the kernel in
+the write. The deadline is a wall-clock guard: partial line reads and partial
+writes do not reset it, and it is independent of the Step's virtual time. A
+missed deadline is a Run failure (exit 1) whose diagnostic names the Process
+participant, the Step phase, and that Step's virtual time. The kernel reports
+the same failure when it has not written the complete `step` line. The option
+is a run-boundary argument, not Manifest data, so it does not change the
+Manifest hash, protocol messages, or Recording bytes of a Run that completes
+before all deadlines.
 
 Without the option, the write and the wait have no limit. SIGINT, SIGTERM, and
-SIGHUP end the Run (exit 1) also while the kernel waits to write a `step` line
-that the child does not read. The option is a run-boundary argument, not Manifest data, so it
-does not change the Manifest hash, protocol messages, or Recording bytes of a
-Run that completes before all deadlines.
+SIGHUP end the Run (exit 1), also while the kernel waits to write a `step` line
+that the child does not read.
 
 The run boundary also supplies three resource guards for every Process
 participant. Their defaults are deliberately above the payloads used by the

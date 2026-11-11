@@ -60,6 +60,7 @@ class ProcessParticipant {
   // write of the request and the read of its response.
   std::string request_response(const std::string &line,
                                std::optional<uint64_t> step_time);
+  // Writes the request; it waits for a full pipe as `wait_for` does.
   void send_line(const std::string &line,
                  const std::optional<Clock::time_point> &deadline,
                  std::optional<uint64_t> step_time);
@@ -72,7 +73,7 @@ class ProcessParticipant {
   void wait_for(int fd, short events,
                 const std::optional<Clock::time_point> &deadline,
                 std::optional<uint64_t> step_time);
-  ParticipantRunError timeout(std::optional<uint64_t> step_time);
+  ParticipantRunError timeout_failure(std::optional<uint64_t> step_time);
   // Sends one request and parses its response line. A line that is not JSON
   // is a Step protocol violation.
   nlohmann::json exchange(const std::string &line,

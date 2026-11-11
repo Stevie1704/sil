@@ -74,7 +74,7 @@ def finish(runner: subprocess.Popen) -> str:
     return stderr
 
 
-def wait_for(marker: Path) -> None:
+def wait_until_sink_stalls(marker: Path) -> None:
     deadline = time.monotonic() + RUN_BOUND_S
     while not marker.exists():
         assert time.monotonic() < deadline, "the sink did not stop reading"
@@ -102,7 +102,7 @@ def test_signal_ends_a_run_blocked_in_the_write(
     manifest, marker = blob_manifest(tmp_path, "stop-reading")
     # No deadline: only the signal can end this Run.
     runner = start(sil_run, manifest)
-    wait_for(marker)
+    wait_until_sink_stalls(marker)
     # Let the runner fill the pipe, so the signal comes after a partial write.
     time.sleep(0.3)
     runner.send_signal(termination_signal)

@@ -310,8 +310,8 @@ _Avoid_: runtime error, crash, test failure
 **Response deadline**:
 The wall-clock time one process participant gets to complete a single `ready`
 or `step_done` answer. Chosen at the run boundary, never in the manifest, and
-started afresh before every request is written, so it also covers the write of
-the request. Missing it is a run failure; meeting it says
+started afresh before the kernel writes each request, so it also covers that
+write. Missing it is a run failure; meeting it says
 nothing about how fast the run was, and a run that answers in time records the
 same bytes with or without one.
 _Avoid_: step budget, watchdog, latency budget, whole-run timeout
