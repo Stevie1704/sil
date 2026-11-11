@@ -148,6 +148,46 @@ struct RunOutputs {
   std::filesystem::path provenance_path;
 };
 
+// True when both paths name one file. An existing file is compared by
+// identity, so a symlink or a hard link matches. A path that does not exist
+// yet is compared by its canonical spelling.
+bool same_file(const std::filesystem::path &a,
+               const std::filesystem::path &b) {
+  std::error_code error;
+  if (std::filesystem::equivalent(a, b, error)) return true;
+  std::error_code error_a;
+  std::error_code error_b;
+  const auto canonical_a = std::filesystem::weakly_canonical(a, error_a);
+  const auto canonical_b = std::filesystem::weakly_canonical(b, error_b);
+  return !error_a && !error_b && canonical_a == canonical_b;
+}
+
+// The runner truncates its outputs in place. An output that is also a Replay
+// input would destroy the stimulus that the Manifest hash covers (#387), so
+// such a Run is a Manifest error before any output opens. Returns the
+// diagnostic for the first such output, or nothing.
+std::optional<std::string> output_on_replay_input(
+    const sil::Manifest &manifest, const RunOutputs &outputs) {
+  const std::pair<const char *, std::filesystem::path> written[] = {
+      {"Recording", outputs.recording ? outputs.recording_path : ""},
+      {"provenance record", outputs.provenance_path},
+      {"failure report",
+       sil::default_failure_report_path(outputs.recording_path)},
+  };
+  for (const sil::ParticipantSpec &participant : manifest.participants) {
+    const auto *replay = std::get_if<sil::ReplaySpec>(&participant.impl);
+    if (!replay) continue;
+    std::filesystem::path input = replay->recording;
+    if (input.is_relative()) input = manifest.base_dir / input;
+    for (const auto &[role, output] : written)
+      if (!output.empty() && same_file(output, input))
+        return "manifest error: participant '" + participant.name +
+               "': recording '" + input.string() + "' is also the " + role +
+               " '" + output.string() + "' that this Run writes";
+  }
+  return std::nullopt;
+}
+
 // Completes the provenance record once the Run's outcome is known and writes
 // the JSON side-car. The Recording digest comes from the closed sink, which
 // reports `omitted` in external mode, so a normal Run does not read the file
@@ -558,9 +598,15 @@ int run(int argc, char **argv) {
   std::optional<sil::Manifest> manifest;
   std::optional<FirstFailure> failure;
   int exit_code = kExitConfigError;
+  // Set when an output is a Replay input: then the Run writes no output.
+  bool outputs_refused = false;
 
   try {
     manifest.emplace(sil::load_manifest(manifest_path));
+    if (auto problem = output_on_replay_input(*manifest, outputs)) {
+      outputs_refused = true;
+      throw sil::ManifestError(*problem);
+    }
     provenance.emplace(
         sil::initialize_provenance(manifest.value(), SIL_VERSION,
                                    SIL_SOURCE_REPOSITORY, SIL_SOURCE_REVISION,
@@ -633,7 +679,7 @@ int run(int argc, char **argv) {
 
   if (provenance)
     write_side_car(*provenance, exit_code, recorder.get(), outputs);
-  write_failure_side_car(failure, exit_code, out_path);
+  if (!outputs_refused) write_failure_side_car(failure, exit_code, out_path);
 
 #ifdef SIL_RUN_DIAGNOSTICS
   write_diagnostics(diagnostics_path,
