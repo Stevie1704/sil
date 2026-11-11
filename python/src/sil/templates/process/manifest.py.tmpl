@@ -23,8 +23,9 @@ def build(out: Path) -> Manifest:
     m = Manifest(duration_ns=1_000_000_000)
     m.add_schemas(SCHEMAS)
     m.add_channel("$name.out", schema="$name.Out")
-    # A relative path in a command resolves against the Manifest's directory.
-    participant = os.path.relpath(HERE / "participant.py", out.resolve().parent)
+    # A relative path in a command resolves against the Manifest's directory
+    # when it has a "/". The "./" keeps a participant beside the Manifest a path.
+    participant = "./" + os.path.relpath(HERE / "participant.py", out.resolve().parent)
     m.add_process(
         "$name",
         command=["python3", participant],
