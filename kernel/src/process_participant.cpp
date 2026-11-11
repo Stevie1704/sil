@@ -139,6 +139,9 @@ bool close_on_exec_pipe(int fds[2]) {
 constexpr size_t kStderrTailLines = 20;
 constexpr size_t kStderrTailBytes = 64 * 1024;
 
+// The longest a protocol wait goes without a check for a termination signal.
+constexpr std::chrono::milliseconds kSignalCheckInterval{100};
+
 std::vector<std::string> last_lines(const std::string &text) {
   std::vector<std::string> lines;
   size_t end = text.size();
@@ -636,6 +639,10 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     close(from_child[1]);
     close(child_errors[1]);
     child_stdin_ = to_child[1];
+    // Non-blocking, so a child that stops reading cannot hold the runner in
+    // a write: the write waits in the same poll loop as the read.
+    (void)fcntl(child_stdin_, F_SETFL,
+                fcntl(child_stdin_, F_GETFL) | O_NONBLOCK);
     child_stdout_ = from_child[0];
     // Non-blocking, so draining it never waits for a child that is quiet.
     child_stderr_ = child_errors[0];
@@ -842,23 +849,29 @@ ProcessParticipant::decode_step_done(const json &done, uint64_t now_ns) {
   }
 }
 
-void ProcessParticipant::send_line(const std::string &line) {
-  std::string data = line + "\n";
+void ProcessParticipant::send_line(
+    const std::string &line, const std::optional<Clock::time_point> &deadline,
+    std::optional<uint64_t> step_time) {
+  const std::string data = line + "\n";
   size_t off = 0;
   while (off < data.size()) {
-    ssize_t n = write(child_stdin_, data.data() + off, data.size() - off);
-    if (n < 0 && errno == EINTR) {
-      if (run_interrupted())
-        throw RunError(run_interrupt_message());
+    const ssize_t n =
+        write(child_stdin_, data.data() + off, data.size() - off);
+    if (n >= 0) {
+      off += size_t(n);
       continue;
     }
-    if (n < 0) throw unexpected_exit();
-    off += size_t(n);
+    if (errno == EINTR) continue;
+    if (errno != EAGAIN && errno != EWOULDBLOCK) throw unexpected_exit();
+    // The pipe is full. The wait does not look at why stdin became ready:
+    // a child that is gone gives EPIPE on the next write.
+    wait_for(child_stdin_, POLLOUT, deadline, step_time);
   }
 }
 
 std::string ProcessParticipant::request_response(
     const std::string &line, std::optional<uint64_t> step_time) {
+  // The deadline starts before the write, so it covers the complete exchange.
   std::optional<Clock::time_point> deadline;
   if (participant_timeout_) {
     const Clock::time_point start = Clock::now();
@@ -875,7 +888,7 @@ std::string ProcessParticipant::request_response(
                      *participant_timeout_);
     }
   }
-  send_line(line);
+  send_line(line, deadline, step_time);
   return read_line(deadline, step_time);
 }
 
@@ -946,19 +959,6 @@ std::string ProcessParticipant::read_line(
     read_buffer_.append(data, length);
   };
 
-  const auto timeout = [&]() -> ParticipantRunError {
-    if (!step_time)
-      return failure(FailureCategory::Timeout,
-                     "participant '" + name_ +
-                         "': timeout waiting for initialization ready "
-                         "response");
-    return failure(FailureCategory::Timeout,
-        "participant '" + name_ +
-        "': timeout waiting for step_done response during Step at virtual "
-        "time " +
-        std::to_string(*step_time) + " ns");
-  };
-
   for (;;) {
     size_t nl = read_buffer_.find('\n');
     if (nl != std::string::npos) {
@@ -967,35 +967,7 @@ std::string ProcessParticipant::read_line(
       return line;
     }
 
-    // Without a deadline the runner waits for as long as the child takes.
-    int wait_ms = -1;
-    if (deadline) {
-      const Clock::duration remaining = *deadline - Clock::now();
-      if (remaining <= Clock::duration::zero()) throw timeout();
-      auto remaining_ms =
-          std::chrono::duration_cast<std::chrono::milliseconds>(remaining);
-      if (remaining_ms.count() == 0) remaining_ms = std::chrono::milliseconds(1);
-      const auto max_poll_ms =
-          std::chrono::milliseconds(std::numeric_limits<int>::max());
-      if (remaining_ms > max_poll_ms) remaining_ms = max_poll_ms;
-      wait_ms = static_cast<int>(remaining_ms.count());
-    }
-
-    // Both pipes are watched: a child that fills its stderr pipe while the
-    // runner waits only for stdout would block forever. poll ignores the
-    // stderr entry once that pipe is closed (-1).
-    pollfd descriptors[2] = {{child_stdout_, POLLIN, 0},
-                             {child_stderr_, POLLIN, 0}};
-    const int ready = poll(descriptors, 2, wait_ms);
-    if (ready < 0 && errno == EINTR) {
-      if (run_interrupted()) throw RunError(run_interrupt_message());
-      continue;
-    }
-    if (ready == 0) throw timeout();
-    if (ready < 0)
-      throw RunError("participant '" + name_ + "': poll failed");
-    if (descriptors[1].revents != 0) drain_stderr();
-    if (descriptors[0].revents == 0) continue;
+    wait_for(child_stdout_, POLLIN, deadline, step_time);
 
     char buf[4096];
     ssize_t n = read(child_stdout_, buf, sizeof buf);
@@ -1005,6 +977,56 @@ std::string ProcessParticipant::read_line(
     }
     if (n <= 0) throw unexpected_exit();
     append_checked(buf, size_t(n));
+  }
+}
+
+ParticipantRunError ProcessParticipant::timeout_failure(
+    std::optional<uint64_t> step_time) {
+  if (!step_time)
+    return failure(FailureCategory::Timeout,
+                   "participant '" + name_ +
+                       "': timeout waiting for initialization ready "
+                       "response");
+  return failure(FailureCategory::Timeout,
+      "participant '" + name_ +
+      "': timeout waiting for step_done response during Step at virtual "
+      "time " +
+      std::to_string(*step_time) + " ns");
+}
+
+void ProcessParticipant::wait_for(
+    int fd, short events, const std::optional<Clock::time_point> &deadline,
+    std::optional<uint64_t> step_time) {
+  for (;;) {
+    // Checked on each pass, not only on EINTR: a signal that interrupts a
+    // partly completed write gives a short count, not EINTR.
+    if (run_interrupted()) throw RunError(run_interrupt_message());
+
+    // Without a deadline the runner waits for as long as the child takes.
+    // Each poll is still bounded: a signal that arrives after the check above
+    // and before poll starts does not interrupt it, so the next pass sees it.
+    auto wait = kSignalCheckInterval;
+    if (deadline) {
+      const Clock::duration remaining = *deadline - Clock::now();
+      if (remaining <= Clock::duration::zero())
+        throw timeout_failure(step_time);
+      auto remaining_ms =
+          std::chrono::duration_cast<std::chrono::milliseconds>(remaining);
+      if (remaining_ms.count() == 0) remaining_ms = std::chrono::milliseconds(1);
+      wait = std::min(wait, remaining_ms);
+    }
+
+    // The stderr pipe is watched too: a child that fills it while the runner
+    // waits only for `fd` would block forever. poll ignores the stderr entry
+    // once that pipe is closed (-1).
+    pollfd descriptors[2] = {{fd, events, 0}, {child_stderr_, POLLIN, 0}};
+    const int ready = poll(descriptors, 2, static_cast<int>(wait.count()));
+    // The top of the loop decides between a timeout and another wait.
+    if (ready == 0 || (ready < 0 && errno == EINTR)) continue;
+    if (ready < 0)
+      throw RunError("participant '" + name_ + "': poll failed");
+    if (descriptors[1].revents != 0) drain_stderr();
+    if (descriptors[0].revents != 0) return;
   }
 }
 
@@ -1082,7 +1104,9 @@ int ProcessParticipant::terminate_child() {
   alive_ = false;
   json bye = {{"op", "shutdown"}};
   std::string data = bye.dump() + "\n";
-  // Best effort: child may already be gone.
+  // Best effort: the child may be gone, or its pipe may be full. The pipe is
+  // non-blocking, so this write cannot block. After a partial Step write the
+  // child reads a corrupt line instead; the group escalation below ends it.
   (void)!write(child_stdin_, data.data(), data.size());
   close(child_stdin_);
   close(child_stdout_);

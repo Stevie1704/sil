@@ -55,14 +55,25 @@ class ProcessParticipant {
   // Reaps the child and releases its regions, and answers its wait status.
   // `shutdown` turns a bad status into a RunError; the destructor cannot.
   int terminate_child();
-  void send_line(const std::string &line);
   // `step_time` is absent for the initialization response and otherwise
-  // contains the virtual time of the Step request.
+  // contains the virtual time of the Step request. One deadline covers the
+  // write of the request and the read of its response.
   std::string request_response(const std::string &line,
                                std::optional<uint64_t> step_time);
+  // Writes the request; it waits for a full pipe as `wait_for` does.
+  void send_line(const std::string &line,
+                 const std::optional<Clock::time_point> &deadline,
+                 std::optional<uint64_t> step_time);
   std::string read_line(
       const std::optional<Clock::time_point> &deadline,
       std::optional<uint64_t> step_time);
+  // Waits until `fd` reports `events`, and drains the child's stderr while it
+  // waits. Throws the timeout failure at `deadline`, and a RunError when a
+  // termination signal arrives.
+  void wait_for(int fd, short events,
+                const std::optional<Clock::time_point> &deadline,
+                std::optional<uint64_t> step_time);
+  ParticipantRunError timeout_failure(std::optional<uint64_t> step_time);
   // Sends one request and parses its response line. A line that is not JSON
   // is a Step protocol violation.
   nlohmann::json exchange(const std::string &line,
