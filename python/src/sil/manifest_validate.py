@@ -46,9 +46,9 @@ from ._schema_types import INT_RANGES, SIZES
 from .manifest import (_FLOAT32_MAX, _INTERCEPTOR_KINDS, _OVERFLOW_POLICIES,
                        _SLEEP_POLICIES, _THREAD_POLICIES, _TRANSPORTS,
                        MANIFEST_VERSION)
-from .manifest_json import LoneSurrogate, RepeatedKey
-from .manifest_json import pointer as _pointer
 from .recording import read_channels
+
+_pointer = manifest_json.pointer
 
 REPORT_VERSION = 1
 EXIT_INVALID = 2
@@ -649,11 +649,11 @@ def validate(path: Path) -> list[Problem]:
         return [Problem("", f"invalid JSON: {error}", "Save the file as UTF-8.")]
     try:
         doc = manifest_json.loads(text)
-    except LoneSurrogate:
+    except manifest_json.LoneSurrogate:
         return [Problem("", "invalid JSON: a string has a lone surrogate "
                             "escape", "Escape a character outside the Basic "
                                       "Multilingual Plane as a pair.")]
-    except RepeatedKey as error:
+    except manifest_json.RepeatedKey as error:
         return [Problem(_pointer(where + (key,)),
                         f"object '{_pointer(where)}' repeats key '{key}'",
                         "Define each key only once in an object.")

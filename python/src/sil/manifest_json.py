@@ -10,10 +10,12 @@ from __future__ import annotations
 import json
 import math
 
+from ._schema_types import INT_RANGES
+
 
 class RepeatedKey(ValueError):
-    """An object repeats a key. `repeats` holds the path of each object that
-    repeats a key, with that key."""
+    """An object repeats a key. Each item of `repeats` is (object path, key).
+    """
 
     def __init__(self, repeats: list[tuple[tuple, str]]):
         self.repeats = repeats
@@ -22,6 +24,8 @@ class RepeatedKey(ValueError):
 
 
 class LoneSurrogate(ValueError):
+    """A string has half of a surrogate pair only."""
+
     def __init__(self):
         super().__init__("a string has a lone surrogate escape")
 
@@ -53,7 +57,8 @@ def _parse_int(text: str):
     # The kernel's JSON parser keeps an integer outside the 64-bit ranges as a
     # floating-point number, which no integer key accepts.
     value = int(text)
-    return value if -(2**63) <= value <= 2**64 - 1 else _parse_float(text)
+    low, high = INT_RANGES["i64"][0], INT_RANGES["u64"][1]
+    return value if low <= value <= high else _parse_float(text)
 
 
 def _parse_float(text: str) -> float:
