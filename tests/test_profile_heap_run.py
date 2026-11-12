@@ -115,6 +115,21 @@ def test_a_participant_that_is_no_process_is_rejected(tools, tmp_path,
     assert not list(tmp_path.glob(".sil-run-*"))
 
 
+def test_a_repeated_participant_is_rejected(tools, tmp_path):
+    # Without the check the last definition, a Process participant, would be
+    # the heap scope of a Manifest that sil-run refuses.
+    manifest = tmp_path / "repeated.json"
+    manifest.write_text('{"participants": {'
+                        '"p": {"type": "native", "library": "x.silp"}, '
+                        '"p": {"type": "process", "command": ["true"]}}}')
+
+    proc = sil(heap(manifest, "--participant", "p"), tools, tmp_path)
+
+    assert proc.returncode == 2, proc.stderr
+    assert "object '/participants' repeats key 'p'" in proc.stderr
+    assert not (tmp_path / "prof").exists()
+
+
 def test_a_shimmed_process_participant_is_rejected(tools, tmp_path):
     manifest = shimmed_manifest(tmp_path)
 

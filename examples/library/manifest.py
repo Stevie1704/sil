@@ -31,13 +31,13 @@ stopping it; it is not Manifest data and does not change the Recording.
 """
 
 import argparse
-import json
 from pathlib import Path
 
+from sil import manifest_json
 from sil.manifest import Manifest, SubscriberRoute
 
 EXAMPLE_DIR = Path(__file__).resolve().parent
-MAPPING = json.loads((EXAMPLE_DIR / "mapping.json").read_text())
+MAPPING = manifest_json.loads((EXAMPLE_DIR / "mapping.json").read_text())
 
 STEP_PERIOD_NS = 10_000_000
 # Explicit, and equal to the default: a recorded Message is visible at the

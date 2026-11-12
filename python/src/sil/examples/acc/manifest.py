@@ -37,12 +37,12 @@ Manifest.
 from __future__ import annotations
 
 import argparse
-import json
 from importlib.resources import files
 
+from sil import manifest_json
 from sil.manifest import Manifest, SubscriberRoute
 
-ACC_SCHEMAS = json.loads(
+ACC_SCHEMAS = manifest_json.loads(
     files("sil.examples.acc").joinpath("acc.json").read_text()
 )
 

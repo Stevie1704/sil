@@ -189,6 +189,18 @@ class TestCli:
         assert rc == footprint.EXIT_CONFIG_ERROR
         assert "not valid JSON" in capsys.readouterr().err
 
+    def test_a_repeated_key_is_a_config_error(self, tmp_path, capsys):
+        path = tmp_path / "m.json"
+        text = json.dumps(camera_manifest(subscribers=1, capacity=3))
+        path.write_text(text.replace('"participants": {',
+                                     '"participants": {"sub0": {}, ', 1))
+
+        rc = footprint.main([str(path)])
+
+        assert rc == footprint.EXIT_CONFIG_ERROR
+        assert "object '/participants' repeats key 'sub0'" in \
+            capsys.readouterr().err
+
     def test_a_json_scalar_is_a_config_error(self, tmp_path, capsys):
         path = tmp_path / "m.json"
         path.write_text("42")

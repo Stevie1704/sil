@@ -35,6 +35,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from sil import manifest_json
 from sil.build_info import __version__ as SIL_VERSION
 from sil.diagnostics_report import write_new_file
 from sil.diagnostics_run import (
@@ -133,7 +134,8 @@ def scope_problem(request: HeapRequest, cwd: Path) -> str | None:
         return None
     name = request.participant
     try:
-        manifest = json.loads((cwd / request.target.manifest).read_text())
+        manifest = manifest_json.loads(
+            (cwd / request.target.manifest).read_bytes())
         participant = manifest["participants"].get(name)
     except (OSError, ValueError, KeyError, AttributeError, TypeError) as error:
         return (f"cannot read the Manifest '{request.target.manifest}' to "

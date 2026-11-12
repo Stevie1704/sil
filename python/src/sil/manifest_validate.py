@@ -34,19 +34,21 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import math
 import os
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import NamedTuple
 
+from . import manifest_json
 from ._schema_types import INT_RANGES, SIZES
 # The builder and this check share the closed sets of the Manifest format.
 from .manifest import (_FLOAT32_MAX, _INTERCEPTOR_KINDS, _OVERFLOW_POLICIES,
                        _SLEEP_POLICIES, _THREAD_POLICIES, _TRANSPORTS,
                        MANIFEST_VERSION)
 from .recording import read_channels
+
+_pointer = manifest_json.pointer
 
 REPORT_VERSION = 1
 EXIT_INVALID = 2
@@ -82,11 +84,6 @@ class Problem:
     path: str
     message: str
     hint: str
-
-
-def _pointer(tokens: tuple[str, ...]) -> str:
-    return "".join("/" + str(token).replace("~", "~0").replace("/", "~1")
-                   for token in tokens)
 
 
 def _describe(value) -> str:
@@ -641,60 +638,6 @@ def _check_recording(c: _Checker, recording: str, digest: str, path,
                   "Declare the Schema exactly as the Recording has it.")
 
 
-def _parse_int(text: str):
-    # The kernel's JSON parser keeps an integer outside the 64-bit ranges as a
-    # floating-point number, which no integer key accepts.
-    value = int(text)
-    return value if -(2**63) <= value <= _U64[1] else _parse_float(text)
-
-
-def _parse_float(text: str) -> float:
-    value = float(text)
-    if not math.isfinite(value):
-        raise ValueError(f"number overflow parsing '{text}'")
-    return value
-
-
-def _reject_constant(text: str):
-    raise ValueError(f"invalid literal '{text}'")
-
-
-class _RepeatedKeys:
-    """`object_pairs_hook` that keeps the last value of a repeated key, as the
-    kernel's JSON parser does, and records each repeat for an error."""
-
-    def __init__(self):
-        self.found: list[tuple[dict, str]] = []
-
-    def __call__(self, pairs) -> dict:
-        obj = {}
-        for key, value in pairs:
-            if key in obj:
-                self.found.append((obj, key))
-            obj[key] = value
-        return obj
-
-
-def _container_paths(value, path=()):
-    """The path of every object and array in `value`, by object identity."""
-    paths = {id(value): path}
-    items = value.items() if isinstance(value, dict) else enumerate(value)
-    for token, child in items:
-        if isinstance(child, (dict, list)):
-            paths.update(_container_paths(child, path + (token,)))
-    return paths
-
-
-def _repeated_key_problems(doc, found) -> list[Problem]:
-    # An object inside a dropped first definition is not in `doc`; the repeat
-    # that dropped it is reported.
-    paths = _container_paths(doc) if isinstance(doc, (dict, list)) else {}
-    return [Problem(_pointer(paths[id(obj)] + (key,)),
-                    f"object '{_pointer(paths[id(obj)])}' repeats key '{key}'",
-                    "Define each key only once in an object.")
-            for obj, key in found if id(obj) in paths]
-
-
 def validate(path: Path) -> list[Problem]:
     """Every Problem of the Manifest at `path`; an empty list if it is valid."""
     try:
@@ -704,22 +647,20 @@ def validate(path: Path) -> list[Problem]:
                         "Check the path.")]
     except UnicodeDecodeError as error:
         return [Problem("", f"invalid JSON: {error}", "Save the file as UTF-8.")]
-    repeated = _RepeatedKeys()
     try:
-        doc = json.loads(text, parse_int=_parse_int, parse_float=_parse_float,
-                         parse_constant=_reject_constant,
-                         object_pairs_hook=repeated)
-    except ValueError as error:
-        return [Problem("", f"invalid JSON: {error}",
-                        "Write the Manifest with the sil.manifest builder.")]
-    try:
-        json.dumps(doc, ensure_ascii=False).encode()
-    except UnicodeEncodeError:
+        doc = manifest_json.loads(text)
+    except manifest_json.LoneSurrogate:
         return [Problem("", "invalid JSON: a string has a lone surrogate "
                             "escape", "Escape a character outside the Basic "
                                       "Multilingual Plane as a pair.")]
-    if repeated.found:
-        return _repeated_key_problems(doc, repeated.found)
+    except manifest_json.RepeatedKey as error:
+        return [Problem(_pointer(where + (key,)),
+                        f"object '{_pointer(where)}' repeats key '{key}'",
+                        "Define each key only once in an object.")
+                for where, key in error.repeats]
+    except ValueError as error:
+        return [Problem("", f"invalid JSON: {error}",
+                        "Write the Manifest with the sil.manifest builder.")]
     return _check_document(doc, path.absolute().parent)
 
 

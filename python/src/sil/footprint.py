@@ -20,11 +20,11 @@ the part a manifest promises before anything runs, which is what the gate needs.
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from sil import manifest_json
 from sil.schema import load as load_message_types
 
 PROG = "sil footprint"
@@ -189,11 +189,14 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        doc = json.loads(args.manifest.read_text())
+        doc = manifest_json.loads(args.manifest.read_bytes())
     except OSError as exc:
         sys.stderr.write(f"{PROG}: cannot read manifest: {exc}\n")
         return EXIT_CONFIG_ERROR
-    except json.JSONDecodeError as exc:
+    except manifest_json.RepeatedKey as exc:
+        sys.stderr.write(f"{PROG}: manifest {exc}\n")
+        return EXIT_CONFIG_ERROR
+    except ValueError as exc:
         sys.stderr.write(f"{PROG}: manifest is not valid JSON: {exc}\n")
         return EXIT_CONFIG_ERROR
     if not isinstance(doc, dict):

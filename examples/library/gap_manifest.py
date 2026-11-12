@@ -23,13 +23,13 @@ or, with the staged installation on PATH:
 """
 
 import argparse
-import json
 from pathlib import Path
 
+from sil import manifest_json
 from sil.manifest import Manifest, SubscriberRoute
 
 EXAMPLE_DIR = Path(__file__).resolve().parent
-MAPPING = json.loads((EXAMPLE_DIR / "gap_mapping.json").read_text())
+MAPPING = manifest_json.loads((EXAMPLE_DIR / "gap_mapping.json").read_text())
 
 STEP_PERIOD_NS = 10_000_000
 # The two inputs have different Latencies: an ego speed is visible at the

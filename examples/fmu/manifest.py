@@ -41,14 +41,14 @@ bounded payload field and the length beside it. See docs/fmi.md for both.
 """
 
 import argparse
-import json
 from pathlib import Path
 
+from sil import manifest_json
 from sil.manifest import Manifest, SubscriberRoute
 
 EXAMPLE_DIR = Path(__file__).resolve().parent
 ROOT = EXAMPLE_DIR.parents[1]
-FMU_SCHEMAS = json.loads((EXAMPLE_DIR / "schemas.json").read_text())
+FMU_SCHEMAS = manifest_json.loads((EXAMPLE_DIR / "schemas.json").read_text())
 
 FMU_PATH = ROOT / "tests" / "fixtures" / "reference-fmus" / "3.0" / "Feedthrough.fmu"
 
