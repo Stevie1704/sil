@@ -12,7 +12,84 @@ the edge, outside the kernel.
 Read [SUPPORT.md](SUPPORT.md) for the supported machine class, compatibility
 policy, and scope of the determinism guarantee. SiL is not safety-qualified.
 
-## Quick start
+## Install the latest release
+
+Use the [latest release](https://github.com/Stevie1704/sil/releases/latest)
+without cloning or building this repository.
+
+### With a coding agent
+
+Copy this prompt into your agent in the project where you want to use SiL:
+
+```text
+Install the latest stable release of SiL (https://github.com/Stevie1704/sil)
+for this project. Read the installation guide at
+https://github.com/Stevie1704/sil/blob/main/docs/getting-started.md first.
+
+Check the OS and CPU architecture. On Linux x86-64 with glibc 2.36 or newer,
+ensure curl, tar, and Python 3.11+ with venv are available, then use
+https://github.com/Stevie1704/sil/releases/latest/download/install.sh
+to install both the Python tools and native runtime. On Windows, use WSL2;
+on macOS, use the Linux amd64 Docker image pinned by digest in the latest
+release notes, following the guide's platform instructions.
+
+For a native installation, source ~/.local/share/sil/env and add that line
+to my shell profile if missing. Verify sil --help and sil-run --version,
+then run sil skill install in this project and read sil docs agent-guide.
+Verify the installation by generating the packaged ACC example with
+python -m sil.examples.acc.manifest acc.json and running sil check acc.json
+in a temporary directory (use the container equivalents for Docker).
+Report the installed version, verification result, and how to use SiL in
+a new terminal.
+```
+
+### On your own
+
+On **Linux x86-64 with glibc 2.36+** (Debian 12 / Ubuntu 24.04 or newer),
+you need `curl`, `tar`, Python 3.11+ with `venv`, and `sha256sum` or `shasum`.
+On Debian or Ubuntu, install the prerequisites with:
+
+```sh
+sudo apt-get update
+sudo apt-get install -y curl tar python3 python3-venv coreutils
+```
+
+Install the latest release and put it on `PATH` in your current shell:
+
+```sh
+curl -fsSL https://github.com/Stevie1704/sil/releases/latest/download/install.sh | sh
+. "$HOME/.local/share/sil/env"
+sil --help
+sil-run --version
+```
+
+The installer checks the wheel and native archive against the release's
+`SHA256SUMS` and installs both under `~/.local/share/sil/<VERSION>/`.
+Add `. "$HOME/.local/share/sil/env"` to your shell profile (for example,
+`~/.bashrc` for Bash or `~/.zshrc` for Zsh) to use SiL in new terminals.
+Run the same installation command to upgrade; previous versions stay installed.
+
+Check the packaged example in a temporary directory:
+
+```sh
+(
+  cd "$(mktemp -d)" || exit 1
+  python -m sil.examples.acc.manifest acc.json
+  sil check acc.json
+)
+```
+
+In your project directory, run `sil skill install` to give your coding agent
+the installed version's guide and commands. Use `sil docs agent-guide` to
+read the guide yourself.
+
+On **Windows**, use WSL2 with Ubuntu 24.04 and run the Linux commands above
+in its shell. On **macOS**, use the Linux amd64 Docker image from the release.
+See [Windows and macOS](docs/getting-started.md#windows-and-macos) for setup
+and container commands, or [installation details](docs/getting-started.md#install-a-release)
+for a custom prefix or a specific release.
+
+## Build from source
 
 From a checkout, with CMake 3.24+, a C++20 toolchain, Python 3.11+, and `uv`:
 
@@ -41,8 +118,6 @@ An installed SiL has one command for its tools: `sil --help` lists them
 provides the adapters, bindings and preparation inputs without a checkout.
 `sil skill install` gives a coding agent the guide and commands of that version.
 
-On Linux x86-64, the `install.sh` asset of a GitHub release installs that
-release ([install a release](docs/getting-started.md#install-a-release)).
 See [examples and installation](docs/getting-started.md) for the ACC example
 and staged installation, or [container deployment](docs/container.md) to run
 one Manifest in a Linux container. Detailed [Run behavior and guards](docs/running.md)
