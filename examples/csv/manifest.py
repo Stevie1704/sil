@@ -28,13 +28,13 @@ or, without the convenience target:
 """
 
 import argparse
-import json
 from pathlib import Path
 
+from sil import manifest_json
 from sil.manifest import Manifest, SubscriberRoute
 
 EXAMPLE_DIR = Path(__file__).resolve().parent
-MAPPING = json.loads((EXAMPLE_DIR / "mapping.json").read_text())
+MAPPING = manifest_json.loads((EXAMPLE_DIR / "mapping.json").read_text())
 REPLAYED = [entry["channel"] for entry in MAPPING["channels"]]
 
 SEEN_SCHEMAS = {

@@ -45,10 +45,11 @@ import json
 from collections.abc import Callable
 from pathlib import Path
 
+from sil import manifest_json
 from sil.manifest import Manifest, SubscriberRoute
 
 EXAMPLE_DIR = Path(__file__).resolve().parent
-SCHEMAS = json.loads((EXAMPLE_DIR / "schemas.json").read_text())
+SCHEMAS = manifest_json.loads((EXAMPLE_DIR / "schemas.json").read_text())
 MANEUVERS = ("clear", "hazard", "release", "unavailable", "boundaries",
              "occupancy", "turnover", "ordering", "cadence", "freshness")
 

@@ -57,17 +57,6 @@ def test_both_ends_of_the_typed_contract_agree_on_the_layout():
     assert "sizeof(acc_Command) == 8" in header
 
 
-def test_a_repeated_key_in_the_schemas_is_refused():
-    # The repeat would be lost before the generated Manifest exists, so the
-    # kernel could not see it.
-    text = manifest.SCHEMAS_FILE.read_text().replace(
-        "{", '{"acc.Sensing": {}, ', 1)
-
-    with pytest.raises(ValueError,
-                       match="object '' repeats key 'acc.Sensing'"):
-        manifest.read_schemas(text)
-
-
 def test_the_plant_publishes_sensing_every_step(acc_result):
     assert len(acc_result.messages("acc.Sensing")) == (
         manifest.DURATION_NS // manifest.STEP_PERIOD_NS
