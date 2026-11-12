@@ -65,6 +65,8 @@ sil-run --version
 
 The installer checks the wheel and native archive against the release's
 `SHA256SUMS` and installs both under `~/.local/share/sil/<VERSION>/`.
+The released native runtime includes OpenSSL's hashing library through static
+linking; no separate OpenSSL installation is needed.
 Add `. "$HOME/.local/share/sil/env"` to your shell profile (for example,
 `~/.bashrc` for Bash or `~/.zshrc` for Zsh) to use SiL in new terminals.
 Run the same installation command to upgrade; previous versions stay installed.
@@ -91,7 +93,8 @@ for a custom prefix or a specific release.
 
 ## Build from source
 
-From a checkout, with CMake 3.24+, a C++20 toolchain, Python 3.11+, and `uv`:
+From a checkout, with CMake 3.24+, a C++20 toolchain, Python 3.11+, `uv`,
+and OpenSSL 3.0+ headers and its static library (`libssl-dev` on Debian/Ubuntu):
 
 ```sh
 make venv
