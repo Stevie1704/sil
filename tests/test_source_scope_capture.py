@@ -183,6 +183,25 @@ def test_preflight_failures_exit_2_before_the_directory(tmp_path, case):
     assert not (tmp_path / "scopes").exists()
 
 
+def test_a_repeated_participant_is_a_preflight_failure(tmp_path):
+    # Without the check the last definition, a Native participant, would be
+    # captured from a Manifest that sil-run refuses.
+    library = fake_library(tmp_path)
+    manifest = tmp_path / "repeated.json"
+    manifest.write_text(
+        f'{{"participants": {{'
+        f'"{PARTICIPANT}": {{"type": "process", "command": ["true"]}}, '
+        f'"{PARTICIPANT}": {{"type": "native", "library": "{library.name}"}}'
+        f'}}}}')
+
+    proc = capture(manifest, tmp_path, tmp_path)
+
+    assert proc.returncode == 2, proc.stderr
+    assert f"object '/participants' repeats key '{PARTICIPANT}'" in \
+        proc.stderr
+    assert not (tmp_path / "scopes").exists()
+
+
 def test_an_existing_output_directory_is_never_replaced(tmp_path):
     (tmp_path / "scopes").mkdir()
     (tmp_path / "scopes" / "kept.txt").write_text("evidence")

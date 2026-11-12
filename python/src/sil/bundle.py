@@ -54,6 +54,7 @@ import threading
 from dataclasses import dataclass
 from pathlib import Path
 
+from sil import manifest_json
 from sil.compare import ContractError, RecordingError, compare, read_contract
 
 PROG = "sil bundle"
@@ -427,7 +428,9 @@ def _undeclared_paths(root: Path, declaration: Declaration) -> list[str]:
     for run in declaration.runs:
         manifest = root / run.manifest
         try:
-            doc = json.loads(manifest.read_bytes())
+            doc = manifest_json.loads(manifest.read_bytes())
+        except manifest_json.RepeatedKey as error:
+            raise Refusal(f"Manifest {run.manifest}: {error}")
         except ValueError as error:
             raise Refusal(f"Manifest {run.manifest} is not JSON: {error}")
         for text in _strings_in(doc):

@@ -27,6 +27,7 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
+from sil import manifest_json
 from sil.build_info import __version__ as SIL_VERSION
 from sil.diagnostics_report import write_new_file
 from sil.diagnostics_run import (
@@ -148,7 +149,7 @@ def preflight(request: ScopesRequest, cwd: Path) -> Preflight:
     manifest_path = cwd / request.target.manifest
     try:
         manifest_bytes = manifest_path.read_bytes()
-        participant = json.loads(manifest_bytes)["participants"].get(
+        participant = manifest_json.loads(manifest_bytes)["participants"].get(
             request.participant)
     except (OSError, ValueError, KeyError, AttributeError, TypeError) as error:
         raise Refusal(f"cannot read the Manifest '{request.target.manifest}' "

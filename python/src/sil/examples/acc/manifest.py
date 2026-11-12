@@ -37,14 +37,20 @@ Manifest.
 from __future__ import annotations
 
 import argparse
-import json
 from importlib.resources import files
 
+from sil import manifest_json
 from sil.manifest import Manifest, SubscriberRoute
 
-ACC_SCHEMAS = json.loads(
-    files("sil.examples.acc").joinpath("acc.json").read_text()
-)
+SCHEMAS_FILE = files("sil.examples.acc").joinpath("acc.json")
+
+
+def read_schemas(text: str) -> dict:
+    """The ACC Schemas in `text`; ValueError on a key the kernel refuses."""
+    return manifest_json.loads(text)
+
+
+ACC_SCHEMAS = read_schemas(SCHEMAS_FILE.read_text())
 
 STEP_PERIOD_NS = 10_000_000
 DURATION_NS = 5_000_000_000

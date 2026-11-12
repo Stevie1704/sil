@@ -301,6 +301,23 @@ def test_seal_refuses_an_undeclared_file_and_an_undeclared_path(
     assert f"library.json names {library_binary.resolve()}" in proc.stderr
 
 
+def test_seal_refuses_a_manifest_that_repeats_a_key(
+        tmp_path, runtime, library_binary):
+    # A path in a dropped first definition would not be checked.
+    root = tmp_path / "library"
+    prepare.library(root, runtime, library_binary)
+    manifest = root / "library.json"
+    manifest.write_text(manifest.read_text().replace(
+        "{", '{"epoch_ns": 0, "epoch_ns": 0, ', 1))
+
+    proc = sil_bundle(runtime, "seal", root)
+
+    assert proc.returncode == 2, proc.stderr
+    assert "Manifest library.json: object '' repeats key 'epoch_ns'" in \
+        proc.stderr
+    assert not (root / "bundle.lock.json").exists()
+
+
 def test_a_sealed_bundle_cannot_be_sealed_again(library_bundle, runtime):
     proc = sil_bundle(runtime, "seal", library_bundle)
 
