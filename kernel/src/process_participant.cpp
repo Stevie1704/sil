@@ -115,10 +115,32 @@ std::string participant_directory_name(const std::string &name) {
   return encoded;
 }
 
+// A pipe whose two ends close on exec. A child keeps only the ends that it
+// moves onto stdin, stdout and stderr with dup2. No later sibling gets them.
+bool close_on_exec_pipe(int fds[2]) {
+#ifdef __linux__
+  return pipe2(fds, O_CLOEXEC) == 0;
+#else
+  // macOS has no pipe2. Kernel code forks only from this thread, so a fork
+  // between pipe and fcntl can come only from a thread of a Native
+  // participant.
+  if (pipe(fds) != 0) return false;
+  if (fcntl(fds[0], F_SETFD, FD_CLOEXEC) == 0 &&
+      fcntl(fds[1], F_SETFD, FD_CLOEXEC) == 0)
+    return true;
+  close(fds[0]);
+  close(fds[1]);
+  return false;
+#endif
+}
+
 // The failure report keeps the last lines of a child's stderr. The byte
 // bound keeps a child that never writes a newline from growing the buffer.
 constexpr size_t kStderrTailLines = 20;
 constexpr size_t kStderrTailBytes = 64 * 1024;
+
+// The longest a protocol wait goes without a check for a termination signal.
+constexpr std::chrono::milliseconds kSignalCheckInterval{100};
 
 std::vector<std::string> last_lines(const std::string &text) {
   std::vector<std::string> lines;
@@ -553,14 +575,10 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     const int offered_protocol = protocol_;
 
     int to_child[2], from_child[2], child_errors[2], group_ready[2];
-    if (pipe(to_child) != 0 || pipe(from_child) != 0 ||
-        pipe(child_errors) != 0 || pipe(group_ready) != 0)
+    if (!close_on_exec_pipe(to_child) || !close_on_exec_pipe(from_child) ||
+        !close_on_exec_pipe(child_errors) || !close_on_exec_pipe(group_ready))
       throw failure(FailureCategory::Spawn,
                     "participant '" + name + "': pipe failed");
-    // Only this child may hold the write end. A child that another thread
-    // forks and execs at this time must not keep the parent's read open.
-    (void)fcntl(group_ready[0], F_SETFD, FD_CLOEXEC);
-    (void)fcntl(group_ready[1], F_SETFD, FD_CLOEXEC);
 
     const diagnostics::SpawnTime forked;
     pid_ = fork();
@@ -621,6 +639,10 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     close(from_child[1]);
     close(child_errors[1]);
     child_stdin_ = to_child[1];
+    // Non-blocking, so a child that stops reading cannot hold the runner in
+    // a write: the write waits in the same poll loop as the read.
+    (void)fcntl(child_stdin_, F_SETFL,
+                fcntl(child_stdin_, F_GETFL) | O_NONBLOCK);
     child_stdout_ = from_child[0];
     // Non-blocking, so draining it never waits for a child that is quiet.
     child_stderr_ = child_errors[0];
@@ -663,37 +685,8 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
                  {"protocol", offered_protocol},
                  {"channels", channels},
                  {"schemas", schemas}};
-    json ready = exchange(init.dump(), std::nullopt);
-    const std::string op = ready.value("op", "");
-    // `fail` in answer to `init` is a Manifest error (exit 2), unless the child
-    // explicitly marks a failure from its own initialization work as a Run
-    // failure (exit 1). The same line after a Step is always a Run failure.
-    // See docs/step-protocol.md.
-    if (op == "fail") {
-      const std::string reason =
-          ready.value("reason", "rejected its init line");
-      if (ready.value("failure", "") == "run")
-        throw failure(FailureCategory::Participant,
-                      "participant '" + name + "' failed: " + reason);
-      throw ManifestError("participant '" + name + "': " + reason);
-    }
-    if (op != "ready")
-      throw failure(FailureCategory::Protocol,
-                    "participant '" + name + "': expected ready, got " +
-                        ready.dump());
-    int announced_protocol = kSingleSlotProtocol;
-    if (ready.contains("protocol")) {
-      const json &value = ready.at("protocol");
-      if (!value.is_number_integer())
-        throw ManifestError("participant '" + name +
-                            "': ready protocol must be a positive integer");
-      const int64_t announced = value.get<int64_t>();
-      if (announced < 1 || announced > std::numeric_limits<int>::max())
-        throw ManifestError("participant '" + name +
-                            "': ready protocol must be a positive integer");
-      announced_protocol = static_cast<int>(announced);
-    }
-    protocol_ = std::min(offered_protocol, announced_protocol);
+    const json ready = exchange(init.dump(), std::nullopt);
+    protocol_ = std::min(offered_protocol, decode_ready(ready));
     codec_ = std::make_unique<StepCodec>(arenas_, protocol_);
   } catch (...) {
     // This intentionally covers every init-path throw, not only timeouts: an
@@ -702,6 +695,42 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
     // used for every later Run failure here.
     (void)terminate_child();
     throw;
+  }
+}
+
+int ProcessParticipant::decode_ready(const json &ready) {
+  try {
+    const std::string op = ready.value("op", "");
+    // `fail` in answer to `init` is a Manifest error (exit 2), unless the
+    // child explicitly marks a failure from its own initialization work as a
+    // Run failure (exit 1). The same line after a Step is always a Run
+    // failure. See docs/step-protocol.md.
+    if (op == "fail") {
+      const std::string reason =
+          ready.value("reason", "rejected its init line");
+      if (ready.value("failure", "") == "run")
+        throw failure(FailureCategory::Participant,
+                      "participant '" + name_ + "' failed: " + reason);
+      throw ManifestError("participant '" + name_ + "': " + reason);
+    }
+    if (op != "ready")
+      throw failure(FailureCategory::Protocol,
+                    "participant '" + name_ + "': expected ready, got " +
+                        ready.dump());
+    if (!ready.contains("protocol")) return kSingleSlotProtocol;
+    const json &value = ready.at("protocol");
+    if (!value.is_number_integer())
+      throw ManifestError("participant '" + name_ +
+                          "': ready protocol must be a positive integer");
+    const int64_t announced = value.get<int64_t>();
+    if (announced < 1 || announced > std::numeric_limits<int>::max())
+      throw ManifestError("participant '" + name_ +
+                          "': ready protocol must be a positive integer");
+    return static_cast<int>(announced);
+  } catch (const json::exception &e) {
+    throw failure(FailureCategory::Protocol,
+                  "participant '" + name_ + "': malformed ready" +
+                      step_context() + ": " + e.what());
   }
 }
 
@@ -743,8 +772,17 @@ void ProcessParticipant::step(uint64_t now_ns) {
   const json done = exchange(step.dump(), now_ns);
 
   for (StepOutput &output : decode_step_done(done, now_ns))
+    publish_output(output);
+}
+
+void ProcessParticipant::publish_output(const StepOutput &output) {
+  try {
     engine_.publish(name_, output.channel, output.bytes.data(),
                     output.bytes.size());
+  } catch (const PublishError &e) {
+    // The Engine does not know the Step, so add this participant's facts.
+    throw failure(FailureCategory::Run, e.what() + step_context());
+  }
 }
 
 std::vector<ProcessParticipant::StepOutput>
@@ -811,23 +849,29 @@ ProcessParticipant::decode_step_done(const json &done, uint64_t now_ns) {
   }
 }
 
-void ProcessParticipant::send_line(const std::string &line) {
-  std::string data = line + "\n";
+void ProcessParticipant::send_line(
+    const std::string &line, const std::optional<Clock::time_point> &deadline,
+    std::optional<uint64_t> step_time) {
+  const std::string data = line + "\n";
   size_t off = 0;
   while (off < data.size()) {
-    ssize_t n = write(child_stdin_, data.data() + off, data.size() - off);
-    if (n < 0 && errno == EINTR) {
-      if (run_interrupted())
-        throw RunError(run_interrupt_message());
+    const ssize_t n =
+        write(child_stdin_, data.data() + off, data.size() - off);
+    if (n >= 0) {
+      off += size_t(n);
       continue;
     }
-    if (n < 0) throw unexpected_exit();
-    off += size_t(n);
+    if (errno == EINTR) continue;
+    if (errno != EAGAIN && errno != EWOULDBLOCK) throw unexpected_exit();
+    // The pipe is full. The wait does not look at why stdin became ready:
+    // a child that is gone gives EPIPE on the next write.
+    wait_for(child_stdin_, POLLOUT, deadline, step_time);
   }
 }
 
 std::string ProcessParticipant::request_response(
     const std::string &line, std::optional<uint64_t> step_time) {
+  // The deadline starts before the write, so it covers the complete exchange.
   std::optional<Clock::time_point> deadline;
   if (participant_timeout_) {
     const Clock::time_point start = Clock::now();
@@ -844,7 +888,7 @@ std::string ProcessParticipant::request_response(
                      *participant_timeout_);
     }
   }
-  send_line(line);
+  send_line(line, deadline, step_time);
   return read_line(deadline, step_time);
 }
 
@@ -915,19 +959,6 @@ std::string ProcessParticipant::read_line(
     read_buffer_.append(data, length);
   };
 
-  const auto timeout = [&]() -> ParticipantRunError {
-    if (!step_time)
-      return failure(FailureCategory::Timeout,
-                     "participant '" + name_ +
-                         "': timeout waiting for initialization ready "
-                         "response");
-    return failure(FailureCategory::Timeout,
-        "participant '" + name_ +
-        "': timeout waiting for step_done response during Step at virtual "
-        "time " +
-        std::to_string(*step_time) + " ns");
-  };
-
   for (;;) {
     size_t nl = read_buffer_.find('\n');
     if (nl != std::string::npos) {
@@ -936,35 +967,7 @@ std::string ProcessParticipant::read_line(
       return line;
     }
 
-    // Without a deadline the runner waits for as long as the child takes.
-    int wait_ms = -1;
-    if (deadline) {
-      const Clock::duration remaining = *deadline - Clock::now();
-      if (remaining <= Clock::duration::zero()) throw timeout();
-      auto remaining_ms =
-          std::chrono::duration_cast<std::chrono::milliseconds>(remaining);
-      if (remaining_ms.count() == 0) remaining_ms = std::chrono::milliseconds(1);
-      const auto max_poll_ms =
-          std::chrono::milliseconds(std::numeric_limits<int>::max());
-      if (remaining_ms > max_poll_ms) remaining_ms = max_poll_ms;
-      wait_ms = static_cast<int>(remaining_ms.count());
-    }
-
-    // Both pipes are watched: a child that fills its stderr pipe while the
-    // runner waits only for stdout would block forever. poll ignores the
-    // stderr entry once that pipe is closed (-1).
-    pollfd descriptors[2] = {{child_stdout_, POLLIN, 0},
-                             {child_stderr_, POLLIN, 0}};
-    const int ready = poll(descriptors, 2, wait_ms);
-    if (ready < 0 && errno == EINTR) {
-      if (run_interrupted()) throw RunError(run_interrupt_message());
-      continue;
-    }
-    if (ready == 0) throw timeout();
-    if (ready < 0)
-      throw RunError("participant '" + name_ + "': poll failed");
-    if (descriptors[1].revents != 0) drain_stderr();
-    if (descriptors[0].revents == 0) continue;
+    wait_for(child_stdout_, POLLIN, deadline, step_time);
 
     char buf[4096];
     ssize_t n = read(child_stdout_, buf, sizeof buf);
@@ -974,6 +977,56 @@ std::string ProcessParticipant::read_line(
     }
     if (n <= 0) throw unexpected_exit();
     append_checked(buf, size_t(n));
+  }
+}
+
+ParticipantRunError ProcessParticipant::timeout_failure(
+    std::optional<uint64_t> step_time) {
+  if (!step_time)
+    return failure(FailureCategory::Timeout,
+                   "participant '" + name_ +
+                       "': timeout waiting for initialization ready "
+                       "response");
+  return failure(FailureCategory::Timeout,
+      "participant '" + name_ +
+      "': timeout waiting for step_done response during Step at virtual "
+      "time " +
+      std::to_string(*step_time) + " ns");
+}
+
+void ProcessParticipant::wait_for(
+    int fd, short events, const std::optional<Clock::time_point> &deadline,
+    std::optional<uint64_t> step_time) {
+  for (;;) {
+    // Checked on each pass, not only on EINTR: a signal that interrupts a
+    // partly completed write gives a short count, not EINTR.
+    if (run_interrupted()) throw RunError(run_interrupt_message());
+
+    // Without a deadline the runner waits for as long as the child takes.
+    // Each poll is still bounded: a signal that arrives after the check above
+    // and before poll starts does not interrupt it, so the next pass sees it.
+    auto wait = kSignalCheckInterval;
+    if (deadline) {
+      const Clock::duration remaining = *deadline - Clock::now();
+      if (remaining <= Clock::duration::zero())
+        throw timeout_failure(step_time);
+      auto remaining_ms =
+          std::chrono::duration_cast<std::chrono::milliseconds>(remaining);
+      if (remaining_ms.count() == 0) remaining_ms = std::chrono::milliseconds(1);
+      wait = std::min(wait, remaining_ms);
+    }
+
+    // The stderr pipe is watched too: a child that fills it while the runner
+    // waits only for `fd` would block forever. poll ignores the stderr entry
+    // once that pipe is closed (-1).
+    pollfd descriptors[2] = {{fd, events, 0}, {child_stderr_, POLLIN, 0}};
+    const int ready = poll(descriptors, 2, static_cast<int>(wait.count()));
+    // The top of the loop decides between a timeout and another wait.
+    if (ready == 0 || (ready < 0 && errno == EINTR)) continue;
+    if (ready < 0)
+      throw RunError("participant '" + name_ + "': poll failed");
+    if (descriptors[1].revents != 0) drain_stderr();
+    if (descriptors[0].revents != 0) return;
   }
 }
 
@@ -1051,7 +1104,9 @@ int ProcessParticipant::terminate_child() {
   alive_ = false;
   json bye = {{"op", "shutdown"}};
   std::string data = bye.dump() + "\n";
-  // Best effort: child may already be gone.
+  // Best effort: the child may be gone, or its pipe may be full. The pipe is
+  // non-blocking, so this write cannot block. After a partial Step write the
+  // child reads a corrupt line instead; the group escalation below ends it.
   (void)!write(child_stdin_, data.data(), data.size());
   close(child_stdin_);
   close(child_stdout_);

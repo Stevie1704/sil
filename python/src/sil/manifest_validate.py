@@ -8,7 +8,8 @@ The rules mirror three places in the kernel, and
 `tests/test_manifest_validate.py` runs both sides over one corpus of
 Manifests so that they cannot drift apart:
 
-- the loader, `kernel/src/manifest.cpp`: keys, types, ranges, references;
+- the loader, `kernel/src/manifest.cpp`: keys (also a key that repeats in
+  one object), types, ranges, references;
 - the one-publisher-per-Channel rule;
 - the Participant setup rules that need only the Manifest, such as the
   shm Channel that one Process participant subscribes and publishes;
@@ -419,7 +420,7 @@ def _check_process(c: _Checker, participant, path, channels) -> list[str]:
     if command is not None and c.array(command, path + ("command",)) is not None:
         if not command:
             c.add(path + ("command",), "command must be a non-empty array",
-                  "Name the executable first: [\"python3\", \"participant.py\"].")
+                  "Name the executable first: [\"python3\", \"./participant.py\"].")
         items = [c.string(item, path + ("command", index))
                  for index, item in enumerate(command)]
         if items and items[0] is not None:
@@ -582,9 +583,13 @@ def _check_readable(c: _Checker, file: Path, path, what: str) -> bool:
 
 
 def _check_command_files(c: _Checker, arguments, path) -> None:
-    """A command argument that names a file is an artifact of the Run."""
+    """A command argument with a `/` that names a file is an artifact of the Run.
+
+    The kernel reads a bare word as a literal, so only a word with a `/` can name
+    a file beside the Manifest.
+    """
     for index, argument in enumerate(arguments, start=1):
-        if argument and (c.base_dir / argument).is_file():
+        if argument and "/" in argument and (c.base_dir / argument).is_file():
             _check_readable(c, c.base_dir / argument, path + (index,),
                             "command file")
 
@@ -654,6 +659,42 @@ def _reject_constant(text: str):
     raise ValueError(f"invalid literal '{text}'")
 
 
+class _RepeatedKeys:
+    """`object_pairs_hook` that keeps the last value of a repeated key, as the
+    kernel's JSON parser does, and records each repeat for an error."""
+
+    def __init__(self):
+        self.found: list[tuple[dict, str]] = []
+
+    def __call__(self, pairs) -> dict:
+        obj = {}
+        for key, value in pairs:
+            if key in obj:
+                self.found.append((obj, key))
+            obj[key] = value
+        return obj
+
+
+def _container_paths(value, path=()):
+    """The path of every object and array in `value`, by object identity."""
+    paths = {id(value): path}
+    items = value.items() if isinstance(value, dict) else enumerate(value)
+    for token, child in items:
+        if isinstance(child, (dict, list)):
+            paths.update(_container_paths(child, path + (token,)))
+    return paths
+
+
+def _repeated_key_problems(doc, found) -> list[Problem]:
+    # An object inside a dropped first definition is not in `doc`; the repeat
+    # that dropped it is reported.
+    paths = _container_paths(doc) if isinstance(doc, (dict, list)) else {}
+    return [Problem(_pointer(paths[id(obj)] + (key,)),
+                    f"object '{_pointer(paths[id(obj)])}' repeats key '{key}'",
+                    "Define each key only once in an object.")
+            for obj, key in found if id(obj) in paths]
+
+
 def validate(path: Path) -> list[Problem]:
     """Every Problem of the Manifest at `path`; an empty list if it is valid."""
     try:
@@ -663,9 +704,11 @@ def validate(path: Path) -> list[Problem]:
                         "Check the path.")]
     except UnicodeDecodeError as error:
         return [Problem("", f"invalid JSON: {error}", "Save the file as UTF-8.")]
+    repeated = _RepeatedKeys()
     try:
         doc = json.loads(text, parse_int=_parse_int, parse_float=_parse_float,
-                         parse_constant=_reject_constant)
+                         parse_constant=_reject_constant,
+                         object_pairs_hook=repeated)
     except ValueError as error:
         return [Problem("", f"invalid JSON: {error}",
                         "Write the Manifest with the sil.manifest builder.")]
@@ -675,6 +718,8 @@ def validate(path: Path) -> list[Problem]:
         return [Problem("", "invalid JSON: a string has a lone surrogate "
                             "escape", "Escape a character outside the Basic "
                                       "Multilingual Plane as a pair.")]
+    if repeated.found:
+        return _repeated_key_problems(doc, repeated.found)
     return _check_document(doc, path.absolute().parent)
 
 

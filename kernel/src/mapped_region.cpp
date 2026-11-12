@@ -1,5 +1,6 @@
 #include "mapped_region.hpp"
 
+#include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -44,9 +45,11 @@ MappedRegion MappedRegion::create(const std::string &prefix, size_t size,
   path.push_back('\0');
 
   MappedRegion region;
-  region.fd_ = mkstemp(path.data());
+  // Close on exec: a child maps the region by its path, not by this
+  // descriptor.
+  region.fd_ = mkostemp(path.data(), O_CLOEXEC);
   if (region.fd_ < 0) {
-    error = "mkstemp failed";
+    error = "mkostemp failed";
     return region;
   }
   region.path_ = path.data();

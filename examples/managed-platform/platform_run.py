@@ -53,7 +53,7 @@ def stage_inputs(run_directory: Path) -> Path:
     manifest = Manifest(duration_ns=100_000_000)
     manifest.add_schemas(SCHEMAS)
     manifest.add_channel("counts", schema="example.Count")
-    manifest.add_process("counter", command=[sys.executable, "participant.py"],
+    manifest.add_process("counter", command=[sys.executable, "./participant.py"],
                          step_period_ns=10_000_000, publishes=["counts"])
     path = manifest.write(run_directory / "manifest.json").path
     for file in (participant, path):

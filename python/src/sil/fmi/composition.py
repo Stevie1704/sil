@@ -53,9 +53,9 @@ def instance_paths(declared: Sequence[Sequence[str]]) -> dict[str, Path]:
 
     The name and the path are two arguments rather than one joined by a
     separator, because the kernel resolves and digests a command argument that
-    names a file: an FMU spelled into a larger argument would name no file, so
-    it would neither anchor to the Manifest's directory nor reach the Run's
-    provenance. The name is the group's own vocabulary, and every other
+    names a file by a path: an FMU spelled into a larger argument would name no
+    file, so it would neither anchor to the Manifest's directory nor reach the
+    Run's provenance. The name is the group's own vocabulary, and every other
     argument spells a variable of it as `<name>.<variable>`.
     """
     paths: dict[str, Path] = {}

@@ -25,6 +25,14 @@ struct RunError : std::runtime_error {
   using std::runtime_error::runtime_error;
 };
 
+// A publish that the Engine refuses because of the publisher: a wrong-size
+// Message, or a full subscriber route with policy `fail`. A Recording write
+// failure during a publish is a plain RunError, because the publisher did not
+// cause it.
+struct PublishError : RunError {
+  using RunError::RunError;
+};
+
 // A Run failure that knows which Participant failed, how and when. The runner
 // writes these facts to the failure report; the message stays the diagnostic.
 struct ParticipantRunError : RunError {

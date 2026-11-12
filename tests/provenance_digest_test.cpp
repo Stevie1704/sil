@@ -95,7 +95,7 @@ void shared_inputs_keep_their_attribution(const fs::path &directory) {
       directory,
       {native("a", "lib/libshared.so"), native("b", "lib/alias.so"),
        native("c", "lib/libshared.so"),
-       process("p", {"./tool", "data.txt"}), process("q", {"./tool"})});
+       process("p", {"./tool", "./data.txt"}), process("q", {"./tool"})});
 
   Provenance provenance = sil::initialize_provenance(manifest, "test", "", "",
                                                    sil::ProvenanceMode::Full);

@@ -55,14 +55,25 @@ class ProcessParticipant {
   // Reaps the child and releases its regions, and answers its wait status.
   // `shutdown` turns a bad status into a RunError; the destructor cannot.
   int terminate_child();
-  void send_line(const std::string &line);
   // `step_time` is absent for the initialization response and otherwise
-  // contains the virtual time of the Step request.
+  // contains the virtual time of the Step request. One deadline covers the
+  // write of the request and the read of its response.
   std::string request_response(const std::string &line,
                                std::optional<uint64_t> step_time);
+  // Writes the request; it waits for a full pipe as `wait_for` does.
+  void send_line(const std::string &line,
+                 const std::optional<Clock::time_point> &deadline,
+                 std::optional<uint64_t> step_time);
   std::string read_line(
       const std::optional<Clock::time_point> &deadline,
       std::optional<uint64_t> step_time);
+  // Waits until `fd` reports `events`, and drains the child's stderr while it
+  // waits. Throws the timeout failure at `deadline`, and a RunError when a
+  // termination signal arrives.
+  void wait_for(int fd, short events,
+                const std::optional<Clock::time_point> &deadline,
+                std::optional<uint64_t> step_time);
+  ParticipantRunError timeout_failure(std::optional<uint64_t> step_time);
   // Sends one request and parses its response line. A line that is not JSON
   // is a Step protocol violation.
   nlohmann::json exchange(const std::string &line,
@@ -150,11 +161,20 @@ class ProcessParticipant {
     std::vector<uint8_t> bytes;
   };
 
+  // Checks the answer to `init` and returns the protocol level the child
+  // announces. A line of the wrong JSON shape is a protocol failure.
+  int decode_ready(const nlohmann::json &ready);
+
   // Checks a step_done line against the Step protocol and the size guards,
   // and decodes its outputs. Publishing them is the caller's job, so a route
   // capacity failure is never reported as this Participant's protocol fault.
   std::vector<StepOutput> decode_step_done(const nlohmann::json &done,
                                            uint64_t now_ns);
+
+  // Publishes one decoded output. A PublishError (a wrong-size output or a
+  // full route with policy `fail`) keeps the `run` category but gets this
+  // Participant and its Step in the failure report.
+  void publish_output(const StepOutput &output);
 
   // Private step-scoped codec seam (issue #41), with inline and Arena as
   // adapters behind it. `encode_inputs` receives the complete input set

@@ -1059,8 +1059,8 @@ class TestRunBoundary:
         The kernel resolves a command argument that names a file against the
         Manifest's directory and digests it into the Run's provenance. It does
         that for arguments, not for text inside one, so a group's FMU paths are
-        arguments of their own: a Manifest may name them relatively, and the
-        Recording is attributable to the archives that produced it.
+        arguments of their own: a Manifest may name them relatively, with a `/`,
+        and the Recording is attributable to the archives that produced it.
         """
         models = tmp_path / "models"
         models.mkdir()

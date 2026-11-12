@@ -334,3 +334,80 @@ def test_command_files_are_digested_without_knowing_the_standard(
     assert files == {
         str(payload.resolve()): hashlib.sha256(payload.read_bytes()).hexdigest()
     }
+
+
+# A Process participant that writes its second argument into the directory the
+# first one names, then completes the Step protocol.
+RECORD_SECOND_ARGUMENT = (
+    "#!/bin/sh\n"
+    "printf '%s\\n' \"$2\" > \"$1/argument\"\n"
+)
+
+
+def write_recording_participant(directory: Path) -> Path:
+    script = directory / "participant.sh"
+    script.write_text(RECORD_SECOND_ARGUMENT + STEP_LOOP)
+    script.chmod(0o755)
+    return script
+
+
+def test_a_bare_argument_is_a_literal_even_beside_a_file_of_its_name(
+    run_sil, tmp_path
+):
+    """A bare word is never a path, so a file of its name cannot change it.
+
+    The participant receives the word as written. The side-car keeps the word
+    and digests no file for it, although a file of that name sits beside the
+    Manifest.
+    """
+    (tmp_path / "counter").write_text("beside the Manifest\n")
+    received = tmp_path / "received"
+    received.mkdir()
+    script = write_recording_participant(tmp_path)
+
+    manifest = toy_manifest(duration_ns=1)
+    manifest.add_process(
+        "consumer",
+        command=[str(script), str(received), "counter"],
+        step_period_ns=1,
+    )
+    ref = manifest.write(tmp_path / "manifest.json")
+    out = tmp_path / "out.mcap"
+
+    proc = run_sil(ref.path, out=out)
+    assert proc.returncode == 0, proc.stderr
+
+    assert (received / "argument").read_text() == "counter\n"
+    document = sidecar(out)
+    assert document["artifacts"]["process_participants"][0]["command"] == [
+        str(script), str(received), "counter"
+    ]
+    assert command_files(document) == {}
+
+
+def test_a_path_argument_with_a_slash_resolves_beside_the_manifest(
+    run_sil, tmp_path
+):
+    """A `./` path names the Manifest's file, so it is rewritten and digested."""
+    payload = tmp_path / "counter"
+    payload.write_text("beside the Manifest\n")
+    received = tmp_path / "received"
+    received.mkdir()
+    script = write_recording_participant(tmp_path)
+
+    manifest = toy_manifest(duration_ns=1)
+    manifest.add_process(
+        "consumer",
+        command=[str(script), str(received), "./counter"],
+        step_period_ns=1,
+    )
+    ref = manifest.write(tmp_path / "manifest.json")
+    out = tmp_path / "out.mcap"
+
+    proc = run_sil(ref.path, out=out)
+    assert proc.returncode == 0, proc.stderr
+
+    assert (received / "argument").read_text() == f"{payload}\n"
+    assert command_files(sidecar(out)) == {
+        str(payload.resolve()): hashlib.sha256(payload.read_bytes()).hexdigest()
+    }

@@ -37,6 +37,15 @@ One run = `sil-run manifest.json -o out.mcap`:
 Exit codes: `0` ok, `1` run/test failure, `2` Manifest error, `3` determinism
 violation (sil check).
 
+A Run does not write over its own stimulus. The runner writes the Recording
+(`-o`), the provenance record (`--provenance`) and the failure report in
+place. If one of these paths is the same file as the Recording of a Replay
+participant, the Run is a Manifest error (exit `2`). The runner compares
+files by identity, so a relative path, a symlink or a hard link to the
+Replay input also matches. The runner stops before it opens an output, so
+the Replay input stays unchanged and the Run writes no Recording, no
+provenance record and no failure report.
+
 ## Validate a Manifest
 
 `sil-run` stops at the first Manifest error. `sil manifest validate` checks a
@@ -54,6 +63,12 @@ and Schemas of a replayed Recording with the Manifest. Paths resolve against
 the Manifest directory, as in a Run. A bare Process participant command is looked up on the `PATH` of
 the check, and `sil-run` uses its own `PATH`. The check needs only the wheel,
 not `sil-run`.
+
+A key must not repeat in one object. `sil-run` stops at the first repeated
+key. The check lists every repeated key, and then it stops: it does not check
+a Manifest that has a repeated key for other errors. A repeat inside an
+earlier definition of a repeated key is not in the list, because the repeat
+of the outer key is an error already.
 
 Only a Run finds the Manifest errors that come from the code of a
 Participant or from the system: a Native library that does not load, does not
@@ -98,7 +113,8 @@ include directory, set `CFLAGS=-I<dir>`.
 Each Run that has loaded its Manifest writes a deterministic JSON record next
 to its Recording: `<recording>.provenance.json`. `--provenance PATH` selects
 another path. With `--no-recording`, the record goes next to the default
-`out.mcap` location.
+`out.mcap` location. A Run that has an output on a Replay input writes no
+record ([Run contract](#run-contract)).
 
 ### Provenance mode
 
@@ -259,8 +275,10 @@ gains only if it already has these identities.
 
 When `sil-run` has accepted its command line, a Run that ends with exit `1` or
 `2` writes a failure report next to its Recording: `<recording>.failure.json`.
-A usage error writes no report. With `--no-recording`, the report goes
-next to the default `out.mcap` location, like the provenance side-car. A
+A usage error writes no report, and an output on a Replay input
+([Run contract](#run-contract)) writes no report. With `--no-recording`, the
+report goes next to the default `out.mcap` location, like the provenance
+side-car. A
 successful Run writes no report, and it removes a report that an earlier
 failed Run left at the same path. The report adds facts to the diagnostic
 line. It does not change the exit code.
@@ -290,13 +308,13 @@ line. It does not change the exit code.
 | --- | --- |
 | `manifest` | the Run was rejected before any Participant was stepped (exit `2`) |
 | `spawn` | the runner could not create the pipes or the process for a Process participant. A command that cannot be executed exits with status `127`, and the report gives `exit` with no Step |
-| `protocol` | a Participant broke the Step protocol, for example a wrong `op` or a line that is not JSON |
+| `protocol` | a Participant broke the Step protocol, for example a wrong `op`, a line that is not JSON, or a `ready` line that is not a JSON object |
 | `timeout` | a Participant missed its response deadline (`--participant-timeout-ms`) |
 | `exit` | a Process participant exited or was killed by a signal before the runner shut it down, or exited non-zero at shutdown |
 | `guard` | a Participant exceeded a Step-protocol size guard |
 | `participant` | a Participant reported its own failure (`fail`, or a failed test assertion) |
 | `interrupted` | `sil-run` received a termination signal |
-| `run` | any other Run failure, for example a full subscriber route |
+| `run` | any other Run failure, for example a full subscriber route. When a Process participant published the Message, the report gives that Participant and its Step |
 
 The runner reads the stderr of each Process participant through a pipe. It
 writes what it reads to its own stderr unchanged, and keeps only the tail for
@@ -310,8 +328,10 @@ sil-run manifest.json --participant-timeout-ms 5000 -o out.mcap
 ```
 
 The value is a positive wall-clock duration in milliseconds. It applies
-independently to each Process participant's complete `ready` and `step_done`
-response wait. A missed deadline is a Run failure (exit 1), not a Manifest
+independently to each Process participant's complete exchange of a request and
+its `ready` or `step_done` response. The deadline starts before the runner
+writes the request, so it also bounds a write to a child that stops reading its
+stdin. A missed deadline is a Run failure (exit 1), not a Manifest
 change: the option is absent from the Manifest and its hash. Omitting it keeps
 the existing unlimited-wait behavior.
 
@@ -413,8 +433,8 @@ participant and its descendants at Run shutdown, as for a direct `sil-run`.
 When you omit the keyword, the wait stays unlimited and the Manifest hash, exit
 codes, and Recording bytes do not change.
 
-The deadline is not a bound on the whole job. It covers only the response wait
-of each Process participant. Native participants run in the runner process, so
+The deadline is not a bound on the whole job. It covers only the exchange of
+each request and response of each Process participant. Native participants run in the runner process, so
 a Native callback that does not return is not bounded by this option. Give the
 CI job its own overall timeout (for example `timeout-minutes` in GitHub
 Actions). That timeout bounds this case and all other waits.
@@ -432,9 +452,11 @@ participant command:
 The runner starts the file that it found. The provenance side-car records the
 command with the path of that file. The side-car also records the SHA-256 of
 the file after symbolic links. For a venv `python3`, that file is the base
-interpreter. The runner does not search `PATH` for the other arguments. If a
-relative argument names a file in the Manifest directory, the runner and the
-side-car use the absolute path of that file.
+interpreter. The runner does not search `PATH` for the other arguments. A later
+argument with a `/` that names a file in the Manifest directory, such as
+`./data.csv`, is replaced by the absolute path of that file, and the side-car
+records that path. A bare word, such as `data.csv`, reaches the participant
+unchanged.
 
 In `full` mode, `sil-run` digests each distinct input file once for each Run.
 Participants that name the same file, directly or through a symbolic link, share
@@ -904,7 +926,7 @@ m = Manifest(duration_ns=30_000_000, epoch_ns=1_700_000_000_000_000_000)
 m.add_channel("readings", schema="toy.Counter")
 m.add_process(
     "vecu",
-    command=[sys.executable, "vecu.py"],
+    command=[sys.executable, "./vecu.py"],
     step_period_ns=10_000_000,
     publishes=["readings"],
     shim=True,           # this participant sees virtual time; others do not

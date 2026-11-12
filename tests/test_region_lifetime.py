@@ -144,4 +144,4 @@ class TestRegionLifetime:
             env=scoped_to(tmp_path / "does-not-exist"),
         )
         assert proc.returncode == 1, proc.stderr
-        assert "participant 'sink': clock region: mkstemp failed" in proc.stderr
+        assert "participant 'sink': clock region: mkostemp failed" in proc.stderr

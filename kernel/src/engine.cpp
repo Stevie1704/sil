@@ -145,10 +145,10 @@ void Engine::publish(const std::string &owner, const std::string &channel,
                      const void *data, size_t len) {
   ChannelState &c = channel_or_fail(channel, "participant '" + owner + "'");
   if (len != c.schema->byte_size)
-    throw RunError("participant '" + owner + "' published " +
-                   std::to_string(len) + " bytes on '" + channel +
-                   "' but schema '" + c.spec->schema + "' is " +
-                   std::to_string(c.schema->byte_size) + " bytes");
+    throw PublishError("participant '" + owner + "' published " +
+                       std::to_string(len) + " bytes on '" + channel +
+                       "' but schema '" + c.spec->schema + "' is " +
+                       std::to_string(c.schema->byte_size) + " bytes");
 
   const uint8_t *p = static_cast<const uint8_t *>(data);
   counters::count(counters::Site::kCallerToKernel, len);
@@ -176,7 +176,7 @@ void Engine::publish(const std::string &owner, const std::string &channel,
       continue;
     }
     counters::route_overflow_failure(route->channel(), route->owner());
-    throw RunError(
+    throw PublishError(
         "subscriber route capacity exceeded: Channel '" + channel +
         "', publisher '" + owner + "', subscriber '" + route->owner() +
         "', configured capacity " + std::to_string(*route->capacity()) +

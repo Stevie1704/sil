@@ -20,13 +20,43 @@ reaping the children, whether the Run passes or fails. Generated directory
 names are runtime state: they are absent from the Manifest, its hash, and the
 init line.
 
+The child gets three descriptors from the runner: stdin, stdout and stderr.
+All descriptors that the runner holds while it starts a participant close on
+exec. Thus the child does not get the Recording, the pipes of other
+participants, the Arena and clock-region files, or the diagnostics outputs.
+The child opens an Arena or the clock
+region by its path.
+
 Changing directory must not strand commands written for the earlier launch
-contract. Before the fork, the kernel resolves a relative `command[0]` that
-contains a directory component, and every argument that names an existing
-relative filesystem entry, against the runner's invocation directory. A bare
-executable name still uses `PATH`. Other relative arguments stay unchanged and
-are therefore interpreted by the participant from its private directory; this
-is where a relative output path naturally creates Run-scoped state.
+contract. Before the fork, the kernel resolves each command word that names a
+path against the Manifest directory. A word names a path when it contains a
+`/`, for example `./x` or `dir/x`. The kernel always resolves `command[0]` when
+it names a path. A bare executable name uses `PATH`. A later argument is
+resolved only when it names a path and an entry of that name exists. A bare
+word is never resolved. Other relative arguments stay unchanged and are
+therefore interpreted by the participant from its private directory; this is
+where a relative output path naturally creates Run-scoped state.
+
+### Command path decision
+
+A later argument with no existing entry stays relative, so a relative output
+path is created in the participant's own directory. `command[0]` has no such
+case: a missing path there is a Manifest error. The kernel must decide which
+later arguments it changes. Three options were considered:
+
+| Option | Effect | Cost |
+| --- | --- | --- |
+| Resolve only words that name a path (chosen) | A bare word is never changed. The rule matches `command[0]`. | A Manifest that names a file beside it writes `./file`. |
+| Resolve only regular files | A directory is no longer changed. A bare word that equals a file name is still changed. | A bare Channel name or mode word that matches a file is still rewritten. |
+| Mark path arguments in the Manifest | Nothing is guessed. | The Manifest format changes. |
+
+The provenance side-car digests each regular file that a later argument names
+with a path. A directory is not digested, and a bare word is not digested.
+
+A path argument depends on the Manifest directory. Adding or removing a file
+that a path argument names changes the command. The Manifest hash does not
+cover that directory. A Manifest that names a file beside it must write
+`./file`.
 
 That resolution covers the command line, which the kernel builds. It does not
 cover the environment, which the child inherits unchanged apart from the shim
@@ -79,13 +109,16 @@ FMI diagnostic instead of turning it into a generic child-exited message.
 Only that deliberate line is a Manifest error. Any other answer to
 `init`, and a child that dies while initializing without answering at all,
 stays a run failure — a participant that breaks on the way up is not a bad
-Manifest.
+Manifest. An answer that is not a JSON object, or that has an `op`, `reason`
+or `failure` that is not a string, is a `protocol` failure (exit 1).
 
 The run boundary may be given `--participant-timeout-ms N`. When present, the
 kernel gives each Process participant an independent `N`-millisecond,
-wall-clock deadline for the complete wait for this `ready` response. The
-deadline starts with the `init` request and is not extended by receiving only a
-partial response line. A missed initialization deadline is a Run failure (exit
+wall-clock deadline for the complete exchange of `init` and `ready`. The
+deadline starts before the kernel writes the `init` request, so it covers the
+write of the request and the wait for the response. It is not extended by
+receiving only a partial response line. A missed initialization deadline is a
+Run failure (exit
 1) naming the participant and initialization phase. Without the option, the
 wait remains unlimited for compatibility.
 
@@ -127,14 +160,23 @@ protocol 2. The representation present on the line is authoritative. A child
 failure at Step time is a run failure, not a Manifest error; only a `fail`
 answering `init` is a Manifest error.
 
-The same `--participant-timeout-ms N` deadline starts anew with every `step`
-request and covers the complete wait for its `step_done` response. It is a
-wall-clock guard: partial line reads do not reset it, and it is independent of
-the Step's virtual time. A missed deadline is a Run failure (exit 1) whose
-diagnostic names the Process participant, the Step phase, and that Step's
-virtual time. The option is a run-boundary argument, not Manifest data, so it
-does not change the Manifest hash, protocol messages, or Recording bytes of a
-Run that completes before all deadlines.
+The same `--participant-timeout-ms N` deadline starts anew before the kernel
+writes every `step` request. It covers the write of the request and the
+complete wait for its `step_done` response. A `step` line can be larger than
+the pipe buffer. Then the kernel waits for space in the pipe under the same
+deadline. Thus a child that stops reading its stdin cannot hold the kernel in
+the write. The deadline is a wall-clock guard: partial line reads and partial
+writes do not reset it, and it is independent of the Step's virtual time. A
+missed deadline is a Run failure (exit 1) whose diagnostic names the Process
+participant, the Step phase, and that Step's virtual time. The kernel reports
+the same failure when it has not written the complete `step` line. The option
+is a run-boundary argument, not Manifest data, so it does not change the
+Manifest hash, protocol messages, or Recording bytes of a Run that completes
+before all deadlines.
+
+Without the option, the write and the wait have no limit. SIGINT, SIGTERM, and
+SIGHUP end the Run (exit 1), also while the kernel waits to write a `step` line
+that the child does not read.
 
 The run boundary also supplies three resource guards for every Process
 participant. Their defaults are deliberately above the payloads used by the

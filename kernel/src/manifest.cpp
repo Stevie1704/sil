@@ -12,6 +12,7 @@
 #include <set>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -95,6 +96,70 @@ void reject_unknown_keys(const json &value, const std::string &ctx,
            describe_json(it.value()) + ")");
   }
 }
+
+// Parse callback that rejects a key repeated in one object. The parser keeps
+// only the last value of a repeated key, so without this check the Manifest
+// loads and an earlier definition has no effect.
+class RepeatedKeyCheck {
+ public:
+  bool operator()(int, json::parse_event_t event, json &parsed) {
+    switch (event) {
+      case json::parse_event_t::object_start:
+        containers_.push_back({true});
+        break;
+      case json::parse_event_t::array_start:
+        containers_.push_back({false});
+        break;
+      case json::parse_event_t::key:
+        add_key(parsed.get_ref<const std::string &>());
+        break;
+      case json::parse_event_t::object_end:
+      case json::parse_event_t::array_end:
+        containers_.pop_back();
+        end_element();
+        break;
+      case json::parse_event_t::value:
+        end_element();
+        break;
+    }
+    return true;
+  }
+
+ private:
+  struct Container {
+    bool is_object;
+    std::set<std::string> keys;
+    std::string key;    // object: the key of the element being parsed
+    size_t index = 0;   // array: the index of the element being parsed
+  };
+
+  void add_key(const std::string &key) {
+    Container &object = containers_.back();
+    if (!object.keys.insert(key).second)
+      fail("object '" + innermost_object_pointer() + "' repeats key '" + key +
+           "'");
+    object.key = key;
+  }
+
+  void end_element() {
+    if (!containers_.empty() && !containers_.back().is_object)
+      ++containers_.back().index;
+  }
+
+  // RFC 6901 pointer of the innermost open container.
+  std::string innermost_object_pointer() const {
+    json::json_pointer pointer;
+    for (size_t i = 0; i + 1 < containers_.size(); ++i) {
+      if (containers_[i].is_object)
+        pointer /= containers_[i].key;
+      else
+        pointer /= containers_[i].index;
+    }
+    return pointer.to_string();
+  }
+
+  std::vector<Container> containers_;
+};
 
 template <typename T>
 std::string integer_range() {
@@ -637,7 +702,7 @@ Manifest load_manifest(const std::filesystem::path &path) {
 
     json doc;
     try {
-      doc = json::parse(bytes);
+      doc = json::parse(bytes, RepeatedKeyCheck());
     } catch (const json::exception &e) {
       fail(std::string("invalid JSON: ") + e.what());
     }

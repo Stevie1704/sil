@@ -119,8 +119,9 @@ behind it.
   never from both — one source per input.
 - One process now holds several FMU instances, so a failure has to close all of
   them. It does, on the initialization path and on the Step path alike.
-- Each FMU's path is its own command argument, so the kernel resolves it
-  against the Manifest's directory and digests it into the Run's provenance —
+- Each FMU's path is its own command argument. A path with a `/` resolves
+  against the Manifest's directory (see `docs/step-protocol.md`), and the
+  kernel digests it into the Run's provenance —
   the rule that already covers a single FMU's path, and one a `name=path`
   spelling would have silently lost.
 - The kernel contract is unchanged. Nothing here asked for a new Channel
