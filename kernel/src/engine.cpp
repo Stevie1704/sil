@@ -159,7 +159,6 @@ void Engine::publish(const std::string &owner, const std::string &channel,
   if (verdict.suppressed) return;
   msg.publish_ns = verdict.visible_ns;
   if (recorder_) {
-    counters::count(counters::Site::kRecorded, msg.bytes.size());
     recorder_->record(c.index, msg.publish_ns, c.next_seq, msg.bytes.data(),
                       msg.bytes.size());
   }

@@ -28,6 +28,7 @@ _INTERCEPTOR_KINDS = {"drop", "drop_nth", "delay", "override"}
 # JSON step line; "shm" hands megabyte-class payloads across the kernel↔process
 # boundary through a per-channel arena, skipping base64/JSON.
 _TRANSPORTS = {"inline", "shm"}
+RECORD_MODES = ("full", "digest", "off")
 _OVERFLOW_POLICIES = {"fail", "drop_newest"}
 _SIZE_MAX = sys.maxsize * 2 + 1
 # An override-validation limit, independent of integer widths: binary32 has
@@ -243,7 +244,13 @@ class Manifest:
         latency_ns: int | None = None,
         transport: str = "inline",
         slots: int | None = None,
+        record: str = "full",
     ) -> None:
+        """Declare a Channel.
+
+        `record` sets what the Recording stores for each Message: "full"
+        (default) the payload, "digest" its SHA-256, "off" nothing. See
+        docs/running.md#record-modes."""
         name = _string(name, "channel name")
         schema = _string(schema, f"channel {name!r} schema")
         if name in self._channels:
@@ -276,6 +283,11 @@ class Manifest:
             raise ManifestError(
                 f"channel {name!r}: slots is only valid with shm transport"
             )
+        if record not in RECORD_MODES:
+            raise ManifestError(
+                f"channel {name!r}: unknown record mode {record!r} "
+                f"(expected one of {list(RECORD_MODES)})"
+            )
         entry: dict = {"schema": schema}
         if latency_ns is not None:
             entry["latency_ns"] = latency_ns
@@ -284,6 +296,9 @@ class Manifest:
         if transport != "inline":
             entry["transport"] = transport
             entry["slots"] = slots
+        # Full is the default; omit it so the Manifest keeps its bytes.
+        if record != "full":
+            entry["record"] = record
         self._channels[name] = entry
 
     def add_interceptor(

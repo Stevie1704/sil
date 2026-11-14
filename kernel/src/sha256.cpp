@@ -45,7 +45,7 @@ void Sha256::update(const void *data, size_t len) {
     backend_failure("digest update");
 }
 
-std::string Sha256::hex_digest() {
+std::array<unsigned char, 32> Sha256::digest() {
   if (finished_) throw std::logic_error("SHA-256 digest already ended");
   std::array<unsigned char, 32> bytes{};
   unsigned int written = 0;
@@ -53,7 +53,11 @@ std::string Sha256::hex_digest() {
       written != bytes.size())
     backend_failure("digest end");
   finished_ = true;
+  return bytes;
+}
 
+std::string Sha256::hex_digest() {
+  const std::array<unsigned char, 32> bytes = digest();
   static constexpr char hex[] = "0123456789abcdef";
   std::string out;
   out.reserve(bytes.size() * 2);
@@ -68,6 +72,12 @@ std::string sha256_hex(const std::string &bytes) {
   Sha256 hash;
   hash.update(bytes.data(), bytes.size());
   return hash.hex_digest();
+}
+
+std::array<unsigned char, 32> sha256_digest(const void *data, size_t len) {
+  Sha256 hash;
+  hash.update(data, len);
+  return hash.digest();
 }
 
 }  // namespace sil

@@ -744,7 +744,7 @@ Manifest load_manifest(const std::filesystem::path &path) {
       const std::string ctx = "channel '" + name + "'";
       reject_unknown_keys(js, ctx,
                           {"schema", "latency_ns", "transport", "slots",
-                           "interceptors"});
+                           "record", "interceptors"});
       ChannelSpec c;
       c.name = name;
       c.schema = required<std::string>(js, "schema", ctx);
@@ -773,6 +773,20 @@ Manifest load_manifest(const std::filesystem::path &path) {
         c.slots = extract<size_t>(*slots, ctx + " key 'slots'");
         if (c.slots == 0)
           type_error(*slots, ctx + " key 'slots'", "a positive integer");
+      }
+      // Full is the default (and omitted from the canonical doc).
+      if (const json *record = find_value(js, "record", ctx)) {
+        const std::string mode =
+            extract<std::string>(*record, ctx + " key 'record'");
+        if (mode == "full")
+          c.record = RecordMode::Full;
+        else if (mode == "digest")
+          c.record = RecordMode::Digest;
+        else if (mode == "off")
+          c.record = RecordMode::Off;
+        else
+          fail(ctx + ": unknown record mode '" + mode +
+               "' (expected 'full', 'digest' or 'off')");
       }
       if (schema_it->second.byte_size >
           std::numeric_limits<size_t>::max() / c.slots)
