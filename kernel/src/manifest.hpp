@@ -76,6 +76,11 @@ enum class OverflowPolicy { Fail, DropNewest };
 // Off stores no Message but still declares the Channel. Absent means Full.
 enum class RecordMode { Full, Digest, Off };
 
+// The Manifest and Recording spelling of a mode: "full", "digest" or "off".
+const char *record_mode_name(RecordMode mode);
+// The mode a spelling names, or nothing for an unknown one.
+std::optional<RecordMode> parse_record_mode(const std::string &name);
+
 struct SubscriberRouteSpec {
   std::string channel;
   std::optional<size_t> capacity;

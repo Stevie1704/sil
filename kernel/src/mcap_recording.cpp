@@ -165,7 +165,8 @@ McapRecorder::McapRecorder(const std::filesystem::path &out,
         digest_schema_id = schema.id;
       }
       schema_id = *digest_schema_id;
-      metadata = {{kRecordModeKey, "digest"}, {kRecordSchemaKey, c.schema}};
+      metadata = {{kRecordModeKey, record_mode_name(c.record)},
+                  {kRecordSchemaKey, c.schema}};
     } else {
       auto it = schema_ids.find(c.schema);
       if (it == schema_ids.end()) {
@@ -175,7 +176,8 @@ McapRecorder::McapRecorder(const std::filesystem::path &out,
         it = schema_ids.emplace(c.schema, schema.id).first;
       }
       schema_id = it->second;
-      if (c.record == RecordMode::Off) metadata = {{kRecordModeKey, "off"}};
+      if (c.record == RecordMode::Off)
+        metadata = {{kRecordModeKey, record_mode_name(c.record)}};
     }
     mcap::Channel channel(c.name, "sil_pod", schema_id, metadata);
     writer_->addChannel(channel);
@@ -314,7 +316,9 @@ class McapRecordingReader : public RecordingReader {
           {channel->topic, rs->name,
            std::string(reinterpret_cast<const char *>(rs->data.data()),
                        rs->data.size()),
-           mode == channel->metadata.end() ? "full" : mode->second});
+           mode == channel->metadata.end()
+               ? std::optional<RecordMode>(RecordMode::Full)
+               : parse_record_mode(mode->second)});
     }
 
     view_.emplace(reader_.readMessages(

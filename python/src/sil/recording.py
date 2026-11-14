@@ -31,6 +31,12 @@ RECORD_MODE_KEY = "sil_record"
 RECORD_SCHEMA_KEY = "sil_schema"
 
 
+def record_mode(channel_metadata: dict[str, str]) -> str:
+    """The record mode of an MCAP Channel from its metadata: "full" when the
+    Channel has no `sil_record` key."""
+    return channel_metadata.get(RECORD_MODE_KEY, "full")
+
+
 class RecordedChannel(NamedTuple):
     """A Channel the Recording declares, with its Schema.
 
@@ -99,7 +105,7 @@ def read_channels(path: str | Path) -> list[RecordedChannel]:
         schema = summary.schemas[channel.schema_id]
         channels.append(RecordedChannel(
             channel.topic, schema.name, json.loads(schema.data),
-            channel.metadata.get(RECORD_MODE_KEY, "full"),
+            record_mode(channel.metadata),
             channel.metadata.get(RECORD_SCHEMA_KEY, schema.name)))
     return channels
 
