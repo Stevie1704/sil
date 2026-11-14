@@ -24,6 +24,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from sil.recording import read_channels
 from sil.recording_diff import first_difference
 
 EXIT_USAGE = 2
@@ -67,12 +68,31 @@ def check(runner: Path, manifest: Path, out=sys.stdout, err=sys.stderr,
         hashes = [file_sha256(path) for path in recordings]
         difference = (None if hashes[0] == hashes[1]
                       else first_difference(*recordings))
+        modes = _record_modes(recordings[0])
 
     # Only kept Recordings outlive the check, so only they are named.
     kept = recordings if keep is not None else [None, None]
-    report = _report(manifest, hashes, kept, difference)
+    report = _report(manifest, hashes, kept, difference, modes)
     _write(report, out, err, as_json=as_json)
     return EXIT_VIOLATION if difference is not None else 0
+
+
+def _record_modes(recording: Path) -> dict[str, list[str]] | None:
+    """The Channels whose Messages the Recording stores without payload, by
+    record mode (#398), or None if the Recording cannot be read. The check
+    compares the Recording bytes, so it compares only the SHA-256 of a digest
+    Channel and nothing of an off Channel."""
+    from mcap.exceptions import McapError
+
+    try:
+        channels = read_channels(recording)
+    except (OSError, ValueError, KeyError, McapError):
+        return None
+    modes: dict[str, list[str]] = {"digest": [], "off": []}
+    for channel in channels:
+        if channel.record in modes:
+            modes[channel.record].append(channel.name)
+    return modes
 
 
 def _write(report: dict, out, err, *, as_json: bool) -> None:
@@ -85,9 +105,23 @@ def _write(report: dict, out, err, *, as_json: bool) -> None:
             "DETERMINISM VIOLATION: two runs of the same manifest produced "
             f"different recordings\n  run 1: {run1}\n  run 2: {run2}\n"
             f"  first difference: {report['first_difference']['detail']}\n"
+            + _scope_lines(report["record_modes"])
         )
     else:
-        out.write(f"deterministic: {report['runs'][0]['sha256']}\n")
+        out.write(f"deterministic: {report['runs'][0]['sha256']}\n"
+                  + _scope_lines(report["record_modes"]))
+
+
+def _scope_lines(modes: dict[str, list[str]] | None) -> str:
+    lines = ""
+    if modes is None:
+        return lines
+    if modes["digest"]:
+        lines += ("  digest only (payload not compared, only its SHA-256): "
+                  + ", ".join(modes["digest"]) + "\n")
+    if modes["off"]:
+        lines += "  not recorded (not compared): " + ", ".join(modes["off"]) + "\n"
+    return lines
 
 
 def _workdir(keep: Path | None):
@@ -105,7 +139,8 @@ def _run_line(run: dict) -> str:
 
 
 def _report(manifest: Path, hashes: list[str], kept: list[Path | None],
-            difference: dict | None) -> dict:
+            difference: dict | None, modes: dict[str, list[str]] | None
+            ) -> dict:
     return {
         "sil_check_report": REPORT_VERSION,
         "verdict": VIOLATION if difference is not None else DETERMINISTIC,
@@ -114,6 +149,7 @@ def _report(manifest: Path, hashes: list[str], kept: list[Path | None],
                   "recording": None if path is None else str(path)}
                  for sha256, path in zip(hashes, kept)],
         "first_difference": difference,
+        "record_modes": modes,
     }
 
 

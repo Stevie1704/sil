@@ -630,6 +630,12 @@ def _check_recording(c: _Checker, recording: str, digest: str, path,
             c.add(where, f"channel '{name}' not present in recording",
                   "Replay only Channels that the Recording has: "
                   + ", ".join(sorted(recorded)) + ".")
+        elif not recorded[name].has_payload:
+            c.add(where, f"channel '{name}' is recorded with record mode "
+                         f"'{recorded[name].record}': the Recording has no "
+                         "payload to replay",
+                  "Replay a Recording of a Run that declared the Channel "
+                  "with record mode 'full'.")
         elif channel.schema_doc is not None and (
                 recorded[name].schema_name != channel.schema
                 or recorded[name].schema != channel.schema_doc):

@@ -330,8 +330,15 @@ def _prepare_selection(path: Path, request: _Request) -> _Selection:
     declared = {c.name: c for c in channels}
     if request.channel not in declared:
         raise QueryError(f"unknown Channel {request.channel!r}")
-    spec = declared[request.channel].schema
-    fields, size = _fields(spec, request.fields)
+    channel = declared[request.channel]
+    spec = channel.schema
+    try:
+        fields, size = _fields(spec, request.fields)
+    except QueryError as e:
+        if channel.record != "digest":
+            raise
+        # The stored Schema is the digest, not the Manifest Schema (#398).
+        raise QueryError(f"digest Channel, only 'sha256': {e}") from e
     if request.mode == "summary" and any(f.count is not None for f in fields):
         raise QueryError("summaries require scalar fields or explicit array elements")
     predicate = None

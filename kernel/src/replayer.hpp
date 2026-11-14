@@ -42,7 +42,8 @@ class Replayer {
   void publish_due(uint64_t now_ns);
 
  private:
-  // Rejects a selected channel that is missing from the recording or whose
+  // Rejects a selected channel that is missing from the recording, that the
+  // recording stores without payload (record mode digest or off), or whose
   // recorded schema differs from the manifest's.
   void validate_channels(const RecordingReader &reader, const ReplaySpec &spec,
                          const std::filesystem::path &path,

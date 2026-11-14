@@ -309,10 +309,12 @@ class McapRecordingReader : public RecordingReader {
       if (!rs)
         throw RecordingError("channel '" + channel->topic +
                              "' has no schema in recording");
+      const auto mode = channel->metadata.find(kRecordModeKey);
       schemas_.push_back(
           {channel->topic, rs->name,
            std::string(reinterpret_cast<const char *>(rs->data.data()),
-                       rs->data.size())});
+                       rs->data.size()),
+           mode == channel->metadata.end() ? "full" : mode->second});
     }
 
     view_.emplace(reader_.readMessages(

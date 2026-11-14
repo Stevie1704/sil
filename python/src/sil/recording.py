@@ -25,12 +25,31 @@ class UnknownRecordingFormat(ValueError):
     """Raised for a recording path whose extension names no known format."""
 
 
+# The Channel metadata that a Run writes for a Channel whose record mode is
+# not full (#398). A full Channel has no such metadata.
+RECORD_MODE_KEY = "sil_record"
+RECORD_SCHEMA_KEY = "sil_schema"
+
+
 class RecordedChannel(NamedTuple):
-    """A Channel the Recording declares, with its Schema."""
+    """A Channel the Recording declares, with its Schema.
+
+    `record` is the Channel's record mode: "full", "digest" or "off". The
+    Schema is the one its Messages are stored with: for a digest Channel,
+    `sil.Sha256Digest` (one u8[32] field `sha256`); `source_schema` is then
+    the Manifest Schema of the payload that was digested. For a full or off
+    Channel, `source_schema` equals `schema_name`."""
 
     name: str
     schema_name: str
     schema: dict
+    record: str = "full"
+    source_schema: str = ""
+
+    @property
+    def has_payload(self) -> bool:
+        """True if the Messages store the payload: the record mode is full."""
+        return self.record == "full"
 
 
 def read_records(path: str | Path, *, channels: Collection[str] | None = None,
@@ -78,8 +97,10 @@ def read_channels(path: str | Path) -> list[RecordedChannel]:
     channels = []
     for channel in summary.channels.values():
         schema = summary.schemas[channel.schema_id]
-        channels.append(RecordedChannel(channel.topic, schema.name,
-                                        json.loads(schema.data)))
+        channels.append(RecordedChannel(
+            channel.topic, schema.name, json.loads(schema.data),
+            channel.metadata.get(RECORD_MODE_KEY, "full"),
+            channel.metadata.get(RECORD_SCHEMA_KEY, schema.name)))
     return channels
 
 

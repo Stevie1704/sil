@@ -37,10 +37,12 @@ def test_channels_lists_each_channel_with_its_schema_count_and_times(acc, capsys
     assert report["manifest_hash"] == acc.manifest_hash
     by_name = {c["channel"]: c for c in report["channels"]}
     assert by_name["acc.Sensing"] == {
-        "channel": "acc.Sensing", "schema": "acc.Sensing", "messages": STEPS,
+        "channel": "acc.Sensing", "schema": "acc.Sensing", "record": "full",
+        "source_schema": "acc.Sensing", "messages": STEPS,
         "first_t_ns": 0, "last_t_ns": (STEPS - 1) * STEP_NS}
     assert by_name["acc.Command"] == {
-        "channel": "acc.Command", "schema": "acc.Command", "messages": STEPS - 1,
+        "channel": "acc.Command", "schema": "acc.Command", "record": "full",
+        "source_schema": "acc.Command", "messages": STEPS - 1,
         "first_t_ns": STEP_NS, "last_t_ns": (STEPS - 1) * STEP_NS}
 
 
@@ -140,8 +142,8 @@ def test_channels_of_a_recording_no_run_wrote_has_no_manifest_hash(
 
     assert code == 0
     assert out == ("manifest_hash none\n"
-                   "CHANNEL    SCHEMA     MESSAGES  FIRST_T_NS  LAST_T_NS\n"
-                   "bus.Frame  bus.Frame  1         7           7\n")
+                   "CHANNEL    SCHEMA     RECORD  MESSAGES  FIRST_T_NS  LAST_T_NS\n"
+                   "bus.Frame  bus.Frame  full    1         7           7\n")
 
 
 @pytest.mark.parametrize("option", [["--from", "-1"], ["--to", "x"],
@@ -174,7 +176,8 @@ def test_a_channel_without_messages_has_no_times(tmp_path, capsys):
 
     assert code == 0
     assert json.loads(out)["channels"][1] == {
-        "channel": "bus.Idle", "schema": "bus.Idle", "messages": 0,
+        "channel": "bus.Idle", "schema": "bus.Idle", "record": "full",
+        "source_schema": "bus.Idle", "messages": 0,
         "first_t_ns": None, "last_t_ns": None}
 
 
@@ -202,7 +205,8 @@ def test_channels_reports_the_earliest_and_latest_time_of_an_unsorted_channel(
 
     assert code == 0
     assert json.loads(out)["channels"] == [{
-        "channel": "bus.Frame", "schema": "bus.Frame", "messages": 3,
+        "channel": "bus.Frame", "schema": "bus.Frame", "record": "full",
+        "source_schema": "bus.Frame", "messages": 3,
         "first_t_ns": 10, "last_t_ns": 30}]
     # show keeps the stored order.
     assert sil(capsys, "show", str(recording))[1] == (

@@ -132,3 +132,197 @@ def test_the_kernel_refuses_an_unknown_record_mode(sil_run, tmp_path, value):
 
     assert proc.returncode == 2
     assert "channel 'ticks'" in proc.stderr and "record" in proc.stderr
+
+
+def replay_manifest(recording, channels=("ticks",)):
+    m = toy_manifest(duration_ns=DURATION_NS)
+    for channel in channels:
+        m.add_channel(channel, schema="toy.Counter")
+    m.add_replay("replay", recording=recording, channels=list(channels))
+    return m
+
+
+@pytest.mark.parametrize("mode", ["digest", "off"])
+def test_replay_refuses_a_channel_recorded_without_payload(
+        sil_run, tmp_path, recordings, mode):
+    ref = replay_manifest(recordings[mode]).write(tmp_path / "replay.json")
+
+    proc = run_manifest(sil_run, ref.path, tmp_path / "replay.mcap")
+
+    assert proc.returncode == 2
+    assert (f"channel 'ticks' is recorded with record mode '{mode}'"
+            in proc.stderr)
+
+
+def test_replay_takes_a_full_channel_from_a_recording_with_a_digest_channel(
+        sil_run, tmp_path, recordings):
+    ref = replay_manifest(recordings["digest"], channels=("echo",)).write(
+        tmp_path / "replay.json")
+
+    proc = run_manifest(sil_run, ref.path, tmp_path / "replay.mcap")
+
+    assert proc.returncode == 0, proc.stderr
+
+
+@pytest.mark.parametrize("mode", ["digest", "off"])
+def test_validate_refuses_a_replay_of_a_channel_without_payload(
+        tmp_path, recordings, mode):
+    from sil.manifest_validate import validate
+
+    ref = replay_manifest(recordings[mode]).write(tmp_path / "replay.json")
+
+    problems = validate(ref.path)
+
+    assert [(p.path, p.message) for p in problems] == [
+        ("/participants/replay/channels/0",
+         f"channel 'ticks' is recorded with record mode '{mode}': the "
+         "Recording has no payload to replay")]
+
+
+@pytest.mark.parametrize("mode", ["digest", "off"])
+def test_a_replay_window_refuses_a_channel_without_payload(
+        tmp_path, recordings, mode):
+    from sil.replay_window import WindowError, prepare
+
+    doc = tmp_path / "window.json"
+    doc.write_text(json.dumps({
+        "sil_replay_window": 1, "source_origin_ns": 0, "replay_start_ns": 0,
+        "evaluation_start_ns": TICK_NS, "end_ns": DURATION_NS,
+        "channels": ["ticks"]}))
+
+    with pytest.raises(WindowError, match=(
+            f"channel 'ticks' is recorded with record mode '{mode}'")):
+        prepare(doc, recordings[mode], tmp_path / "window.mcap")
+    assert not (tmp_path / "window.mcap").exists()
+
+
+def check(sil_run, manifest_path, *argv):
+    import subprocess
+
+    return subprocess.run(
+        [sys.executable, "-m", "sil.check", "--runner", str(sil_run),
+         str(manifest_path), *argv],
+        capture_output=True, text=True)
+
+
+def test_check_names_the_channels_recorded_without_payload(sil_run, tmp_path):
+    m = producer_manifest("digest")
+    m.add_channel("debug", schema="toy.Counter", record="off")
+    ref = m.write(tmp_path / "check.json")
+
+    proc = check(sil_run, ref.path, "--json")
+
+    assert proc.returncode == 0, proc.stderr
+    report = json.loads(proc.stdout)
+    assert report["verdict"] == "deterministic"
+    assert report["record_modes"] == {"digest": ["ticks"], "off": ["debug"]}
+    text = check(sil_run, ref.path)
+    assert text.returncode == 0, text.stderr
+    assert text.stdout.splitlines()[1:] == [
+        "  digest only (payload not compared, only its SHA-256): ticks",
+        "  not recorded (not compared): debug"]
+
+
+def test_check_report_of_a_full_recording_names_no_channel(sil_run, tmp_path):
+    ref = producer_manifest(None).write(tmp_path / "check.json")
+
+    proc = check(sil_run, ref.path, "--json")
+
+    assert proc.returncode == 0, proc.stderr
+    assert json.loads(proc.stdout)["record_modes"] == {"digest": [], "off": []}
+    assert len(check(sil_run, ref.path).stdout.splitlines()) == 1
+
+
+def test_check_finds_a_changed_payload_of_a_digest_channel(sil_run, tmp_path):
+    m = toy_manifest(duration_ns=DURATION_NS)
+    m.add_channel("echo", schema="toy.Counter", record="digest")
+    m.add_process(
+        "noisy",
+        command=[sys.executable,
+                 str(ROOT / "tests" / "participants" / "nondet.py")],
+        step_period_ns=TICK_NS,
+        publishes=["echo"],
+    )
+    ref = m.write(tmp_path / "nondet.json")
+
+    proc = check(sil_run, ref.path, "--json")
+
+    assert proc.returncode == 3
+    report = json.loads(proc.stdout)
+    assert report["verdict"] == "violation"
+    assert report["first_difference"]["kind"] == "message"
+    assert report["first_difference"]["channel"] == "echo"
+    assert report["record_modes"] == {"digest": ["echo"], "off": []}
+
+
+def sil(capsys, *argv):
+    from sil import cli
+
+    code = cli.main(list(argv))
+    out, err = capsys.readouterr()
+    return code, out, err
+
+
+def test_recording_channels_states_the_record_mode_of_each_channel(
+        capsys, recordings):
+    code, out, _ = sil(capsys, "recording", "channels",
+                       str(recordings["digest"]), "--json")
+
+    assert code == 0
+    rows = {row["channel"]: row for row in json.loads(out)["channels"]}
+    assert rows["ticks"] == {
+        "channel": "ticks", "schema": "sil.Sha256Digest", "record": "digest",
+        "source_schema": "toy.Counter", "messages": 5, "first_t_ns": 0,
+        "last_t_ns": 4 * TICK_NS}
+    assert rows["echo"]["record"] == "full"
+    assert rows["echo"]["source_schema"] == "toy.Counter"
+
+    code, out, _ = sil(capsys, "recording", "channels",
+                       str(recordings["off"]), "--json")
+    rows = {row["channel"]: row for row in json.loads(out)["channels"]}
+    assert rows["ticks"] == {
+        "channel": "ticks", "schema": "toy.Counter", "record": "off",
+        "source_schema": "toy.Counter", "messages": 0, "first_t_ns": None,
+        "last_t_ns": None}
+
+
+def test_recording_show_prints_the_digest_of_a_digest_channel(
+        capsys, recordings):
+    _, _, full = mcap(recordings["full"])
+    expected = [{"channel": "ticks", "t_ns": t,
+                 "fields": {"sha256": hashlib.sha256(data).hexdigest()}}
+                for topic, t, data in full if topic == "ticks"]
+
+    code, out, _ = sil(capsys, "recording", "show", str(recordings["digest"]),
+                       "--channel", "ticks", "--json")
+
+    assert code == 0
+    assert [json.loads(line) for line in out.splitlines()] == expected
+
+
+def test_recording_query_names_the_digest_when_a_payload_field_is_asked(
+        capsys, recordings):
+    code, out, err = sil(capsys, "recording", "query",
+                         str(recordings["digest"]), "--channel", "ticks",
+                         "--field", "value")
+
+    assert code == 2
+    assert json.loads(out)["error"] == (
+        "digest Channel, only 'sha256': unknown or invalid field 'value'")
+    assert "unknown or invalid field 'value'" in err
+
+
+def test_run_simulation_gives_the_digest_fields_of_a_digest_channel(
+        sil_run, tmp_path, recordings):
+    from sil.testing import run_simulation
+
+    _, _, full = mcap(recordings["full"])
+    result = run_simulation(producer_manifest("digest"), runner=sil_run,
+                            workdir=tmp_path)
+
+    assert result.messages("ticks") == [
+        (t, {"sha256": hashlib.sha256(data).digest()})
+        for topic, t, data in full if topic == "ticks"]
+    assert result.messages("echo") == [
+        (t, {"seq": t // TICK_NS, "value": -(t // TICK_NS)})
+        for topic, t, _ in full if topic == "echo"]

@@ -23,10 +23,13 @@ class RecordingReader {
  public:
   // One recorded channel's schema, as the recorder embedded it: the schema
   // name and its canonical JSON bytes, compared verbatim against the manifest.
+  // record_mode is the Channel's stored record mode ("full", "digest" or
+  // "off"); only a full Channel has payloads to replay.
   struct ChannelSchema {
     std::string channel;
     std::string schema_name;
     std::string canonical_json;
+    std::string record_mode;
   };
 
   // A view into the reader's current record: valid until advance().
