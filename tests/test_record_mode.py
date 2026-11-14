@@ -401,3 +401,30 @@ def test_compare_fails_on_an_off_channel(capsys, tmp_path, recordings):
     assert report["coverage"] == []
     assert report["channels"]["ticks"]["missing_actual"] == 5
 
+
+
+@pytest.mark.parametrize("mode", ["full", "digest", "off"])
+def test_validate_accepts_each_record_mode(capsys, tmp_path, mode):
+    doc = producer_manifest(None).to_doc()
+    doc["channels"]["ticks"]["record"] = mode
+    path = tmp_path / "manifest.json"
+    path.write_text(json.dumps(doc))
+
+    code, out, _ = sil(capsys, "manifest", "validate", str(path), "--json")
+
+    assert code == 0, out
+    assert json.loads(out)["errors"] == []
+
+
+@pytest.mark.parametrize("value", ["none", 1, None])
+def test_validate_refuses_an_unknown_record_mode(capsys, tmp_path, value):
+    doc = producer_manifest(None).to_doc()
+    doc["channels"]["ticks"]["record"] = value
+    path = tmp_path / "manifest.json"
+    path.write_text(json.dumps(doc))
+
+    code, out, _ = sil(capsys, "manifest", "validate", str(path), "--json")
+
+    assert code == 2
+    assert [p["path"] for p in json.loads(out)["errors"]] == [
+        "/channels/ticks/record"]

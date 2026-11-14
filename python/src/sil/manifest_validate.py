@@ -46,7 +46,7 @@ from ._schema_types import INT_RANGES, SIZES
 # The builder and this check share the closed sets of the Manifest format.
 from .manifest import (_FLOAT32_MAX, _INTERCEPTOR_KINDS, _OVERFLOW_POLICIES,
                        _SLEEP_POLICIES, _THREAD_POLICIES, _TRANSPORTS,
-                       MANIFEST_VERSION)
+                       MANIFEST_VERSION, RECORD_MODES)
 from .recording import read_channels
 
 _pointer = manifest_json.pointer
@@ -61,7 +61,8 @@ _DEFAULT_PATH = "/usr/local/bin:/usr/bin:/bin"  # the kernel's, for an empty PAT
 
 _TOP_KEYS = ("sil_manifest", "duration_ns", "epoch_ns", "schemas", "channels",
              "participants")
-_CHANNEL_KEYS = ("schema", "latency_ns", "transport", "slots", "interceptors")
+_CHANNEL_KEYS = ("schema", "latency_ns", "transport", "slots", "record",
+                 "interceptors")
 _INTERCEPTOR_KEYS = ("kind", "start_ns", "end_ns", "delay_ns", "n", "field",
                      "value")
 _SHIM_KEYS = ("shim", "sleep", "threads")
@@ -298,6 +299,9 @@ def _check_channel(c: _Checker, channel, path, schema_docs,
                 _byte_size(fields) > _SIZE[1] // slots):
             c.add(path + ("slots",), "Arena byte size overflows size_t",
                   "Use fewer slots.")
+    if "record" in channel:
+        c.choice(channel["record"], path + ("record",), RECORD_MODES,
+                 "record mode")
     if "interceptors" in channel:
         interceptors = c.array(channel["interceptors"], path + ("interceptors",))
         for index, interceptor in enumerate(interceptors or []):
