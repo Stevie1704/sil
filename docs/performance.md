@@ -81,6 +81,11 @@ them.
 [docs/bench/recording-digest.md](bench/recording-digest.md) shows where the
 Recording digest cost goes since it is calculated while the Run writes.
 
+[docs/bench/record-mode-digest.md](bench/record-mode-digest.md) measures a
+camera frame with [record mode](running.md#record-modes) `digest` against
+`full` and against no Recording. The `make bench` rows ending in
+`-recon-digest` repeat it.
+
 [docs/bench/provenance-qualification.md](bench/provenance-qualification.md)
 attributes the backend, the input reuse, the Recording digest and the provenance
 mode, for Runs and for `sil profile`, with its limitations.

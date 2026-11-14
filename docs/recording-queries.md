@@ -23,6 +23,12 @@ this limit at 90 ms. Its nearby radar inputs include a Message published at
 does not establish their cause. `show --json` retains its existing per-Message
 format. `query` always prints JSON, including refusals.
 
+A Channel with [record mode](running.md#record-modes) `digest` stores only
+the SHA-256 of each payload, so its one field is `sha256` (a `u8[32]` array,
+in hex). A query of another field of it is refused (exit `2`), with an error
+that starts with `digest Channel, only 'sha256'`. A Channel with record mode
+`off` has no Messages: a query of it is complete with no results.
+
 ## Selection and predicates
 
 Select exactly one declared Channel with `--channel`, and one or more fields

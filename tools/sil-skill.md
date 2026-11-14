@@ -23,6 +23,9 @@ which further measurement, if any, would answer the user's question.
    `examples/...` files, get them with `sil examples --dir examples`:
    `sil docs examples`.
 2. **Author** the Manifest: `sil docs getting-started`, `sil docs fmu-coupling`.
+   For each Channel, set what the Recording stores (`record="full"`,
+   `"digest"` or `"off"`): `sil docs agent-guide`, section "Choose what the
+   Recording stores".
 3. **Run** it into a Recording: `sil docs running`, `sil docs container`.
    A failed Run writes `<recording>.failure.json`: `sil docs running`.
 4. **Check** the Recording: `sil docs comparison`, `sil docs regression-bundles`.

@@ -326,3 +326,78 @@ def test_run_simulation_gives_the_digest_fields_of_a_digest_channel(
     assert result.messages("echo") == [
         (t, {"seq": t // TICK_NS, "value": -(t // TICK_NS)})
         for topic, t, _ in full if topic == "echo"]
+
+
+def contract(tmp_path, *fields: str):
+    path = tmp_path / f"contract-{'-'.join(fields)}.json"
+    path.write_text(json.dumps({
+        "sil_comparison": 1,
+        "evaluation": {"from_ns": 0, "to_ns": DURATION_NS},
+        "channels": {"ticks": {
+            "actual_offset_ns": 0, "reference_offset_ns": 0,
+            "observations": {"start_ns": 0, "stop_ns": 4 * TICK_NS,
+                             "step_ns": TICK_NS},
+            "fields": {field: "exact" for field in fields}}}}))
+    return path
+
+
+def test_compare_checks_the_digests_of_two_digest_recordings(
+        capsys, tmp_path, recordings, sil_run):
+    again = run(sil_run, producer_manifest("digest"), tmp_path / "again.mcap")
+
+    code, out, err = sil(capsys, "compare", str(contract(tmp_path, "sha256")),
+                         str(recordings["digest"]), str(again), "--json")
+
+    assert code == 0, err
+    assert json.loads(out)["verdict"] == "pass"
+
+
+def test_compare_fails_on_a_payload_field_of_a_digest_channel(
+        capsys, tmp_path, recordings):
+    code, out, _ = sil(capsys, "compare", str(contract(tmp_path, "value")),
+                       str(recordings["digest"]), str(recordings["digest"]),
+                       "--json")
+
+    assert code == 1
+    report = json.loads(out)
+    assert report["verdict"] == "fail"
+    assert "names field 'value', which its schema does not declare" in out
+
+
+def test_query_of_an_off_channel_is_complete_with_no_result(
+        capsys, recordings):
+    code, out, _ = sil(capsys, "recording", "query", str(recordings["off"]),
+                       "--channel", "ticks", "--field", "value")
+
+    assert code == 0
+    report = json.loads(out)
+    assert report["status"] == "complete" and report["results"] == []
+
+
+@pytest.mark.parametrize("mode", ["digest", "off"])
+def test_export_writes_a_digest_or_off_channel(
+        capsys, tmp_path, recordings, mode):
+    out_path = tmp_path / "export.mcap"
+    code, _, err = sil(capsys, "recording", "export", str(recordings[mode]),
+                       "--profile", "visualization-json", "-o",
+                       str(out_path))
+
+    assert code == 0, err
+    channels, _, messages = mcap(out_path)
+    assert "ticks" in channels
+    assert len([m for m in messages if m[0] == "ticks"]) == (
+        5 if mode == "digest" else 0)
+
+
+def test_compare_fails_on_an_off_channel(capsys, tmp_path, recordings):
+    code, out, _ = sil(capsys, "compare",
+                       str(contract(tmp_path, "seq", "value")),
+                       str(recordings["off"]), str(recordings["full"]),
+                       "--json")
+
+    assert code == 1
+    report = json.loads(out)
+    assert report["verdict"] == "fail"
+    assert report["coverage"] == []
+    assert report["channels"]["ticks"]["missing_actual"] == 5
+

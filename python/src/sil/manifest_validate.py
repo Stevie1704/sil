@@ -15,7 +15,8 @@ Manifests so that they cannot drift apart:
   shm Channel that one Process participant subscribes and publishes;
 - the artifact preflight, `kernel/src/provenance.cpp`, and the Replay
   participant's Recording checks: the files the Manifest names can be read,
-  and a replayed Channel is in the Recording with the same Schema.
+  and a replayed Channel is in the Recording with the same Schema and with
+  record mode full, so the Recording has its payloads.
 
 Some Manifest errors only a Run can find. They need the artifact loaded or
 the Participant started: a Native library that does not load, does not
