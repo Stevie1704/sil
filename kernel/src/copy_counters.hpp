@@ -30,7 +30,7 @@ namespace sil::counters {
 enum class Site {
   kCallerToKernel,  // publisher's bytes into the kernel's Message
   kSubscriberCopy,  // that Message duplicated per subscriber route
-  kRecorded,        // payload bytes handed to the Recording sink
+  kRecorded,        // payload bytes the Recording stores (32 per digest Message)
   kArenaWrite,      // kernel -> Arena, shared-memory Transport
   kArenaRead,       // Arena -> kernel, shared-memory Transport
   kInlineEncode,    // payload -> base64 on the step line

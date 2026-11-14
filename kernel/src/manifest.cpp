@@ -692,6 +692,25 @@ const ChannelSpec *Manifest::find_channel(const std::string &name) const {
   return nullptr;
 }
 
+const char *record_mode_name(RecordMode mode) {
+  switch (mode) {
+    case RecordMode::Full:
+      return "full";
+    case RecordMode::Digest:
+      return "digest";
+    case RecordMode::Off:
+      return "off";
+  }
+  return "full";
+}
+
+std::optional<RecordMode> parse_record_mode(const std::string &name) {
+  for (RecordMode mode :
+       {RecordMode::Full, RecordMode::Digest, RecordMode::Off})
+    if (name == record_mode_name(mode)) return mode;
+  return std::nullopt;
+}
+
 Manifest load_manifest(const std::filesystem::path &path) {
   try {
     std::ifstream in(path, std::ios::binary);
@@ -744,7 +763,7 @@ Manifest load_manifest(const std::filesystem::path &path) {
       const std::string ctx = "channel '" + name + "'";
       reject_unknown_keys(js, ctx,
                           {"schema", "latency_ns", "transport", "slots",
-                           "interceptors"});
+                           "record", "interceptors"});
       ChannelSpec c;
       c.name = name;
       c.schema = required<std::string>(js, "schema", ctx);
@@ -773,6 +792,16 @@ Manifest load_manifest(const std::filesystem::path &path) {
         c.slots = extract<size_t>(*slots, ctx + " key 'slots'");
         if (c.slots == 0)
           type_error(*slots, ctx + " key 'slots'", "a positive integer");
+      }
+      // Full is the default (and omitted from the canonical doc).
+      if (const json *record = find_value(js, "record", ctx)) {
+        const std::string mode =
+            extract<std::string>(*record, ctx + " key 'record'");
+        const std::optional<RecordMode> parsed = parse_record_mode(mode);
+        if (!parsed)
+          fail(ctx + ": unknown record mode '" + mode +
+               "' (expected 'full', 'digest' or 'off')");
+        c.record = *parsed;
       }
       if (schema_it->second.byte_size >
           std::numeric_limits<size_t>::max() / c.slots)

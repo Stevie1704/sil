@@ -140,6 +140,15 @@ and so a different Manifest hash.
 `sil recording window` exits 0 on success and 2 when the window or the source is
 rejected; nothing is written then.
 
+## Replay only Channels recorded in full
+
+A Replay participant and `sil recording window` read payloads. They refuse a
+Channel that the source Run declared with record mode `digest` or `off`,
+because the Recording holds no payload of it: a Manifest error, exit `2`.
+`sil manifest validate` reports the same Problem before the Run. Record a
+Channel that you will replay with `full`, the default. See
+[record modes](running.md#record-modes).
+
 ## Replay a long Recording
 
 A Replay participant does not keep its Recording in memory. Before any

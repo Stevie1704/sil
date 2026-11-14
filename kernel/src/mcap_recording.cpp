@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <array>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
@@ -23,6 +24,12 @@
 namespace sil {
 
 namespace {
+
+// The Schema of a digest Channel's Messages: one SHA-256, in the canonical
+// form of a Manifest Schema, so every SiL reader decodes it without a special
+// case.
+constexpr const char *kDigestSchemaJson =
+    R"({"fields":[{"count":32,"name":"sha256","type":"u8"}]})";
 
 // fopen(path, "wb") with a descriptor that closes on exec, so no Process
 // participant can write into the Recording. The "e" mode of fopen is
@@ -147,17 +154,35 @@ McapRecorder::McapRecorder(const std::filesystem::path &out,
   // Channels registered in manifest (name-sorted) order: MCAP schema and
   // channel IDs are a pure function of the manifest.
   std::map<std::string, uint16_t> schema_ids;
+  std::optional<uint16_t> digest_schema_id;  // apart: a user may reuse the name
   for (const ChannelSpec &c : manifest.channels) {
-    auto it = schema_ids.find(c.schema);
-    if (it == schema_ids.end()) {
-      mcap::Schema schema(c.schema, "sil_pod",
-                          manifest.schemas.at(c.schema).canonical_json);
-      writer_->addSchema(schema);
-      it = schema_ids.emplace(c.schema, schema.id).first;
+    uint16_t schema_id = 0;
+    mcap::KeyValueMap metadata;
+    if (c.record == RecordMode::Digest) {
+      if (!digest_schema_id) {
+        mcap::Schema schema(kDigestSchemaName, "sil_pod", kDigestSchemaJson);
+        writer_->addSchema(schema);
+        digest_schema_id = schema.id;
+      }
+      schema_id = *digest_schema_id;
+      metadata = {{kRecordModeKey, record_mode_name(c.record)},
+                  {kRecordSchemaKey, c.schema}};
+    } else {
+      auto it = schema_ids.find(c.schema);
+      if (it == schema_ids.end()) {
+        mcap::Schema schema(c.schema, "sil_pod",
+                            manifest.schemas.at(c.schema).canonical_json);
+        writer_->addSchema(schema);
+        it = schema_ids.emplace(c.schema, schema.id).first;
+      }
+      schema_id = it->second;
+      if (c.record == RecordMode::Off)
+        metadata = {{kRecordModeKey, record_mode_name(c.record)}};
     }
-    mcap::Channel channel(c.name, "sil_pod", it->second);
+    mcap::Channel channel(c.name, "sil_pod", schema_id, metadata);
     writer_->addChannel(channel);
     channel_ids_.push_back(channel.id);
+    modes_.push_back(c.record);
   }
 }
 
@@ -171,6 +196,15 @@ McapRecorder::~McapRecorder() {
 
 void McapRecorder::record(uint32_t channel_index, uint64_t publish_ns,
                           uint32_t seq, const void *data, size_t len) {
+  const RecordMode mode = modes_.at(channel_index);
+  if (mode == RecordMode::Off) return;
+  std::array<unsigned char, 32> digest;
+  if (mode == RecordMode::Digest) {
+    digest = sha256_digest(data, len);
+    data = digest.data();
+    len = digest.size();
+  }
+  counters::count(counters::Site::kRecorded, len);
   mcap::Message msg;
   msg.channelId = channel_ids_.at(channel_index);
   msg.sequence = seq;
@@ -277,10 +311,14 @@ class McapRecordingReader : public RecordingReader {
       if (!rs)
         throw RecordingError("channel '" + channel->topic +
                              "' has no schema in recording");
+      const auto mode = channel->metadata.find(kRecordModeKey);
       schemas_.push_back(
           {channel->topic, rs->name,
            std::string(reinterpret_cast<const char *>(rs->data.data()),
-                       rs->data.size())});
+                       rs->data.size()),
+           mode == channel->metadata.end()
+               ? std::optional<RecordMode>(RecordMode::Full)
+               : parse_record_mode(mode->second)});
     }
 
     view_.emplace(reader_.readMessages(

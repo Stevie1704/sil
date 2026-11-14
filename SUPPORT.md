@@ -45,6 +45,12 @@ What follows:
 - A developer machine gets best-effort reproduction, not the guarantee.
 - The determinism check (`sil check`) proves determinism for one Manifest on
   one machine class at one moment. It does not certify a machine class.
+- A Channel with record mode `digest` is covered by its SHA-256: two Runs with
+  identical payloads give identical Recordings, and one different payload byte
+  is a violation. The Recordings do not hold the payloads, so the check cannot
+  show how they differ. A Channel with record mode `off` is not in the
+  comparison. `sil check` names both kinds of Channel in its report
+  ([docs/running.md](docs/running.md#record-modes-and-the-determinism-check)).
 - The guarantee assumes Participants that take time only from Virtual time.
   The Clock shim answers the documented clock reads and sleeps of a Process
   participant with `shim=True`, and nothing more. It does not cover Native
@@ -135,7 +141,7 @@ carries it.
 | Native participant C ABI | [include/sil/participant.h](include/sil/participant.h), plus `arena.h` and `clock_region.h` | `SIL_ABI_VERSION 1` |
 | Manifest document | the `sil.manifest` builder and the kernel validator | as validated by the shipped release |
 | Step protocol | [docs/step-protocol.md](docs/step-protocol.md) | protocol 2, protocol 1 still accepted |
-| Recording contract | MCAP, uncompressed, virtual timestamps only, Manifest hash embedded; a Recording converted by `sil recording csv` embeds the source and mapping digests instead, because no Manifest produced it | as written by the shipped release |
+| Recording contract | MCAP, uncompressed, virtual timestamps only, Manifest hash embedded; a Recording converted by `sil recording csv` embeds the source and mapping digests instead, because no Manifest produced it. Each Channel's record mode: a `full` Channel has no Channel metadata and stores each payload; a `digest` Channel has the Channel metadata `sil_record: digest` and `sil_schema: <Manifest Schema>`, the Schema `sil.Sha256Digest` (one `u8[32]` field `sha256`) and one 32-byte SHA-256 of the payload per Message; an `off` Channel has `sil_record: off`, its Manifest Schema and no Messages. A reader identifies the mode from `sil_record` only ([docs/running.md](docs/running.md#record-modes)) | as written by the shipped release |
 | Runner command line | `sil-run` (also started as `sil run`), `sil-run --version`, `sil-run --build-info`, and the exit codes `0` ok, `1` run or test failure, `2` Manifest error, `3` determinism violation | as shipped |
 | Diagnostics runner | `sil-run-diagnostics`: the `sil-run` command line plus `--diagnostics-out PATH` (default `<recording>.diagnostics.json`), the same exit codes, and `2` when the report path exists or is another artifact of the Run ([decision](docs/adr/0004-opt-in-run-diagnostics-runner.md)) | as shipped |
 | Diagnostics command line | `sil run MANIFEST --diagnostics`, `--diagnostics-out PATH` and `--html PATH`: the `sil-run` options, a new report path checked before the Run, and the exit codes of [docs/running.md](docs/running.md#measure-a-run). The stdout summary text is not covered. | as shipped |

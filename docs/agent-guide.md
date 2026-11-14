@@ -60,7 +60,8 @@ Do the steps in this order. Each step names the topic to read.
    activate the environment that has `sil` installed before the Run, or the
    Run fails with `No module named 'sil'`. To select between a bare name and
    an absolute path, read the Process participant command section of `sil
-   docs running`.
+   docs running`. For a Channel with large payloads, such as camera frames,
+   set its record mode: read "Choose what the Recording stores" below.
 3. **Validate.** `sil manifest validate manifest.json --json` checks the
    Manifest without a Run. `sil-run` stops at the first error, but this
    command lists every error with its JSON path and a fix hint. Fix all
@@ -83,6 +84,56 @@ Do the steps in this order. Each step names the topic to read.
    compares a Recording with a reference under a contract: read `sil docs
    comparison`. To keep a case for CI, seal it as a regression bundle: read
    `sil docs regression-bundles`.
+
+## Choose what the Recording stores
+
+Each Channel has a record mode: `full` (the default), `digest` or `off`. It
+sets what the Recording stores for each Message of that Channel. Participants
+see the same Messages in each mode. Do these steps for each Channel of a
+Manifest you author:
+
+1. **Select the mode.** Use the first row that applies:
+
+   | The Channel carries | Mode | What you keep |
+   | --- | --- | --- |
+   | data that you replay, read field by field, or compare with `sil compare` under a tolerance | `full` | each payload |
+   | large sensor data (camera frames, point clouds, radar cubes) that only must be the same in two Runs | `digest` | the SHA-256 of each payload, with its time and order |
+   | preview or debug output that is not evidence | `off` | nothing; the Channel stays declared |
+
+   Keep control, state, object-list and ground-truth Channels `full`: they are
+   the evidence of the Run. A dataset of the pixels is a separate product: a
+   Participant or the simulator adapter writes it, not the Recording.
+2. **Declare it** with `record=` in the builder. Leave `full` Channels without
+   it, so their Manifest bytes do not change:
+
+   ```python
+   m.add_channel("camera.frames", schema="sensor.Frame", transport="shm",
+                 record="digest")
+   m.add_channel("debug.overlay", schema="sensor.Frame", record="off")
+   m.add_channel("ego.state", schema="veh.State")
+   ```
+
+   In Manifest JSON, it is the Channel key `"record": "digest"`.
+3. **Validate.** `sil manifest validate manifest.json --json`. An unknown mode
+   is a Problem (exit `2`). A Replay participant that replays a `digest` or
+   `off` Channel of its Recording is also a Problem: only a `full` Channel has
+   payloads to replay.
+4. **Run, then confirm the modes.** `sil recording channels out.mcap --json`
+   gives each Channel's `record`. A `digest` Channel has the `schema`
+   `sil.Sha256Digest` and one field, `sha256`; `source_schema` is its Manifest
+   Schema. `sil check manifest.json --json` lists the `digest` and `off`
+   Channels in `record_modes`. It proves that the payloads of a `digest`
+   Channel are identical, and it proves nothing about an `off` Channel.
+
+The step is done when every Channel has the mode of the first row that applies,
+`sil manifest validate` exits `0`, and `sil recording channels` shows the modes
+you declared.
+
+If `sil check` reports a violation on a `digest` Channel, the Recordings do not
+hold the payloads that differ. Set that Channel to `full` and run `sil check
+--keep DIR` again to read them. The full contract, the MCAP layout and what
+each tool does with each mode, with exit codes: `sil docs running`, section
+"Record modes".
 
 ## Investigate a failed Run
 

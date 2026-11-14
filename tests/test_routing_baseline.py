@@ -69,11 +69,11 @@ def process_manifest(tmp_path, *, direction: str, burst: int):
     return m.write(tmp_path / f"{direction}-burst{burst}.json")
 
 
-def native_manifest(tmp_path, *, subscribers: int):
+def native_manifest(tmp_path, *, subscribers: int, record: str = "full"):
     """One Native publisher sending bench.Small to `subscribers` subscribers."""
     m = Manifest(duration_ns=DURATION_NS)
     m.add_schemas({"bench.Small": BENCH_SCHEMAS["bench.Small"]})
-    m.add_channel("payload", schema="bench.Small")
+    m.add_channel("payload", schema="bench.Small", record=record)
     m.add_native(
         "source",
         library=str(BUILD_DIR / "bench_publisher.silp"),
@@ -88,7 +88,7 @@ def native_manifest(tmp_path, *, subscribers: int):
             config={"input": "payload", "period_ns": PERIOD_NS},
             subscribes=[SubscriberRoute("payload", capacity=COMPAT_ROUTE_CAPACITY)],
         )
-    return m.write(tmp_path / f"bench{subscribers}.json")
+    return m.write(tmp_path / f"bench{subscribers}-{record}.json")
 
 
 def run_report(runner, manifest_path, tmp_path, *, recording: bool):
@@ -230,6 +230,19 @@ class TestCopyCounters:
             assert on[site] == off[site]
         assert on["recorded"]["count"] == PUBLISHES
         assert off["recorded"]["count"] == 0
+
+    @pytest.mark.parametrize("record, stored_bytes", [
+        ("full", SMALL_BYTES), ("digest", 32), ("off", None)])
+    def test_recorded_counts_the_bytes_the_record_mode_stores(
+        self, sil_run_instrumented, tmp_path, record, stored_bytes
+    ):
+        ref = native_manifest(tmp_path, subscribers=1, record=record)
+        counters = count_copies(sil_run_instrumented, ref.path, tmp_path,
+                                recording=True)
+        messages = 0 if stored_bytes is None else PUBLISHES
+        assert counters["recorded"] == {
+            "count": messages, "bytes": messages * (stored_bytes or 0)}
+        assert counters["subscriber_copy"]["count"] == PUBLISHES
 
     def test_production_runner_carries_no_counters(self, sil_run, tmp_path):
         """The instrumentation is absent from sil-run, not merely switched off."""

@@ -71,6 +71,16 @@ enum class ThreadPolicy { Allow, Report, Reject };
 // legacy unbounded behavior for Manifest documents written before issue #75.
 enum class OverflowPolicy { Fail, DropNewest };
 
+// What the Recording stores for each Message of a Channel (issue #398). Full
+// stores the payload; Digest stores its SHA-256 under a fixed 32-byte Schema;
+// Off stores no Message but still declares the Channel. Absent means Full.
+enum class RecordMode { Full, Digest, Off };
+
+// The Manifest and Recording spelling of a mode: "full", "digest" or "off".
+const char *record_mode_name(RecordMode mode);
+// The mode a spelling names, or nothing for an unknown one.
+std::optional<RecordMode> parse_record_mode(const std::string &name);
+
 struct SubscriberRouteSpec {
   std::string channel;
   std::optional<size_t> capacity;
@@ -87,6 +97,7 @@ struct ChannelSpec {
   // the legacy single-slot contract; the Python builder emits 2 for newly
   // authored shared-memory Channels.
   size_t slots = 1;
+  RecordMode record = RecordMode::Full;
   std::vector<InterceptorSpec> interceptors;  // applied in declared order
   // Compiled from `interceptors` by load_manifest. Engines clone this
   // immutable template so runtime state stays isolated per run.

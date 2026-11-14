@@ -380,6 +380,40 @@ class TestTransport:
             m.add_channel("c", schema="toy.Counter", transport="rdma")
 
 
+class TestRecordMode:
+    """A Channel's record mode (#398): full is the default and is omitted, so
+    a Manifest that does not use `record` keeps its bytes and hash."""
+
+    def test_full_is_default_and_keeps_the_pre_record_bytes(self):
+        explicit = Manifest(duration_ns=100_000_000)
+        explicit.add_schemas(TOY_SCHEMAS)
+        explicit.add_channel("ticks", schema="toy.Counter", record="full")
+        explicit.add_native("producer", library="libtoy_producer.dylib",
+                            publishes=["ticks"])
+
+        assert explicit.to_json() == make_minimal().to_json()
+        assert "record" not in json.loads(explicit.to_json())["channels"]["ticks"]
+
+    @pytest.mark.parametrize("mode", ["digest", "off"])
+    def test_digest_and_off_are_emitted_and_change_the_hash(self, mode):
+        m = Manifest(duration_ns=100_000_000)
+        m.add_schemas(TOY_SCHEMAS)
+        m.add_channel("ticks", schema="toy.Counter", record=mode)
+        m.add_native("producer", library="libtoy_producer.dylib",
+                     publishes=["ticks"])
+
+        assert json.loads(m.to_json())["channels"]["ticks"]["record"] == mode
+        assert m.hash() != make_minimal().hash()
+
+    @pytest.mark.parametrize("mode", ["none", "FULL", "", 1, None])
+    def test_unknown_record_mode_is_rejected(self, mode):
+        m = Manifest(duration_ns=1_000_000)
+        m.add_schemas(TOY_SCHEMAS)
+
+        with pytest.raises(ManifestError, match="record"):
+            m.add_channel("c", schema="toy.Counter", record=mode)
+
+
 class TestClockShim:
     """The shim flag and realtime epoch are hashed config: a shimmed and an
     unshimmed variant of the same run must never collide, while manifests that

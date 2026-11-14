@@ -3,9 +3,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
+#include "manifest.hpp"
 #include "recording_file.hpp"
 
 namespace sil {
@@ -23,10 +25,13 @@ class RecordingReader {
  public:
   // One recorded channel's schema, as the recorder embedded it: the schema
   // name and its canonical JSON bytes, compared verbatim against the manifest.
+  // record_mode is the Channel's stored record mode; only a Full Channel has
+  // payloads to replay. An unknown stored mode reads as nothing.
   struct ChannelSchema {
     std::string channel;
     std::string schema_name;
     std::string canonical_json;
+    std::optional<RecordMode> record_mode;
   };
 
   // A view into the reader's current record: valid until advance().

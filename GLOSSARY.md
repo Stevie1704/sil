@@ -328,7 +328,8 @@ _Avoid_: cwd, temp dir, scratch dir
 
 **Recording**:
 The output artifact of a run: every published message with its virtual
-timestamp, plus the schemas and manifest hash needed to interpret it. Whether
+timestamp, plus the schemas and manifest hash needed to interpret it. Each
+Channel's Record mode sets what a message of that Channel stores. Whether
 a run writes one, and where, is chosen at the run boundary rather than in the
 manifest, so the same manifest hash covers a run with and without one. What the
 run computes is identical either way; only the artifact differs.
@@ -336,6 +337,14 @@ A Recording converted from another format at the edge is not a Run's output
 and has no Manifest to name: it carries the digests of its source and mapping
 instead of a Manifest hash, and it exists only as a Replay participant's input.
 _Avoid_: log, trace, output file, mcap
+
+**Record mode**:
+What the Recording stores for each Message of one Channel: `full` (the
+payload, the default), `digest` (the SHA-256 of the payload) or `off`
+(nothing; the Channel stays declared). It is declared in the Manifest and is
+part of the Manifest hash. Only a `full` Channel can be replayed. It differs
+from `--no-recording`, which writes no Recording at all.
+_Avoid_: recording level, capture mode
 
 **Replay window**:
 A selected interval of a Recording, rebased so that a Run over it starts at

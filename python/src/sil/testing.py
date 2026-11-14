@@ -43,10 +43,17 @@ class RunResult:
     _topic_schemas: dict[str, str]
 
     def messages(self, topic: str) -> list[tuple[int, dict]]:
-        """Returns [(virtual_time_ns, fields_dict), ...] for one channel."""
-        from sil.recording import read_records
+        """Returns [(virtual_time_ns, fields_dict), ...] for one channel.
 
-        message_type = self._types[self._topic_schemas[topic]]
+        A Channel with record mode "digest" gives {"sha256": <32 bytes>}
+        per Message, and one with record mode "off" gives no Message."""
+        from sil.recording import read_channels, read_records
+
+        recorded = {c.name: c for c in read_channels(self.mcap_path)}[topic]
+        message_type = (self._types[self._topic_schemas[topic]]
+                        if recorded.has_payload
+                        else schema.MessageType(recorded.schema_name,
+                                                recorded.schema))
         return [
             (log_time, message_type.unpack(data))
             for channel_topic, log_time, data in read_records(self.mcap_path)

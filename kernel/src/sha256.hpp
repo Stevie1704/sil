@@ -3,6 +3,7 @@
 // sha256.cpp; see docs/architecture.md for its choice and its consequences.
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <memory>
 #include <string>
@@ -21,8 +22,9 @@ class Sha256 {
 
   void update(const void *data, size_t len);
 
-  // Ends the digest. A second call, or update() after this call, throws
-  // std::logic_error.
+  // Ends the digest. A second call of either, or update() after this call,
+  // throws std::logic_error.
+  std::array<unsigned char, 32> digest();
   std::string hex_digest();
 
  private:
@@ -32,5 +34,6 @@ class Sha256 {
 };
 
 std::string sha256_hex(const std::string &bytes);
+std::array<unsigned char, 32> sha256_digest(const void *data, size_t len);
 
 }  // namespace sil

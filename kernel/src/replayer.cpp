@@ -64,6 +64,14 @@ void Replayer::validate_channels(const RecordingReader &reader,
 
     // The channel exists in the manifest (load_manifest already rejects a
     // replay of an undeclared channel).
+    // A digest or off Channel holds no payload. The check comes before the
+    // Schema check, so the error names the cause.
+    if (cs.record_mode != RecordMode::Full)
+      throw ManifestError(
+          "manifest error: " + ctx + ": channel '" + cs.channel +
+          "' is recorded with record mode '" +
+          (cs.record_mode ? record_mode_name(*cs.record_mode) : "unknown") +
+          "': the Recording has no payload to replay");
     const ChannelSpec *spec_ch = m.find_channel(cs.channel);
     const SchemaSpec &want_schema = m.schemas.at(spec_ch->schema);
     if (cs.schema_name != spec_ch->schema ||

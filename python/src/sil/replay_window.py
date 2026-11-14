@@ -57,6 +57,7 @@ from mcap.writer import LIBRARY_IDENTIFIER, CompressionType, Writer
 
 from sil import build_info
 from sil._schema_types import FORMATS, INT_RANGES, SIZES
+from sil.recording import record_mode
 
 WINDOW_VERSION = 1
 RECEIPT_VERSION = 1
@@ -272,6 +273,12 @@ def _read_source(data: bytes, path: Path, plan: _Window
             if name not in channels:
                 raise WindowError(f"channel {name!r} is not in the source "
                                   f"Recording {str(path)!r}")
+        for channel in summary.channels.values():
+            mode = record_mode(channel.metadata)
+            if channel.topic in plan.channels and mode != "full":
+                raise WindowError(
+                    f"channel '{channel.topic}' is recorded with record mode "
+                    f"'{mode}': the source Recording has no payload to replay")
         wanted = set(plan.channels)
         # Stored order is Publish order; log-time order would reorder it.
         messages = [

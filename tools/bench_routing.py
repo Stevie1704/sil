@@ -88,11 +88,13 @@ class Config:
 # --- manifest shapes ---------------------------------------------------------
 
 
-def _base(payload: str, messages: int, burst: int, transport: str) -> Manifest:
+def _base(payload: str, messages: int, burst: int, transport: str,
+          record: str = "full") -> Manifest:
     schema_name = PAYLOADS[payload]
     m = Manifest(duration_ns=(messages // burst) * PERIOD_NS)
     m.add_schemas({schema_name: BENCH_SCHEMAS[schema_name]})
-    m.add_channel("payload", schema=schema_name, transport=transport)
+    m.add_channel("payload", schema=schema_name, transport=transport,
+                  record=record)
     return m
 
 
@@ -125,18 +127,24 @@ def _process(m: Manifest, shape: str, burst: int, **channels) -> None:
 
 
 def native_config(build_dir, payload, subscribers, recording, messages, *,
-                  name: str = "") -> Config:
-    """Native fan-out: one publisher, `subscribers` in-process subscribers."""
-    m = _base(payload, messages, burst=1, transport="inline")
+                  name: str = "", record: str = "full") -> Config:
+    """Native fan-out: one publisher, `subscribers` in-process subscribers.
+
+    `record` is the record mode of the payload Channel (#398). A digest row
+    writes the SHA-256 of each payload, not the payload."""
+    m = _base(payload, messages, burst=1, transport="inline", record=record)
     _native_publisher(m, build_dir, payload, burst=1)
     for index in range(subscribers):
         _native_subscriber(m, build_dir, f"subscriber{index}")
+    suffix = "" if record == "full" else f"-{record}"
     return Config(
         name=name or
-        f"native-{payload}-fanout{subscribers}-rec{'on' if recording else 'off'}",
+        f"native-{payload}-fanout{subscribers}-rec{'on' if recording else 'off'}"
+        f"{suffix}",
         dimensions={"participants": "native", "direction": "n/a",
                     "payload": payload, "subscribers": subscribers,
-                    "transport": "n/a", "burst": 1, "recording": recording},
+                    "transport": "n/a", "burst": 1, "recording": recording,
+                    "record": record},
         manifest=m, messages=messages, recording=recording,
     )
 
@@ -196,6 +204,13 @@ def matrix(build_dir: Path, counts: dict[str, int]) -> list[Config]:
                 configs.append(
                     native_config(build_dir, payload, subscribers, recording,
                                   messages))
+    # The camera frame with Recording on and record mode digest: the Run
+    # keeps the evidence of each frame, its SHA-256, and writes 32 bytes
+    # instead of the frame. Compare it with the rec-on and rec-off rows.
+    for subscribers in (0, 1):
+        configs.append(
+            native_config(build_dir, "camera", subscribers, True,
+                          counts["camera"], record="digest"))
     # Process delivery: both directions, inline against the declared Arena,
     # single Message against the default two-slot burst depth.
     for payload, messages in counts.items():
@@ -340,6 +355,15 @@ def _copy_cell(result: dict, site: str) -> str:
     return str(result["copies"][site]["count"])
 
 
+def _recording_cell(dimensions: dict) -> str:
+    """'off', 'on', or 'on, digest' for a row with a non-full record mode.
+    A report from before #398 has no record dimension: it is full."""
+    if not dimensions["recording"]:
+        return "off"
+    record = dimensions.get("record", "full")
+    return "on" if record == "full" else f"on, {record}"
+
+
 def _native_table(results: list[dict]) -> list[str]:
     lines = [
         "| payload | messages | subscribers | recording | run ms | "
@@ -351,7 +375,7 @@ def _native_table(results: list[dict]) -> list[str]:
         d = r["dimensions"]
         lines.append(
             f"| {d['payload']} | {r['messages']} | {d['subscribers']} | "
-            f"{'on' if d['recording'] else 'off'} | "
+            f"{_recording_cell(d)} | "
             f"{r['wall_s']['median'] * 1e3:.1f} | {r['us_per_message']:.1f} | "
             f"{r['payload_mib_per_s']:.1f} | {r['user_s']['median']:.3f} | "
             f"{r['system_s']['median']:.3f} | "

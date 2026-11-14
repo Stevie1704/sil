@@ -71,6 +71,7 @@ def channel_report(path: str | Path) -> dict:
         for channel, t, _ in read_records(path):
             spans[channel].add(t)
     rows = [{"channel": channel.name, "schema": channel.schema_name,
+             "record": channel.record, "source_schema": channel.source_schema,
              "messages": spans[channel.name].messages,
              "first_t_ns": spans[channel.name].first_t_ns,
              "last_t_ns": spans[channel.name].last_t_ns}
@@ -202,10 +203,12 @@ def _write_channels(report: dict, as_json: bool) -> None:
         sys.stdout.write(json.dumps(report, indent=2) + "\n")
         return
     sys.stdout.write(f"manifest_hash {report['manifest_hash'] or 'none'}\n")
-    header = ("CHANNEL", "SCHEMA", "MESSAGES", "FIRST_T_NS", "LAST_T_NS")
+    header = ("CHANNEL", "SCHEMA", "RECORD", "MESSAGES", "FIRST_T_NS",
+              "LAST_T_NS")
     rows = [header] + [
         tuple("-" if c[key] is None else str(c[key]) for key in
-              ("channel", "schema", "messages", "first_t_ns", "last_t_ns"))
+              ("channel", "schema", "record", "messages", "first_t_ns",
+               "last_t_ns"))
         for c in report["channels"]]
     widths = [max(len(row[i]) for row in rows) for i in range(len(header))]
     for row in rows:

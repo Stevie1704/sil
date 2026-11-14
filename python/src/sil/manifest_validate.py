@@ -15,7 +15,8 @@ Manifests so that they cannot drift apart:
   shm Channel that one Process participant subscribes and publishes;
 - the artifact preflight, `kernel/src/provenance.cpp`, and the Replay
   participant's Recording checks: the files the Manifest names can be read,
-  and a replayed Channel is in the Recording with the same Schema.
+  and a replayed Channel is in the Recording with the same Schema and with
+  record mode full, so the Recording has its payloads.
 
 Some Manifest errors only a Run can find. They need the artifact loaded or
 the Participant started: a Native library that does not load, does not
@@ -45,7 +46,7 @@ from ._schema_types import INT_RANGES, SIZES
 # The builder and this check share the closed sets of the Manifest format.
 from .manifest import (_FLOAT32_MAX, _INTERCEPTOR_KINDS, _OVERFLOW_POLICIES,
                        _SLEEP_POLICIES, _THREAD_POLICIES, _TRANSPORTS,
-                       MANIFEST_VERSION)
+                       MANIFEST_VERSION, RECORD_MODES)
 from .recording import read_channels
 
 _pointer = manifest_json.pointer
@@ -60,7 +61,8 @@ _DEFAULT_PATH = "/usr/local/bin:/usr/bin:/bin"  # the kernel's, for an empty PAT
 
 _TOP_KEYS = ("sil_manifest", "duration_ns", "epoch_ns", "schemas", "channels",
              "participants")
-_CHANNEL_KEYS = ("schema", "latency_ns", "transport", "slots", "interceptors")
+_CHANNEL_KEYS = ("schema", "latency_ns", "transport", "slots", "record",
+                 "interceptors")
 _INTERCEPTOR_KEYS = ("kind", "start_ns", "end_ns", "delay_ns", "n", "field",
                      "value")
 _SHIM_KEYS = ("shim", "sleep", "threads")
@@ -297,6 +299,9 @@ def _check_channel(c: _Checker, channel, path, schema_docs,
                 _byte_size(fields) > _SIZE[1] // slots):
             c.add(path + ("slots",), "Arena byte size overflows size_t",
                   "Use fewer slots.")
+    if "record" in channel:
+        c.choice(channel["record"], path + ("record",), RECORD_MODES,
+                 "record mode")
     if "interceptors" in channel:
         interceptors = c.array(channel["interceptors"], path + ("interceptors",))
         for index, interceptor in enumerate(interceptors or []):
@@ -630,6 +635,12 @@ def _check_recording(c: _Checker, recording: str, digest: str, path,
             c.add(where, f"channel '{name}' not present in recording",
                   "Replay only Channels that the Recording has: "
                   + ", ".join(sorted(recorded)) + ".")
+        elif not recorded[name].has_payload:
+            c.add(where, f"channel '{name}' is recorded with record mode "
+                         f"'{recorded[name].record}': the Recording has no "
+                         "payload to replay",
+                  "Replay a Recording of a Run that declared the Channel "
+                  "with record mode 'full'.")
         elif channel.schema_doc is not None and (
                 recorded[name].schema_name != channel.schema
                 or recorded[name].schema != channel.schema_doc):

@@ -399,6 +399,10 @@ Recordings.
 - `runs`: the SHA-256 of each Recording, and its kept path (null without
   `--keep`).
 - `first_difference`: null when the Recordings are bit-identical.
+- `record_modes`: `{"digest": [...], "off": [...]}`, the Channels that the
+  check compares only by the SHA-256 of their payload, or not at all
+  ([record modes](#record-modes)). It is null when the Recording cannot be
+  read. The text output adds one line for each non-empty list.
 
 ```sh
 sil check manifest.json --keep check-out --json
@@ -896,7 +900,11 @@ Channels it declares. An unreadable Recording also exits `2`.
 `sil recording channels --json` prints one `sil_recording_channels` report
 (version 1): `manifest_hash` (`null` for a Recording no Run wrote, such as one
 from `sil recording csv`) and a `channels` list of `channel`, `schema`,
-`messages`, `first_t_ns` and `last_t_ns`. `first_t_ns` is the earliest and
+`record`, `source_schema`, `messages`, `first_t_ns` and `last_t_ns`. `record`
+is the Channel's [record mode](#record-modes) (`full`, `digest` or `off`), and
+`source_schema` is the Manifest Schema of its payload. For a `digest` Channel,
+`schema` is `sil.Sha256Digest` and each Message holds only the SHA-256 of the
+payload. `first_t_ns` is the earliest and
 `last_t_ns` the latest virtual time of the Channel's Messages, also when the
 Recording does not store them in time order. Both are `null` for a Channel
 without Messages.
@@ -1085,6 +1093,124 @@ pointer-based C ABI data plane and need no rebuild.
 **Boundaries (out of scope, per PRD):** true zero-copy into user code (a
 participant-facing copy stays), native-participant shm beyond the pointer ABI,
 cross-machine transport, compression, and arena-size/backpressure tuning.
+
+## Record modes
+
+Each Channel has a record mode. It sets what the Recording stores for each
+Message of that Channel. Use it to keep large sensor data out of the Recording
+and keep the evidence of the Run in it.
+
+| Mode | The Recording stores for each Message | Use it for |
+| --- | --- | --- |
+| `full` (default) | the virtual time, the Channel and the payload | control, state, object lists, ground truth: everything you read, compare or replay |
+| `digest` | the virtual time, the Channel and the SHA-256 of the payload (32 bytes) | large sensor data, such as camera frames or point clouds: it proves that two Runs had identical payloads, with no payload stored |
+| `off` | nothing; the Channel stays declared in the Recording | preview or debug Channels that are not evidence |
+
+The record mode changes only the Recording. Participants, subscriber routes,
+Interceptors and the Transport see the same Messages in each mode.
+
+### Declare a record mode
+
+With the builder:
+
+```python
+m.add_channel("camera.frames", schema="sensor.Frame", transport="shm",
+              record="digest")
+m.add_channel("debug.overlay", schema="sensor.Frame", record="off")
+m.add_channel("ego.state", schema="veh.State")  # record="full"
+```
+
+In the Manifest JSON, it is the optional Channel key `record`:
+
+```json
+"channels": {
+  "camera.frames": {"schema": "sensor.Frame", "transport": "shm", "slots": 2,
+                    "record": "digest"},
+  "ego.state": {"schema": "veh.State"}
+}
+```
+
+- `record` is part of the Manifest, so it is hashed. The builder omits
+  `record="full"`, so a Manifest that does not use `record` keeps its bytes,
+  its hash and its Recording bytes.
+- `sil-run` and `sil manifest validate` accept `"full"`, `"digest"` and
+  `"off"`. Any other value is a Manifest error (exit `2`).
+- `--no-recording` writes no Recording at all, in every mode. A record mode
+  applies only to a Run that writes a Recording.
+
+### How a Recording stores each mode
+
+A reader identifies the mode from the MCAP Channel metadata, never from a
+Schema name, because a Manifest can declare a Schema with any name.
+
+| Mode | MCAP Channel metadata | MCAP Schema of the Channel | Messages |
+| --- | --- | --- | --- |
+| `full` | none | the Manifest Schema | the payload |
+| `digest` | `sil_record: digest`, `sil_schema: <Manifest Schema name>` | `sil.Sha256Digest`: `{"fields":[{"count":32,"name":"sha256","type":"u8"}]}` | 32 bytes: the SHA-256 of the payload |
+| `off` | `sil_record: off` | the Manifest Schema | none |
+
+- The digest covers only the payload bytes, after any Interceptor. The MCAP
+  record of each digest Message still holds the virtual time and the sequence,
+  and the stored order is the global Publish order, as for a full Channel.
+- Each digest Message has a fixed size, so the Recording grows by about the
+  same amount per Message, whatever the payload size.
+- `sil.recording.read_channels` gives each Channel's `record` (`full`,
+  `digest` or `off`) and `source_schema` (the Manifest Schema name), and
+  `has_payload` is true only for `full`.
+
+### What each tool does with a digest or off Channel
+
+The digest Schema is an ordinary SiL Schema, so the tools that decode a
+Recording decode a digest Channel as one field, `sha256`. A `u8` array is
+lowercase hex in JSON.
+
+| Tool | `digest` Channel | `off` Channel | Exit code |
+| --- | --- | --- | --- |
+| `sil recording channels` | `schema` `sil.Sha256Digest`, `record` `digest`, `source_schema` the Manifest Schema, the Message count and times | `record` `off`, `messages` 0 | `0` |
+| `sil recording show` | `sha256` as hex, one line per Message | no lines | `0` |
+| `sil recording query` | the field `sha256` only. Any other field is refused: the error starts with `digest Channel, only 'sha256'` | no Messages, a complete report | `2` refused; else as for any query |
+| `sil compare` | a contract can name only `sha256` (an integer array, rule `exact`). Another field gives the verdict `fail` with a coverage problem that names the field | each observation is `missing-actual`: the verdict is `fail` | `0` pass, `1` fail |
+| `sil recording export`, `sil playback serve` | the `sha256` field | the declared Channel, no Messages | as for any Recording |
+| `sil.testing.RunResult.messages` | `{"sha256": <32 bytes>}` per Message | `[]` | none |
+| `sil check` | compares the digests: one different payload byte is a violation | compares nothing | `0` deterministic, `3` violation |
+| Replay participant | refused: no payload to replay | refused | `2` (Manifest error) |
+| `sil manifest validate` | a replay of the Channel is a Problem | a Problem | `2` |
+| `sil recording window` | refused: no payload to select | refused | `2` |
+
+The refusal text names the mode: `channel 'NAME' is recorded with record mode
+'digest': the Recording has no payload to replay`. The mode that counts is the
+one of the replayed Recording, not the `record` value of the new Manifest. To
+replay a Channel, record it with `full` in the source Run.
+
+### Record modes and the determinism check
+
+`sil check` compares the Recording bytes, so it works with record modes
+unchanged. Its scope changes:
+
+- For a `digest` Channel, it proves that the payloads are identical in both
+  Runs. It cannot show a payload that differs, because neither Recording holds
+  it. Run the Manifest again with `record="full"` on that Channel to inspect
+  the payloads.
+- For an `off` Channel, it proves nothing about the payloads.
+
+The `sil_check_report` names these Channels in `record_modes`, and the text
+output adds a line for each mode that has Channels:
+
+```text
+deterministic: 3f2a...
+  digest only (payload not compared, only its SHA-256): camera.frames
+  not recorded (not compared): debug.overlay
+```
+
+### Cost
+
+In Full provenance mode, the runner already calculates the SHA-256 of each
+Recording byte. A digest Channel moves that hash from the file to the payload,
+and removes the write and the I/O of the payload. On a 2.76 MB camera frame,
+`digest` costs about 1.5 ms per frame against about 3.5 ms for `full` and
+0.4 ms with no Recording ([measurement](bench/record-mode-digest.md)).
+`make bench` has the rows `native-camera-fanout0-recon-digest` and
+`native-camera-fanout1-recon-digest`.
 
 ## Bounded subscriber routes
 
