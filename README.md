@@ -21,6 +21,7 @@ without cloning or building this repository.
 
 Copy this prompt into your agent in the project where you want to use SiL:
 
+<!-- --8<-- [start:agent-prompt] -->
 ```text
 Install the latest stable release of SiL (https://github.com/Stevie1704/sil)
 for this project. Read the installation guide at
@@ -42,6 +43,7 @@ in a temporary directory (use the container equivalents for Docker).
 Report the installed version, verification result, and how to use SiL in
 a new terminal.
 ```
+<!-- --8<-- [end:agent-prompt] -->
 
 ### On your own
 
@@ -159,6 +161,11 @@ ownership, and where to put changes.
 
 The [documentation index](docs/README.md) links every topic guide and explains
 which documents define terminology, behavior, and architectural decisions.
+
+The [documentation site](https://stevie1704.github.io/sil/) publishes these
+guides from `main`, with search. Start with [How SiL works](docs/how-sil-works.md)
+and [choose an integration](docs/integrations.md). For the guides of an
+installed version, run `sil docs`.
 
 - [FMI importer](docs/fmi.md) and [coupling or substituting FMUs](docs/fmu-coupling.md)
 - [Recorded input and FMU replay](docs/recorded-input.md)
