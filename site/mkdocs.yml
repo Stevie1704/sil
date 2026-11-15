@@ -19,7 +19,9 @@ theme:
   name: material
   custom_dir: overrides
   features:
-    - navigation.sections
+    # Chapters as tabs in the header, their pages in the left sidebar, and
+    # the page's sections in the right sidebar.
+    - navigation.tabs
     - navigation.top
     - navigation.footer
     - search.suggest
@@ -61,14 +63,14 @@ validation:
   anchors: warn
 
 nav:
-  - Home: index.md
+  - Overview: index.md
   - Getting started:
       - How SiL works: docs/how-sil-works.md
       - Examples and installation: docs/getting-started.md
       - Agent guide: docs/agent-guide.md
       - Installed examples: docs/examples.md
       - Support statement: SUPPORT.md
-  - Integration and task guides:
+  - Guides:
       - Choose an integration: docs/integrations.md
       - FMI importer: docs/fmi.md
       - Coupling and substituting FMUs: docs/fmu-coupling.md
@@ -82,7 +84,7 @@ nav:
       - Comparisons: docs/comparison.md
       - Regression bundles: docs/regression-bundles.md
       - Container deployment: docs/container.md
-  - Contracts and reference:
+  - Reference:
       - Documentation index: docs/README.md
       - Glossary: GLOSSARY.md
       - Step protocol: docs/step-protocol.md
@@ -99,7 +101,7 @@ nav:
           - Deferred live observation: docs/adr/0005-live-observation-and-run-control.md
           - SHA-256 backend: docs/adr/0006-sha256-backend-static-openssl.md
           - Native scope observer: docs/adr/0007-source-owned-native-scope-observer.md
-  - Prospective (proposals and research):
+  - Prospective:
       - Native source scopes: docs/proposals/native-source-scopes.md
       - Networked ADAS CAN: docs/proposals/networked-adas-can.md
       - Live visualization qualification: docs/research/live-visualization-qualification.md
