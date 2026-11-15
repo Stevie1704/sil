@@ -68,6 +68,34 @@ A behavior change needs a test at the run boundary. The determinism gate in
 continuous integration runs every reference Manifest twice and bit-compares the
 Recordings; a change that breaks it is a defect, not a flaky test.
 
+## Documentation site
+
+The [documentation site](https://stevie1704.github.io/sil/) renders the
+Markdown in this repository. Nothing on it is a separate copy: edit the
+canonical file. The site sources and the toolchain are in `site/`:
+`mkdocs.yml` (navigation and checks), `index.md` (the landing page),
+`overrides/` (the development banner) and `requirements.lock` (the pinned
+toolchain, with hashes). `tools/docs_site.py` stages the published files at
+build time and rewrites their links.
+
+- **Build and check:** `make docs-site` installs the toolchain into
+  `.venv-docs` and writes the site to `build/docs-site/html`. The build
+  fails on a link to a missing page, anchor or file. A link to a checkout
+  file that is not published, such as source code, an example or a proof,
+  goes to that file on GitHub at the built revision. `make docs-serve`
+  serves the site; run it again after an edit.
+- **Add a page:** put the Markdown under `docs/` and add it to `nav` in
+  `site/mkdocs.yml`. Each file under `docs/`, except `docs/agents/`, is
+  published; a page that is not in `nav` is still built and found by
+  search. Pages under `docs/proposals/` and `docs/research/` get a
+  "Prospective material" notice. Write Mermaid diagrams as `mermaid` code
+  blocks: GitHub and the site both render them.
+- **Publish:** the `docs-site` workflow builds each pull request and
+  deploys each push to `main` to GitHub Pages. This needs the repository
+  setting *Settings → Pages → Build and deployment → Source: GitHub
+  Actions*. The site is development documentation; `sil docs` serves the
+  guides of an installed version, and `tools/release.py` packages those.
+
 ## Reporting
 
 - A defect or a feature request: a [GitHub issue](https://github.com/Stevie1704/sil/issues).

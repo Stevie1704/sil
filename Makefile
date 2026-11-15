@@ -227,6 +227,29 @@ bench: venv build ## Regenerate the routing baseline: make bench ARGS="--repeats
 bench-hash: venv ## Hashing cost baseline: make bench-hash ARGS="--revision <commit> --machine <name> --load-condition <text>"
 	$(PYTHON) tools/hash_baseline.py $(ARGS)
 
+# Documentation site -----------------------------------------------------------
+# The site toolchain has its own venv and lock, apart from the runtime and the
+# dev dependencies. tools/docs_site.py stages the canonical Markdown first, so
+# rerun the target after an edit. See CONTRIBUTING.md.
+DOCS_VENV    := .venv-docs
+DOCS_REV     ?= $(shell git rev-parse HEAD)
+MKDOCS       := NO_MKDOCS_2_WARNING=1 SIL_DOCS_REVISION=$(DOCS_REV) $(DOCS_VENV)/bin/mkdocs
+
+$(DOCS_VENV)/bin/mkdocs: site/requirements.lock
+	uv venv --allow-existing $(DOCS_VENV)
+	uv pip sync -p $(DOCS_VENV)/bin/python --require-hashes site/requirements.lock
+	touch $@
+
+.PHONY: docs-site
+docs-site: $(DOCS_VENV)/bin/mkdocs ## Build the documentation site into build/docs-site/html
+	python3 tools/docs_site.py stage --output $(BUILD_DIR)/docs-site/src --revision $(DOCS_REV)
+	$(MKDOCS) build -f site/mkdocs.yml
+
+.PHONY: docs-serve
+docs-serve: $(DOCS_VENV)/bin/mkdocs ## Stage the site and serve it at http://127.0.0.1:8000/sil/
+	python3 tools/docs_site.py stage --output $(BUILD_DIR)/docs-site/src --revision $(DOCS_REV)
+	$(MKDOCS) serve -f site/mkdocs.yml
+
 # Housekeeping -----------------------------------------------------------------
 .PHONY: clean
 clean: ## Remove the build directory and caches
@@ -234,5 +257,5 @@ clean: ## Remove the build directory and caches
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +
 
 .PHONY: distclean
-distclean: clean ## Also remove the Python virtualenv
-	rm -rf .venv
+distclean: clean ## Also remove the Python virtualenvs
+	rm -rf .venv .venv-docs

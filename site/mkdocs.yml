@@ -1,0 +1,112 @@
+# Documentation site (#401). Build with `make docs-site`; see CONTRIBUTING.md.
+# tools/docs_site.py stages the canonical Markdown into docs_dir first.
+site_name: SiL
+site_description: Deterministic software-in-the-loop testing for ADAS/AD
+site_url: https://stevie1704.github.io/sil/
+repo_url: https://github.com/Stevie1704/sil
+repo_name: Stevie1704/sil
+edit_uri: ""
+docs_dir: ../build/docs-site/src
+site_dir: ../build/docs-site/html
+strict: true
+
+extra:
+  # The commit the site is built from: the banner shows it, and the staged
+  # links to source files name it.
+  revision: !ENV [SIL_DOCS_REVISION, unknown]
+
+theme:
+  name: material
+  custom_dir: overrides
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle: {icon: material/weather-night, name: Dark mode}
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle: {icon: material/weather-sunny, name: Light mode}
+
+plugins:
+  - search
+
+markdown_extensions:
+  - toc: {permalink: true}
+  - tables
+  - admonition
+  - attr_list
+  - pymdownx.highlight
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  # The landing page includes marked parts of README.md, from the checkout
+  # root, so the agent prompt has one source.
+  - pymdownx.snippets:
+      base_path: [.]
+      check_paths: true
+
+validation:
+  omitted_files: info
+  not_found: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - How SiL works: docs/how-sil-works.md
+      - Examples and installation: docs/getting-started.md
+      - Agent guide: docs/agent-guide.md
+      - Installed examples: docs/examples.md
+      - Support statement: SUPPORT.md
+  - Integration and task guides:
+      - Choose an integration: docs/integrations.md
+      - FMI importer: docs/fmi.md
+      - Coupling and substituting FMUs: docs/fmu-coupling.md
+      - Recorded input and FMU replay: docs/recorded-input.md
+      - Shared-library participants: docs/library.md
+      - Native ADAS reference application: docs/adas-reference.md
+      - Running simulations: docs/running.md
+      - Replay: docs/replay.md
+      - Bounded Recording queries: docs/recording-queries.md
+      - Visualization: docs/visualization.md
+      - Comparisons: docs/comparison.md
+      - Regression bundles: docs/regression-bundles.md
+      - Container deployment: docs/container.md
+  - Contracts and reference:
+      - Documentation index: docs/README.md
+      - Glossary: GLOSSARY.md
+      - Step protocol: docs/step-protocol.md
+      - Diagnostics report: docs/diagnostics-report.md
+      - Profile report: docs/profile-report.md
+      - Acceptance proofs: docs/acceptance.md
+      - Performance: docs/performance.md
+      - Architecture: docs/architecture.md
+      - Decisions:
+          - FMU groups: docs/adr/0001-connected-fmus-in-one-process-participant.md
+          - Replayed terminal timing: docs/adr/0002-a-replayed-terminal-lands-on-its-own-instant.md
+          - Maintained CAN model: docs/adr/0003-maintained-can-model-at-the-edge.md
+          - Opt-in diagnostics runner: docs/adr/0004-opt-in-run-diagnostics-runner.md
+          - Deferred live observation: docs/adr/0005-live-observation-and-run-control.md
+          - SHA-256 backend: docs/adr/0006-sha256-backend-static-openssl.md
+          - Native scope observer: docs/adr/0007-source-owned-native-scope-observer.md
+  - Prospective (proposals and research):
+      - Native source scopes: docs/proposals/native-source-scopes.md
+      - Networked ADAS CAN: docs/proposals/networked-adas-can.md
+      - Live visualization qualification: docs/research/live-visualization-qualification.md
+      - Perf capture-window control: docs/research/perf-capture-window-control.md
+      - Public adoption artifacts: docs/research/public-adoption-artifacts.md
+  - Contributing:
+      - Contributing: CONTRIBUTING.md
+      - Security: SECURITY.md
+      - Releasing: docs/releasing.md
+      - Release notes: https://github.com/Stevie1704/sil/releases

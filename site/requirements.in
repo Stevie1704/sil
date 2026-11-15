@@ -1,0 +1,6 @@
+# Documentation site toolchain (#401). Separate from the runtime and the
+# Python dev dependencies. Regenerate site/requirements.lock with:
+#   uv pip compile site/requirements.in --universal --python-version 3.11 \
+#     --generate-hashes -o site/requirements.lock
+mkdocs==1.6.1
+mkdocs-material==9.8.1

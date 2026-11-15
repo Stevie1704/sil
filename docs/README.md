@@ -2,6 +2,8 @@
 
 Start with the [repository overview and quick start](../README.md).
 Commands in the guides run from the repository root unless stated otherwise.
+The [documentation site](https://stevie1704.github.io/sil/) publishes these
+guides from `main` with search; it is development documentation.
 
 ## User guides
 
@@ -11,6 +13,8 @@ agent.
 
 | Task | Guide |
 | --- | --- |
+| Understand the execution model | [How SiL works](how-sil-works.md) |
+| Select how a system under test joins a Run | [Choose an integration](integrations.md) |
 | Onboard a system under test as a coding agent | [Agent guide](agent-guide.md) |
 | Get adapters, bindings and preparation scripts without a checkout | [Installed examples](examples.md) |
 | Run the ACC example or install a staged release | [Examples and installation](getting-started.md) |
