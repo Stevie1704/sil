@@ -21,9 +21,9 @@ kinds of Participant connect to the kernel, read
 
 A Native participant runs in the kernel's process: it has no protocol cost,
 but a crash or a hang ends the Run without cleanup, and it has no Clock
-shim. A Process participant runs in its own process, under a response
-deadline, and with `shim=True` the Clock shim answers its clock reads from
-Virtual time. The
+shim. A Process participant runs in its own process. A Run fails when it does not
+answer in its response deadline. With `shim=True`, the Clock shim answers its
+clock reads from Virtual time. The
 [comparison table](library.md#native-participant-alternative) gives the
 details. For an existing library or application that you cannot change,
 start with a Process participant.

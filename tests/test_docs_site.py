@@ -90,3 +90,12 @@ def test_agent_instructions_and_their_directory_link_stay_on_github(tmp_path: Pa
 
     assert not (out / "docs" / "agents").exists()
     assert (out / "docs" / "README.md").read_text() == f"[Agents]({TREE}/docs/agents/)\n"
+
+
+def test_a_code_block_keeps_its_text(tmp_path: Path):
+    sample = "```text\nthe [x](missing.md) of a sample\n```\n"
+    out = _staged(tmp_path, {"docs/fmi.md": f"{sample}[ABI](../include/a.h)\n",
+                             "include/a.h": ""})
+
+    assert (out / "docs" / "fmi.md").read_text() == (
+        f"{sample}[ABI]({BLOB}/include/a.h)\n")

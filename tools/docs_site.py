@@ -14,6 +14,7 @@ import posixpath
 import re
 import shutil
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 LANDING = "site/index.md"
@@ -30,6 +31,7 @@ PROSPECTIVE_NOTICE = (
 PAGE_SUFFIXES = {".md", ".html", ".json"}
 REPOSITORY = "https://github.com/Stevie1704/sil"
 MARKDOWN_LINK = re.compile(r"\]\(([^)\s]+)\)")
+FENCE = re.compile(r" *(`{3,}|~{3,})")
 URL_SCHEME = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*:")
 
 
@@ -71,6 +73,19 @@ def site_link(root: Path, pages: dict[str, str], source: str, target: str,
     return f"{REPOSITORY}/{kind}/{revision}/{linked}{slash}{hash_sign}{fragment}"
 
 
+def rewrite_links(text: str, rewrite: Callable[[str], str]) -> str:
+    """Apply `rewrite` to each link target outside fenced code blocks."""
+    lines, fence = [], ""
+    for line in text.splitlines(keepends=True):
+        marker = FENCE.match(line)
+        if marker and (not fence or marker[1].startswith(fence)):
+            fence = "" if fence else marker[1]
+        elif not fence:
+            line = MARKDOWN_LINK.sub(lambda link: f"]({rewrite(link[1])})", line)
+        lines.append(line)
+    return "".join(lines)
+
+
 def mark_prospective(text: str) -> str:
     """Put the prospective-material notice below the page title."""
     title, newline, body = text.partition("\n")
@@ -86,9 +101,9 @@ def stage(root: Path, out: Path, revision: str) -> None:
         destination = out / target
         destination.parent.mkdir(parents=True, exist_ok=True)
         if source.endswith(".md"):
-            text = MARKDOWN_LINK.sub(
-                lambda link: f"]({site_link(root, pages, source, link[1], revision)})",
-                (root / source).read_text())
+            text = rewrite_links(
+                (root / source).read_text(),
+                lambda target: site_link(root, pages, source, target, revision))
             if source.startswith(PROSPECTIVE):
                 text = mark_prospective(text)
             destination.write_text(text)

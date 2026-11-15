@@ -2,9 +2,9 @@
 
 {% block announce %}
   {% set revision = config.extra.revision %}
-  Development documentation from
-  <a href="{{ config.repo_url }}/tree/{{ revision }}"><code>{{ revision[:12] }}</code></a>
-  on <code>main</code>. It can describe unreleased behavior. For the guides of
+  Development documentation, built from
+  <a href="{{ config.repo_url }}/tree/{{ revision }}"><code>{{ revision[:12] }}</code></a>.
+  It can describe unreleased behavior. For the guides of
   your installed version, run <code>sil docs</code>; see the
   <a href="{{ config.repo_url }}/releases">published releases</a>.
 {% endblock %}

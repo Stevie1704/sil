@@ -106,8 +106,8 @@ SiL. It installs the latest release:
 After the installation:
 
 - `sil skill install` writes the agent skill of the installed version into
-  the project, so the agent finds SiL for SUT, FMU, Manifest, Recording and
-  Run tasks.
+  the project. Then the agent finds SiL for tasks on a system under test, an
+  FMU, a Manifest, a Recording or a Run.
 - `sil docs` lists the guides of the installed version, and
   `sil docs agent-guide` prints the [agent guide](../docs/agent-guide.md),
   the entry point for an agent.
