@@ -156,3 +156,48 @@ def test_release_workflow_builds_each_platform_image_on_its_own_runner():
     assert "push-by-digest=true" in workflow
     assert "docker buildx imagetools create" in workflow
     assert "tools/release.py validate-image-index" in workflow
+    # The dry run before publication names its placeholder digests as such.
+    assert "--image-digest pending --digests-pending" in workflow
+
+
+def test_release_note_refuses_a_digest_that_is_not_sha256(tmp_path: Path, capsys):
+    status = main([
+        "render-notes", "--template", str(ROOT / "docs" / "releases" / "template.md"),
+        "--output", str(tmp_path / "notes.md"), "--version", "1.2.3",
+        "--source-revision", REVISION,
+        *image_args(f"linux/amd64={AMD64}", "linux/arm64=sha256:short"),
+    ])
+
+    assert status == 1
+    assert "sha256:short" in capsys.readouterr().err
+    assert not (tmp_path / "notes.md").exists()
+
+
+def test_release_note_accepts_pending_digests_only_when_asked(tmp_path: Path):
+    def render(*extra: str) -> int:
+        return main([
+            "render-notes", "--template", str(ROOT / "docs" / "releases" / "template.md"),
+            "--output", str(tmp_path / "notes.md"), "--version", "1.2.3",
+            "--source-revision", REVISION, "--image-reference", REFERENCE,
+            "--image-digest", "pending",
+            "--platform-digest", "linux/amd64=pending",
+            "--platform-digest", "linux/arm64=pending", *extra,
+        ])
+
+    assert render() == 1
+    assert render("--digests-pending") == 0
+
+
+def test_image_index_check_refuses_a_digest_that_is_not_sha256(tmp_path: Path, capsys):
+    path = tmp_path / "index.json"
+    # The index and the argument agree, so only the digest check can refuse it.
+    path.write_text(json.dumps(oci_index(("linux/amd64", AMD64), ("linux/arm64", "short"))))
+
+    status = main([
+        "validate-image-index", "--index", str(path),
+        "--platform-digest", f"linux/amd64={AMD64}",
+        "--platform-digest", "linux/arm64=short",
+    ])
+
+    assert status == 1
+    assert "'short'" in capsys.readouterr().err

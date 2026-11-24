@@ -34,6 +34,7 @@ TAG_PATTERN = re.compile(r"v(" + VERSION_PATTERN.pattern[:-2] + r")\Z")
 # The runtime image is one OCI index with one image for each of these.
 IMAGE_PLATFORMS = ("linux/amd64", "linux/arm64")
 DIGEST_PATTERN = re.compile(r"sha256:[0-9a-f]{64}")
+PENDING_DIGEST = "pending"
 
 
 class ReleaseError(RuntimeError):
@@ -631,9 +632,6 @@ def write_release_metadata(
     platform_digests: dict[str, str],
     bundle: Path,
 ) -> Path:
-    for platform, digest in platform_digests.items():
-        if not DIGEST_PATTERN.fullmatch(digest):
-            raise fail(f"image digest {digest!r} of {platform} is not a sha256 digest")
     value = source_metadata(version, revision)
     value.update(
         {
@@ -685,8 +683,12 @@ def write_checksums(directory: Path) -> Path:
     return destination
 
 
-def platform_digests(values: list[str]) -> dict[str, str]:
-    """Map each ``PLATFORM=DIGEST`` value to one digest for each image platform."""
+def platform_digests(values: list[str], *, pending: bool = False) -> dict[str, str]:
+    """Map each ``PLATFORM=DIGEST`` value to one sha256 digest for each image platform.
+
+    With ``pending``, each digest must be the literal ``pending`` instead: a
+    dry run before publication has no image to name.
+    """
     digests: dict[str, str] = {}
     for value in values:
         platform, separator, digest = value.partition("=")
@@ -694,6 +696,10 @@ def platform_digests(values: list[str]) -> dict[str, str]:
             raise fail(
                 f"platform digest {value!r} must name one of {', '.join(IMAGE_PLATFORMS)} once"
             )
+        if pending and digest != PENDING_DIGEST:
+            raise fail(f"image digest {digest!r} of {platform} is not {PENDING_DIGEST!r}")
+        if not pending and not DIGEST_PATTERN.fullmatch(digest):
+            raise fail(f"image digest {digest!r} of {platform} is not a sha256 digest")
         digests[platform] = digest
     missing = [platform for platform in IMAGE_PLATFORMS if platform not in digests]
     if missing:
@@ -706,7 +712,7 @@ def platform_placeholder(platform: str) -> str:
     return "IMAGE_DIGEST_" + platform.replace("/", "_").upper()
 
 
-def platform_digest_arg(parser_: argparse.ArgumentParser) -> None:
+def add_platform_digest_arg(parser_: argparse.ArgumentParser) -> None:
     parser_.add_argument(
         "--platform-digest", action="append", required=True, metavar="PLATFORM=DIGEST",
         help="the image digest of one platform of the index; give one for each platform",
@@ -773,7 +779,11 @@ def parser() -> argparse.ArgumentParser:
     notes.add_argument("--source-revision", required=True)
     notes.add_argument("--image-reference", required=True)
     notes.add_argument("--image-digest", required=True)
-    platform_digest_arg(notes)
+    add_platform_digest_arg(notes)
+    notes.add_argument(
+        "--digests-pending", action="store_true",
+        help=f"each platform digest is {PENDING_DIGEST!r}: a dry run before publication",
+    )
 
     title = sub.add_parser("validate-release-title")
     title.add_argument("--title", required=True)
@@ -785,14 +795,14 @@ def parser() -> argparse.ArgumentParser:
     metadata.add_argument("--source-revision", required=True)
     metadata.add_argument("--image-reference", required=True)
     metadata.add_argument("--image-digest", required=True)
-    platform_digest_arg(metadata)
+    add_platform_digest_arg(metadata)
     metadata.add_argument("--bundle", type=Path, required=True,
                           help="directory with the native archives to list")
 
     index = sub.add_parser("validate-image-index")
     index.add_argument("--index", type=Path, required=True,
                        help="the raw OCI index, as `docker buildx imagetools inspect --raw` gives it")
-    platform_digest_arg(index)
+    add_platform_digest_arg(index)
 
     checksums = sub.add_parser("checksums")
     checksums.add_argument("--directory", type=Path, required=True)
@@ -845,7 +855,9 @@ def main(argv: list[str] | None = None) -> int:
                 "IMAGE_REFERENCE": args.image_reference,
                 "IMAGE_DIGEST": args.image_digest,
             }
-            for platform, digest in platform_digests(args.platform_digest).items():
+            for platform, digest in platform_digests(
+                args.platform_digest, pending=args.digests_pending
+            ).items():
                 values[platform_placeholder(platform)] = digest
             print(render_notes(args.template, args.output, values))
         elif args.command == "validate-release-title":

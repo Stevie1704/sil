@@ -65,7 +65,7 @@ jobs:
             --output build/release-notes.verify.md \
             --version "$VERSION" --source-revision "$REVISION" \
             --image-reference "${IMAGE_NAME}:${VERSION}-ci" \
-            --image-digest pending \
+            --image-digest pending --digests-pending \
             --platform-digest linux/amd64=pending \
             --platform-digest linux/arm64=pending
           cat "$note" >> build/release-notes.verify.md
