@@ -11,3 +11,5 @@ __pycache__/
 /proofs/heaptrack-shim/evidence/
 /proofs/heaptrack-shim/evidence-failure/
 /proofs/heaptrack-shim/evidence-review/
+
+.DS_Store
