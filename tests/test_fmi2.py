@@ -45,6 +45,13 @@ reference_binaries = pytest.mark.skipif(
     reason="the Reference FMUs ship FMI 2.0 binaries for x86-64 only",
 )
 
+# The fixtures build a host FMI 2.0 FMU into binaries/<platform directory>/.
+# FMI 2.0 names no Linux arm64 directory, so the Importer refuses it (#409).
+host_fmu = pytest.mark.skipif(
+    fmi2_platform_directory() is None,
+    reason="this host has no FMI 2.0 platform directory",
+)
+
 FAKE_SCHEMAS = {
     "fake.In": {"fields": [
         {"name": "u", "type": "f64"},
@@ -217,6 +224,7 @@ def fields(u: float = 0.0, n: int = 0, b: int = 0) -> dict:
     return {"u": u, "n": n, "b": b}
 
 
+@host_fmu
 class TestLifecycle:
     """The FMI 2.0 lifecycle, driven in-process against the fake FMU."""
 
@@ -398,6 +406,7 @@ class TestLifecycle:
             group.close()
 
 
+@host_fmu
 class TestExtraction:
     """The extracted files go after success and after failure."""
 
@@ -456,6 +465,7 @@ def fake_manifest(archive: Path, duration_ns: int = 50_000_000) -> Manifest:
     return m
 
 
+@host_fmu
 class TestRunBoundary:
     """The FMI 2.0 importer as a process participant in a complete Run."""
 
