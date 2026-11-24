@@ -97,14 +97,16 @@ none.
 
 ## Supported machine classes
 
-SiL supports two machine classes. Each class has one Linux kernel, one CPU
-architecture and one glibc. A Recording is bit-identical within a class. It is
-not bit-identical across the two classes in general, as described below.
+SiL supports two machine classes: Linux x86-64 and Linux arm64. Each class is
+one CPU architecture on Linux with glibc. On Linux x86-64, `uname -m` reports
+`x86_64`. On Linux arm64, it reports `aarch64`. A Recording is bit-identical
+within a class. It is not bit-identical across the two classes in general, as
+described below.
 
 | Property | Linux x86-64 class | Linux arm64 class |
 | --- | --- | --- |
 | Operating system | Linux | Linux |
-| CPU architecture | x86-64 | arm64 (AArch64), 64-bit |
+| CPU architecture | x86-64 | arm64, 64-bit |
 | libc | glibc, Debian bookworm level or newer | glibc, Debian bookworm level or newer |
 | Python | 3.11 or newer, as the distribution metadata declares; the image pins 3.13 | the same |
 | Native archive | `sil-native-dev-<VERSION>-linux-x86_64.tar.gz` | `sil-native-dev-<VERSION>-linux-aarch64.tar.gz` |
@@ -117,8 +119,8 @@ either class. A built runner has no OpenSSL runtime dependency
 
 Continuous integration runs the test suite and the determinism gate on both
 classes, with one interpreter. A test that needs an x86-64 artifact skips on
-arm64 and names its reason. An older supported Python is declared, not
-exercised. The proof workflows run on x86-64 only. The release workflow builds
+Linux arm64 and names its reason. An older supported Python is declared, not
+exercised. The proof workflows run on Linux x86-64 only. The release workflow builds
 and smoke-tests the native archive of each class on a runner of that class.
 
 macOS and Windows are not supported as native hosts. The Clock shim is a
@@ -134,7 +136,7 @@ bit-identical in general. The two known causes are:
 
 | Cause | Effect | Action |
 | --- | --- | --- |
-| Fused multiply-add (FMA). GCC for AArch64 fuses `a + b * c` into one instruction that rounds once. The x86-64 baseline has no FMA, so the same C or C++ code rounds twice. | One unit in the last place of some `f64` values. In the determinism gate, 2 of 10 references differ, in `fmu-replay` and `library-window`. | Build the Participant with `-ffp-contract=off`. With this flag, all 10 references are bit-identical across the two classes. |
+| Fused multiply-add (FMA). On Linux arm64, GCC computes `a + b * c` with one rounding. On Linux x86-64, it rounds two times. | Some `f64` values differ by one unit in the last place. In the determinism gate, 2 of 10 references differ: `fmu-replay` and `library-window`. | Build the Participant with `-ffp-contract=off`. Then all 10 references are bit-identical on the two classes. |
 | Plain `char` signedness. `sil schema import` reads the compiled type: `i8` on x86-64, `u8` on arm64. | An import on each class gives a different Schema, so the Manifest hash differs. A Schema imported on one class is valid on the other. | Import the Schema once, and use that Schema on both classes. |
 
 Python Participants gave equal Recordings on both classes for the inputs of
