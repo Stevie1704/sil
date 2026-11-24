@@ -1,5 +1,6 @@
 #!/bin/sh
-# Install one released SiL version for Linux x86-64 from its GitHub release.
+# Install one released SiL version for Linux x86-64 or aarch64 from its GitHub
+# release.
 #
 # Each version goes into its own directory, PREFIX/VERSION, with the Python
 # package in a virtual environment (venv/) and the native runners (native/).
@@ -23,8 +24,8 @@ usage() {
     cat <<EOF
 usage: install.sh [--version VERSION] [--prefix DIR]
 
-Install the SiL release VERSION for Linux x86-64: the sil command and the
-Python package in a virtual environment, and the native runners. Every
+Install the SiL release VERSION for Linux x86-64 or aarch64: the sil command
+and the Python package in a virtual environment, and the native runners. Every
 download is checked against the release's SHA256SUMS first.
 
 options:
@@ -81,9 +82,14 @@ esac
 
 system="$(uname -s)"
 machine="$(uname -m)"
-if [ "$system" != Linux ] || [ "$machine" != x86_64 ]; then
-    fail "SiL releases support Linux x86-64 only, not $system $machine. On Windows, run this script in WSL2 (Ubuntu 24.04). Otherwise use the runtime image with Docker, on a Mac with --platform linux/amd64: the release notes give its digest, and 'Windows and macOS' in docs/getting-started.md the commands"
-fi
+case "$system $machine" in
+    "Linux x86_64") platform=linux-x86_64 ;;
+    "Linux aarch64") platform=linux-aarch64 ;;
+    Darwin*)
+        fail "SiL releases do not install natively on macOS. On a Mac, use the runtime image with Docker instead: it runs natively on Apple silicon, so give no --platform flag. The release notes give its digest." ;;
+    *)
+        fail "SiL releases support Linux x86_64 and Linux aarch64, not $system $machine. On Windows, run this script in WSL2 (Ubuntu 24.04). Otherwise use the runtime image with Docker: the release notes give its digest." ;;
+esac
 
 for tool in curl tar python3; do
     command -v "$tool" >/dev/null 2>&1 || fail "'$tool' is not on PATH"
@@ -100,7 +106,7 @@ else
 fi
 
 wheel="sil-$version-py3-none-any.whl"
-archive="sil-native-dev-$version-linux-x86_64.tar.gz"
+archive="sil-native-dev-$version-$platform.tar.gz"
 target="$prefix/$version"
 complete="$target/.complete"
 
