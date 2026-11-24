@@ -281,7 +281,10 @@ add_library(toy_thrower MODULE fixtures/participants/toy_thrower.cpp)
 # Two Tasks of different Periods in one Participant, for the diagnostics
 # collector's per-Task identities (#300).
 add_library(toy_multitask MODULE fixtures/participants/toy_multitask.cpp)
-foreach(toy toy_producer toy_accumulator toy_thrower toy_multitask)
+# Registers the Tasks its config lists and marks each Activation, for the
+# scheduler trace tests (#404).
+add_library(trace_tasks MODULE fixtures/participants/trace_tasks.cpp)
+foreach(toy toy_producer toy_accumulator toy_thrower toy_multitask trace_tasks)
   add_dependencies(${toy} toy_messages)
   target_include_directories(${toy} PRIVATE ${PROJECT_SOURCE_DIR}/include ${SIL_GEN_DIR})
   target_link_libraries(${toy} PRIVATE nlohmann_json::nlohmann_json)

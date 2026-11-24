@@ -87,17 +87,19 @@ def sil_diagnostics_launcher(build_dir) -> Path:
 
 
 def run_manifest(runner: Path, manifest_path: Path, out: Path,
-                 env: dict[str, str] | None = None):
+                 env: dict[str, str] | None = None,
+                 timeout: float | None = None):
     """One Run at the run boundary: manifest in, exit code + MCAP out.
 
     The runner is an argument because the production and the instrumented
     kernel have to be run the same way to be compared (issue #82).
+    A `timeout` raises `subprocess.TimeoutExpired` from a Run that hangs.
     """
     # `env=None` inherits this process's environment, so only callers that
     # need to scope the run (e.g. TMPDIR) pass one.
     proc = subprocess.run(
         [str(runner), str(manifest_path), "-o", str(out)],
-        capture_output=True, text=True, env=env,
+        capture_output=True, text=True, env=env, timeout=timeout,
     )
     proc.mcap_path = out
     return proc
