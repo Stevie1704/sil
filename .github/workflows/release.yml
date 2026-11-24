@@ -196,6 +196,9 @@ jobs:
             runner: ubuntu-24.04-arm
             arch: arm64
     runs-on: ${{ matrix.runner }}
+    # A push to the registry waits for the same approval as the release.
+    environment:
+      name: ${{ github.event_name == 'push' && startsWith(github.ref_name, 'v') && 'release' || '' }}
     permissions:
       contents: read
       packages: write
