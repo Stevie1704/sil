@@ -227,3 +227,11 @@ def test_the_published_index_is_checked_without_the_local_image_store():
     assert "docker image inspect" not in publish
     assert "--format '{{json .Image}}'" in publish
 
+
+def test_an_arm64_host_runs_the_arm64_image_of_the_version_tag():
+    job = release_jobs()["pull-arm64"]
+    assert "runs-on: ubuntu-24.04-arm\n" in job
+    assert re.search(r"needs: \[.*\bpublish\b.*\]", job)
+    runs = [line for line in job.splitlines() if "docker run" in line]
+    assert runs and not any("--platform" in line for line in runs)
+    assert '"${IMAGE_NAME}:${VERSION}" -m)" = aarch64' in job

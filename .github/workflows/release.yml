@@ -557,3 +557,35 @@ jobs:
           for file in dist/*; do
             grep -Fxq "$(basename "$file")" <<< "$assets"
           done
+
+  pull-arm64:
+    # An arm64 host that pulls the version tag with no --platform must run
+    # the arm64 image of the index.
+    name: Run the published version tag on an arm64 host
+    if: github.event_name == 'push' && startsWith(github.ref_name, 'v')
+    needs: [verify, publish]
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: read
+    env:
+      VERSION: ${{ needs.verify.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check that the version tag selects the arm64 image
+        run: |
+          set -euo pipefail
+          test "$(docker run --rm --pull always --entrypoint uname "${IMAGE_NAME}:${VERSION}" -m)" = aarch64
+          python3 tools/release.py validate-image \
+            --image "${IMAGE_NAME}:${VERSION}" --version "$VERSION" \
+            --source-revision "$GITHUB_SHA"
