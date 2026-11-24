@@ -80,3 +80,39 @@ jobs:
           SIL_CONTAINER_ACCEPTANCE_IMAGE: sil-acceptance:ci
           SIL_NATIVE_RUNNER: build/native/bin/sil-run
         run: .venv/bin/python -m pytest tests/test_container.py -v
+
+  # Linux arm64 is a second machine class (#311). This job runs the suite and
+  # the determinism gate there. Tests that need the x86-64 class skip, and
+  # `make test` prints each reason (-rs). Proofs, release artifacts and the
+  # runtime image stay on x86-64 runners.
+  test-arm64:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install the build dependencies
+        run: |
+          sudo apt-get update
+          # tests/test_install_script.py creates venvs with pip, which needs
+          # ensurepip: Ubuntu ships it in python3-venv.
+          sudo apt-get install -y --no-install-recommends libssl-dev \
+            python3-venv
+
+      - name: Set up Python environment
+        run: make venv
+
+      # An unlimited -j can run out of memory on arm64 hosts (#407).
+      - name: Build kernel
+        run: make build JOBS=4
+
+      # SIL_TEST_CHROME stays unset: Google publishes no Linux arm64 Chrome
+      # and this image has no Chromium, so the HTML browser checks skip.
+      - name: Run C++ unit tests and the test suite
+        run: make test JOBS=4
+
+      - name: Determinism gate on reference manifests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/python/src
+        run: .venv/bin/python tools/determinism_gate.py
