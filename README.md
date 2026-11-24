@@ -27,12 +27,12 @@ Install the latest stable release of SiL (https://github.com/Stevie1704/sil)
 for this project. Read the installation guide at
 https://github.com/Stevie1704/sil/blob/main/docs/getting-started.md first.
 
-Check the OS and CPU architecture. On Linux x86-64 with glibc 2.36 or newer,
-ensure curl, tar, and Python 3.11+ with venv are available, then use
+Check the OS and CPU architecture. On Linux x86-64 or arm64 with glibc 2.36 or
+newer, ensure curl, tar, and Python 3.11+ with venv are available, then use
 https://github.com/Stevie1704/sil/releases/latest/download/install.sh
 to install both the Python tools and native runtime. On Windows, use WSL2;
-on macOS, use the Linux amd64 Docker image pinned by digest in the latest
-release notes, following the guide's platform instructions.
+on macOS, use the runtime image pinned by digest in the latest release notes,
+with no --platform flag, following the guide's platform instructions.
 
 For a native installation, source ~/.local/share/sil/env and add that line
 to my shell profile if missing. Verify sil --help and sil-run --version,
@@ -47,8 +47,9 @@ a new terminal.
 
 ### On your own
 
-On **Linux x86-64 with glibc 2.36+** (Debian 12 / Ubuntu 24.04 or newer),
-you need `curl`, `tar`, Python 3.11+ with `venv`, and `sha256sum` or `shasum`.
+On **Linux, x86-64 or arm64, with glibc 2.36+** (Debian 12 / Ubuntu 24.04 or
+newer), you need `curl`, `tar`, Python 3.11+ with `venv`, and `sha256sum` or
+`shasum`. The same commands install on both machine classes.
 On Debian or Ubuntu, install the prerequisites with:
 
 ```sh
@@ -88,7 +89,8 @@ the installed version's guide and commands. Use `sil docs agent-guide` to
 read the guide yourself.
 
 On **Windows**, use WSL2 with Ubuntu 24.04 and run the Linux commands above
-in its shell. On **macOS**, use the Linux amd64 Docker image from the release.
+in its shell. On **macOS**, use the runtime image from the release in Docker.
+On Apple silicon it runs natively, so give no `--platform` flag.
 See [Windows and macOS](docs/getting-started.md#windows-and-macos) for setup
 and container commands, or [installation details](docs/getting-started.md#install-a-release)
 for a custom prefix or a specific release.

@@ -10,7 +10,10 @@ the docs) and the native development archive (`sil-run`,
 are assets of the GitHub release. The runtime image is another way to run
 SiL, with nothing to install but Docker (`sil docs container`).
 
-On Linux x86-64, the install script of a release installs both parts. It
+On Linux x86-64 and Linux arm64, the install script of a release installs both
+parts. The same command works on both. The script selects the native archive
+by the machine architecture: `x86_64` selects `linux-x86_64`, and `aarch64`
+selects `linux-aarch64`. Run `uname -m` to see your architecture. The script
 needs `curl`, `tar` and Python 3.11 or newer with `venv` (on Debian and
 Ubuntu, the `python3-venv` package):
 
@@ -37,6 +40,9 @@ curl -fsSL https://github.com/Stevie1704/sil/releases/download/v<VERSION>/instal
   newer. The published 0.1.0 and 0.2.0 archives need glibc 2.38 and
   `GLIBCXX_3.4.32`, for example Ubuntu 24.04. For 0.2.0 on bookworm, use
   its runtime image. The published archives are not replaced.
+- A release without a `linux-aarch64` archive does not install on Linux
+  arm64. The script stops at the download, and installs nothing. The release
+  notes name the machine classes of each release.
 - On Windows and macOS, the script stops before any download. See
   [Windows and macOS](#windows-and-macos).
 
@@ -47,8 +53,9 @@ both `bin` directories on `PATH`.
 
 ## Windows and macOS
 
-SiL releases support Linux x86-64 only (`sil docs support`). On Windows and on
-macOS, run that Linux x86-64 build in WSL2 or in Docker.
+SiL releases support Linux x86-64 and Linux arm64 (`sil docs support`). On
+Windows, run the Linux release in WSL2. On macOS, run the runtime image in
+Docker.
 
 **Windows: WSL2.** WSL2 runs a real Linux x86-64 kernel, so this is the
 supported machine class on an x86-64 PC. In PowerShell, install Ubuntu 24.04,
@@ -67,23 +74,27 @@ under `~`, not under `/mnt/c`: the Windows drives are slower and do not keep
 Linux file modes.
 
 **Windows and macOS: Docker.** The runtime image is the reference environment.
-Pull it by the digest in the release notes and run it as
-`sil docs container` describes. The image is for `linux/amd64` only; on a Mac
-with Apple silicon, give `--platform linux/amd64` to each `docker pull` and
-`docker run`, and Docker Desktop emulates it:
+Pull it by the image index digest in the release notes and run it as
+`sil docs container` describes. The image index holds `linux/amd64` and
+`linux/arm64`. Docker selects the platform of the host, so give no
+`--platform` flag. On a Mac with Apple silicon, the arm64 image runs natively:
 
 ```sh
-image=ghcr.io/stevie1704/sil@sha256:<release-image-digest>
-docker pull --platform linux/amd64 "$image"
-docker run --rm --platform linux/amd64 --network none \
+image=ghcr.io/stevie1704/sil@sha256:<release-image-index-digest>
+docker pull "$image"
+docker run --rm --network none \
   --user "$(id -u):$(id -g)" \
   --mount "type=bind,src=$PWD,dst=/workspace" \
   "$image" /workspace/manifest.json -o /workspace/out.mcap
 ```
 
-- The emulated Run is the same machine class as the reference, but it is
-  slower. Do not use its diagnostics or benchmark times as the speed of the
-  SUT.
+- A Run on an Apple silicon Mac is a Linux arm64 Run. Its Recording is not
+  bit-identical to a Recording from Linux x86-64; see
+  [Across machine classes](../SUPPORT.md#across-machine-classes).
+- To run the x86-64 image on Apple silicon, give `--platform linux/amd64` to
+  `docker pull` and `docker run`. Docker Desktop then emulates it, which is
+  slower. Do not use the diagnostics or benchmark times of an emulated Run as
+  the speed of the SUT.
 - Docker Desktop on macOS shares only some directories with containers, by
   default your home directory. Keep the workspace under it.
 - On Windows, run the `docker` commands in a WSL2 shell, where `$PWD` and
@@ -91,8 +102,8 @@ docker run --rm --platform linux/amd64 --network none \
 - The image entry point is `sil-run`. For the `sil` command, give
   `--entrypoint sil`, for example `--entrypoint sil "$image" docs`.
 
-**Not supported:** a native Windows build, a native macOS build, and Linux
-arm64. A build from source on macOS can serve for development, but it is not
+**Not supported:** a native Windows build and a native macOS build. A build
+from source on macOS can serve for development, but it is not
 a release, no determinism claim covers it, and the clock shim has no macOS
 counterpart.
 
