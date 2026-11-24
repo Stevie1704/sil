@@ -362,17 +362,23 @@ def _media_type(
 
 def _unverified(extracted: Path, description: ModelDescription) -> list[str]:
     """What only a loaded binary, or its host, can answer."""
-    directory = description.platform_directory() or "linux64"
-    binary = (
-        f"binaries/{directory}/"
-        f"{description.model_identifier}{library_suffix()}"
-    )
-    unverified = [
-        f"whether {binary} loads on this host and the libraries it depends "
-        f"on resolve",
+    unverified = []
+    # A host with no directory for the version loads no binary; `unusable`
+    # already says so.
+    directory = description.platform_directory()
+    if directory is not None:
+        binary = (
+            f"binaries/{directory}/"
+            f"{description.model_identifier}{library_suffix()}"
+        )
+        unverified.append(
+            f"whether {binary} loads on this host and the libraries it "
+            f"depends on resolve"
+        )
+    unverified.append(
         "whether the FMU accepts its start values and completes "
-        "initialization",
-    ]
+        "initialization"
+    )
     capabilities = description.capabilities
     if capabilities.get("needsExecutionTool") == "true":
         unverified.append(
