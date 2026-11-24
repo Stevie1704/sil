@@ -21,7 +21,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import platform
 import re
 import shutil
 import signal
@@ -42,6 +41,7 @@ from sil.diagnostics_run import (
     add_provenance_mode_argument, command_error,
     find_native_tools, guards_from, provenance_mode_from,
 )
+from sil.machine_class import other_linux_machine_class
 from sil.profile_activation import correlate
 from sil.profile_common import (
     PROG, POLL_S, STDERR_TAIL_BYTES, SYMBOLIZATION_TIMEOUT_S, CaptureRun,
@@ -933,22 +933,14 @@ def main(argv: list[str] | None = None) -> int:
     return request.capture(cwd)
 
 
-def _other_linux_machine_class() -> str | None:
-    """The host, when it is a Linux machine class other than x86-64. perf on
-    Linux arm64 is not qualified (#311): it lost source lines and inlined
-    frames there. macOS has no perf, so its own error names the cause."""
-    system, machine = platform.system(), platform.machine()
-    if system == "Linux" and machine != "x86_64":
-        return f"{system} {machine}"
-    return None
-
-
 def run_cpu(request: CpuRequest, cwd: Path) -> int:
     """The CPU collector after the usage checks."""
-    host = _other_linux_machine_class()
-    if host is not None:
+    # perf on Linux arm64 is not qualified (#311): it lost source lines and
+    # inlined frames there. macOS has no perf, so its own error names the cause.
+    machine = other_linux_machine_class()
+    if machine is not None:
         return command_error(PROG, f"the cpu collector needs Linux x86-64; "
-                             f"this host is {host}", EXIT_FAILURE)
+                             f"this host is Linux {machine}", EXIT_FAILURE)
     try:
         find_native_tools()
     except ToolMissing as error:

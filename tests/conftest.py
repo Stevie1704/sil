@@ -1,7 +1,6 @@
 import hashlib
 import importlib.util
 import os
-import platform
 import subprocess
 import sys
 from pathlib import Path
@@ -25,13 +24,14 @@ if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 os.environ["PYTHONPATH"] = str(_SRC) + os.pathsep + os.environ.get("PYTHONPATH", "")
 
+from sil.machine_class import other_linux_machine_class  # noqa: E402
+
 
 # SUPPORT.md defines a machine class per Linux architecture. A test marked
 # `x86_64_only(reason)` needs the Linux x86-64 class (its artifacts or a
 # feature qualified only there) and skips on another Linux class. macOS is a
 # development host, not a machine class, so the mark does not apply there.
-OTHER_LINUX_MACHINE_CLASS = (platform.system() == "Linux"
-                             and platform.machine() != "x86_64")
+OTHER_LINUX_MACHINE_CLASS = other_linux_machine_class() is not None
 
 
 def pytest_configure(config):
