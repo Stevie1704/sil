@@ -74,13 +74,20 @@ under `~`, not under `/mnt/c`: the Windows drives are slower and do not keep
 Linux file modes.
 
 **Windows and macOS: Docker.** The runtime image is the reference environment.
-Pull it by the image index digest in the release notes and run it as
-`sil docs container` describes. The image index holds `linux/amd64` and
-`linux/arm64`. Docker selects the platform of the host, so give no
-`--platform` flag. On a Mac with Apple silicon, the arm64 image runs natively:
+Run it as `sil docs container` describes. The image index holds `linux/amd64`
+and `linux/arm64`. The release notes give the index digest and one digest for
+each platform.
+
+- For a quick try, pull the version tag or the index digest. Docker selects
+  the platform of the host.
+- For a deterministic Run, pin the platform digest of your machine class:
+  `linux/arm64` on a Mac with Apple silicon, `linux/amd64` on an x86-64 host.
+
+Give no `--platform` flag. On a Mac with Apple silicon, the arm64 image runs
+natively:
 
 ```sh
-image=ghcr.io/stevie1704/sil@sha256:<release-image-index-digest>
+image=ghcr.io/stevie1704/sil@sha256:<linux-arm64-platform-digest>
 docker pull "$image"
 docker run --rm --network none \
   --user "$(id -u):$(id -g)" \
@@ -91,8 +98,8 @@ docker run --rm --network none \
 - A Run on an Apple silicon Mac is a Linux arm64 Run. Its Recording is not
   bit-identical to a Recording from Linux x86-64; see
   [Across machine classes](../SUPPORT.md#across-machine-classes).
-- To run the x86-64 image on Apple silicon, give `--platform linux/amd64` to
-  `docker pull` and `docker run`. Docker Desktop then emulates it, which is
+- To run the x86-64 image on Apple silicon, pin the `linux/amd64` digest and
+  give `--platform linux/amd64` to `docker pull` and `docker run`. Docker Desktop then emulates it, which is
   slower. Do not use the diagnostics or benchmark times of an emulated Run as
   the speed of the SUT.
 - Docker Desktop on macOS shares only some directories with containers, by
