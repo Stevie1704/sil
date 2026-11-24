@@ -1,6 +1,7 @@
 import hashlib
 import importlib.util
 import os
+import platform
 import subprocess
 import sys
 from pathlib import Path
@@ -23,6 +24,35 @@ _SRC = ROOT / "python" / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 os.environ["PYTHONPATH"] = str(_SRC) + os.pathsep + os.environ.get("PYTHONPATH", "")
+
+
+# SUPPORT.md defines a machine class per Linux architecture. A test marked
+# `x86_64_only(reason)` needs the Linux x86-64 class (its artifacts or a
+# feature qualified only there) and skips on another Linux class. macOS is a
+# development host, not a machine class, so the mark does not apply there.
+OTHER_LINUX_MACHINE_CLASS = (platform.system() == "Linux"
+                             and platform.machine() != "x86_64")
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "x86_64_only(reason): needs the Linux x86-64 machine "
+        "class; skips with the reason on another Linux machine class")
+
+
+def pytest_collection_modifyitems(config, items):
+    if not OTHER_LINUX_MACHINE_CLASS:
+        return
+    for item in items:
+        marker = item.get_closest_marker("x86_64_only")
+        if marker is not None:
+            item.add_marker(pytest.mark.skip(
+                reason=f"Linux x86-64 only: {marker.args[0]}"))
+
+
+# `sil profile --collector cpu` refuses another Linux machine class.
+cpu_collector = pytest.mark.x86_64_only(
+    "the cpu collector (perf) is qualified on Linux x86-64 only")
 
 
 def file_sha256(path) -> str:

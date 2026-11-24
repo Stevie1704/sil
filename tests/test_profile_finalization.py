@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import file_sha256
+from conftest import file_sha256, cpu_collector
 from sil import profile_common, profile_run
 from sil.profile_activation import Correlation
 from test_profile_heap_run import heaptrack, marker_manifest  # noqa: F401
@@ -67,6 +67,7 @@ def correlation_document(monkeypatch) -> None:
     monkeypatch.setattr(profile_run, "correlate", with_document)
 
 
+@cpu_collector
 def test_activations_hash_each_finalized_artifact_once(
         capture, tmp_path, monkeypatch):
     run, hashed = capture
@@ -82,6 +83,7 @@ def test_activations_hash_each_finalized_artifact_once(
             "activation_correlation"} <= roles
 
 
+@cpu_collector
 def test_no_activations_keep_the_inventory(capture, tmp_path):
     run, hashed = capture
 
@@ -92,6 +94,7 @@ def test_no_activations_keep_the_inventory(capture, tmp_path):
             "cpu_samples"} <= {row["role"] for row in report["artifacts"]}
 
 
+@cpu_collector
 def test_external_mode_keeps_the_profile_digest_of_the_recording(
         capture, tmp_path):
     run, hashed = capture
@@ -106,6 +109,7 @@ def test_external_mode_keeps_the_profile_digest_of_the_recording(
     assert side_car["recording"] == {"digest_state": "omitted", "sha256": None}
 
 
+@cpu_collector
 def test_full_mode_hashes_the_recording_apart_from_the_runner(
         capture, tmp_path):
     """No handoff: the profile tool hashes the file in its finalized state, and
@@ -122,6 +126,7 @@ def test_full_mode_hashes_the_recording_apart_from_the_runner(
     assert side_car["recording"]["sha256"] == row["sha256"]
 
 
+@cpu_collector
 def test_a_failed_run_keeps_the_digest_of_its_partial_recording(
         capture, tmp_path):
     run, hashed = capture
@@ -156,6 +161,7 @@ def test_a_heap_capture_hashes_each_artifact_once(
         row["role"] for row in report["artifacts"]}
 
 
+@cpu_collector
 def test_no_recording_has_no_recording_artifact(capture, tmp_path):
     run, hashed = capture
 
@@ -165,6 +171,7 @@ def test_no_recording_has_no_recording_artifact(capture, tmp_path):
     assert "recording" not in {row["role"] for row in report["artifacts"]}
 
 
+@cpu_collector
 def test_a_recording_outside_the_profile_directory_is_no_artifact(
         capture, tmp_path):
     run, hashed = capture

@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import file_sha256
+from conftest import file_sha256, cpu_collector
 from profile_sets import artifact_set, fixture
 from sil.diagnostics_format import provenance_mode_text
 from sil.diagnostics_report import validate_benchmark_report, validate_run_report
@@ -188,6 +188,7 @@ def test_a_benchmark_report_before_the_option_stays_valid():
     ([], "full"), (["--provenance-mode", "full"], "full"),
     (["--provenance-mode", "external"], "external")],
     ids=["default", "full", "external"])
+@cpu_collector
 def test_cpu_capture_forwards_and_records_the_policy(
         tools, exports, tmp_path, options, mode, activations):
     manifest = mixed_period_manifest(tmp_path)
@@ -206,6 +207,7 @@ def test_cpu_capture_forwards_and_records_the_policy(
         "provenance_mode"] == mode
 
 
+@cpu_collector
 def test_external_cpu_capture_still_hashes_every_profile_artifact(
         tools, exports, tmp_path):
     manifest = mixed_period_manifest(tmp_path)
@@ -227,6 +229,7 @@ def test_external_cpu_capture_still_hashes_every_profile_artifact(
 
 
 @pytest.mark.parametrize("mode", ["full", "external"])
+@cpu_collector
 def test_a_profile_rejects_tampered_normalized_evidence_in_each_mode(
         tools, exports, tmp_path, mode):
     manifest = mixed_period_manifest(tmp_path)
@@ -243,6 +246,7 @@ def test_a_profile_rejects_tampered_normalized_evidence_in_each_mode(
     assert "SHA-256" in proc.stderr
 
 
+@cpu_collector
 def test_cpu_capture_keeps_no_recording_and_custom_paths(tools, exports,
                                                          tmp_path):
     manifest = mixed_period_manifest(tmp_path)
@@ -259,6 +263,7 @@ def test_cpu_capture_keeps_no_recording_and_custom_paths(tools, exports,
         "digest_state": "not_requested", "sha256": None}
 
 
+@cpu_collector
 def test_a_failed_cpu_capture_run_keeps_its_exit_code(tools, exports,
                                                       tmp_path):
     manifest = failing_step_manifest(tmp_path)
@@ -274,6 +279,7 @@ def test_a_failed_cpu_capture_run_keeps_its_exit_code(tools, exports,
 
 
 @pytest.mark.parametrize("mode", ["full", "external"])
+@cpu_collector
 def test_cpu_capture_of_a_replay_mismatch_is_a_configuration_error(
         tools, exports, tmp_path, run_sil, mode):
     ref, source = replay_run(tmp_path, run_sil)
