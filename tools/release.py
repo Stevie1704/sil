@@ -397,6 +397,10 @@ REQUIRED_NATIVE_PATHS = (
 )
 
 
+# The `uname -m` names of the Linux machine classes with a native archive.
+NATIVE_ARCHITECTURES = ("x86_64", "aarch64")
+
+
 def validate_native_prefix(
     prefix: Path, version: str, revision: str | None = None
 ) -> None:
@@ -425,10 +429,22 @@ def _tar_add(archive: tarfile.TarFile, path: Path, name: str) -> None:
         archive.addfile(info)
 
 
-def make_native_archive(prefix: Path, output: Path, version: str) -> Path:
-    """Create a deterministic Linux x86-64 development archive."""
+def native_archive_root(version: str, architecture: str) -> str:
+    """The archive root name, also the file name without `.tar.gz`."""
+    if architecture not in NATIVE_ARCHITECTURES:
+        raise fail(
+            f"unknown native architecture {architecture!r}; "
+            f"expected one of {', '.join(NATIVE_ARCHITECTURES)}"
+        )
+    return f"sil-native-dev-{version}-linux-{architecture}"
+
+
+def make_native_archive(
+    prefix: Path, output: Path, version: str, architecture: str
+) -> Path:
+    """Create a deterministic Linux development archive for one architecture."""
+    root_name = native_archive_root(version, architecture)
     validate_native_prefix(prefix, version)
-    root_name = f"sil-native-dev-{version}-linux-x86_64"
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("wb") as stream:
         with gzip.GzipFile(
@@ -454,8 +470,10 @@ def make_native_archive(prefix: Path, output: Path, version: str) -> Path:
 
 
 def validate_native_archive(
-    archive_path: Path, version: str, revision: str | None = None
+    archive_path: Path, version: str, architecture: str,
+    revision: str | None = None,
 ) -> str:
+    expected_root = native_archive_root(version, architecture)
     context = f"native archive {archive_path.name}"
     with tarfile.open(archive_path, "r:gz") as archive:
         members = archive.getmembers()
@@ -465,7 +483,6 @@ def validate_native_archive(
         if len(roots) != 1:
             raise fail(f"{context}: expected one archive root")
         root = next(iter(roots))
-        expected_root = f"sil-native-dev-{version}-linux-x86_64"
         if root != expected_root:
             raise fail(f"{context}: archive root {root!r} != {expected_root!r}")
         names = {member.name.removeprefix(root + "/") for member in members}
@@ -587,12 +604,28 @@ def validate_release_title(title: str, version: str) -> None:
         raise fail(f"release title {title!r} does not equal version {version!r}")
 
 
+def native_archive_entries(bundle: Path, version: str) -> list[dict[str, str]]:
+    """One entry per machine class; a release must carry every archive."""
+    entries = []
+    for architecture in NATIVE_ARCHITECTURES:
+        archive = bundle / f"{native_archive_root(version, architecture)}.tar.gz"
+        if not archive.is_file():
+            raise fail(f"release bundle {bundle} has no {archive.name}")
+        entries.append({
+            "architecture": architecture,
+            "file": archive.name,
+            "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+        })
+    return entries
+
+
 def write_release_metadata(
     output: Path,
     version: str,
     revision: str,
     image_reference: str,
     image_digest: str,
+    bundle: Path,
 ) -> Path:
     value = source_metadata(version, revision)
     value.update(
@@ -601,6 +634,7 @@ def write_release_metadata(
             "image_digest": image_digest,
         }
     )
+    value["native_archives"] = native_archive_entries(bundle, version)
     write_json(output, value)
     return output
 
@@ -658,10 +692,12 @@ def parser() -> argparse.ArgumentParser:
     native.add_argument("--prefix", type=Path, required=True)
     native.add_argument("--output", type=Path, required=True)
     native.add_argument("--version", required=True)
+    native.add_argument("--architecture", choices=NATIVE_ARCHITECTURES, required=True)
 
     native_check = sub.add_parser("validate-native-archive")
     native_check.add_argument("--archive", type=Path, required=True)
     native_check.add_argument("--version", required=True)
+    native_check.add_argument("--architecture", choices=NATIVE_ARCHITECTURES, required=True)
     native_check.add_argument("--source-revision")
 
     runner = sub.add_parser("validate-runner")
@@ -692,6 +728,8 @@ def parser() -> argparse.ArgumentParser:
     metadata.add_argument("--source-revision", required=True)
     metadata.add_argument("--image-reference", required=True)
     metadata.add_argument("--image-digest", required=True)
+    metadata.add_argument("--bundle", type=Path, required=True,
+                          help="directory with the native archives to list")
 
     checksums = sub.add_parser("checksums")
     checksums.add_argument("--directory", type=Path, required=True)
@@ -726,9 +764,13 @@ def main(argv: list[str] | None = None) -> int:
             ):
                 print(artifact)
         elif args.command == "make-native-archive":
-            print(make_native_archive(args.prefix, args.output, args.version))
+            print(make_native_archive(
+                args.prefix, args.output, args.version, args.architecture
+            ))
         elif args.command == "validate-native-archive":
-            validate_native_archive(args.archive, args.version, args.source_revision)
+            validate_native_archive(
+                args.archive, args.version, args.architecture, args.source_revision
+            )
         elif args.command == "validate-runner":
             validate_runner(args.runner, args.version, args.source_revision)
         elif args.command == "validate-image":
@@ -751,6 +793,7 @@ def main(argv: list[str] | None = None) -> int:
                     args.source_revision,
                     args.image_reference,
                     args.image_digest,
+                    args.bundle,
                 )
             )
         elif args.command == "checksums":

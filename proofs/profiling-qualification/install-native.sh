@@ -30,7 +30,7 @@ rm -rf "$out/native"
 docker cp "$container:/opt/sil/native" "$out/native"
 python3 "$root/tools/release.py" make-native-archive --prefix "$out/native" \
     --output "$out/dist/sil-native-dev-${version}-linux-x86_64.tar.gz" \
-    --version "$version"
+    --version "$version" --architecture x86_64
 python3 "$root/tools/release.py" stamp-installer --root "$root" \
     --output "$out/dist/install.sh" --version "$version"
 mirror="$out/mirror"
