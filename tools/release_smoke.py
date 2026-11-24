@@ -315,6 +315,14 @@ def smoke_source_scope_refusal(workspace: Path, execute) -> None:
         )
 
 
+def smoke_source_scopes_for(architecture: str, workspace: Path, execute) -> None:
+    """Source scopes are x86-64 only, so other hosts check the refusal."""
+    if architecture == "x86_64":
+        smoke_source_scopes(workspace, execute)
+    else:
+        smoke_source_scope_refusal(workspace, execute)
+
+
 def find_native_archive(bundle: Path, version: str, architecture: str) -> Path:
     """The bundle's native archive for one architecture (`uname -m` name)."""
     archive = bundle / f"{native_archive_root(version, architecture)}.tar.gz"
@@ -443,10 +451,7 @@ def smoke_native(
         return run([str(python_bin / "sil"), *args],
                    cwd=scope_workspace, env=environment)
 
-    if architecture == "x86_64":
-        smoke_source_scopes(scope_workspace, execute)
-    else:
-        smoke_source_scope_refusal(scope_workspace, execute)
+    smoke_source_scopes_for(architecture, scope_workspace, execute)
     return acc_manifest, manifest_hash
 
 
@@ -540,7 +545,9 @@ def smoke_container(
     for name in ("consumer.so", "scopes-manifest.json"):
         shutil.copyfile(manifest.parent / "native-scopes" / name,
                         scope_workspace / name)
-    smoke_source_scopes(
+    # The image runs for the host platform, like the consumer built above.
+    smoke_source_scopes_for(
+        platform.machine(),
         scope_workspace,
         lambda args: docker_run(image, scope_workspace, args, "sil"),
     )

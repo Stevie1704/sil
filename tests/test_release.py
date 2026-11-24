@@ -405,3 +405,25 @@ def test_release_metadata_requires_every_native_archive(tmp_path: Path):
             "ghcr.io/stevie1704/sil@sha256:abc", "sha256:abc", bundle,
         )
     assert not (tmp_path / "sil-release.json").exists()
+
+
+def test_smoke_fails_when_source_scopes_do_not_refuse_an_arm64_host(tmp_path: Path):
+    from release_smoke import SmokeError, smoke_source_scopes_for
+
+    def captures(args):
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    with pytest.raises(SmokeError, match="did not refuse"):
+        smoke_source_scopes_for("aarch64", tmp_path, captures)
+
+
+def test_smoke_accepts_the_source_scope_refusal_on_an_arm64_host(tmp_path: Path):
+    from release_smoke import smoke_source_scopes_for
+
+    def refuses(args):
+        return subprocess.CompletedProcess(
+            args, 1, stdout="",
+            stderr="sil profile: source scopes need Linux x86-64/glibc; "
+                   "this host is Linux aarch64 glibc\n")
+
+    smoke_source_scopes_for("aarch64", tmp_path, refuses)
