@@ -191,6 +191,7 @@ jobs:
     env:
       VERSION: ${{ needs.verify.outputs.version }}
       REVISION: ${{ needs.verify.outputs.source_revision }}
+      AARCH64_ARCHIVE: sil-native-dev-${{ needs.verify.outputs.version }}-linux-aarch64.tar.gz
     steps:
       - uses: actions/checkout@v4
         with:
@@ -216,13 +217,13 @@ jobs:
           mkdir -p dist
           python3 tools/release.py make-native-archive \
             --prefix build/native \
-            --output "dist/sil-native-dev-${VERSION}-linux-aarch64.tar.gz" \
+            --output "dist/$AARCH64_ARCHIVE" \
             --version "$VERSION" --architecture aarch64
           python3 tools/release.py validate-runner \
             --runner build/native/bin/sil-run --version "$VERSION" \
             --source-revision "$REVISION"
           python3 tools/release.py validate-native-archive \
-            --archive "dist/sil-native-dev-${VERSION}-linux-aarch64.tar.gz" \
+            --archive "dist/$AARCH64_ARCHIVE" \
             --version "$VERSION" --architecture aarch64 \
             --source-revision "$REVISION"
 
@@ -232,7 +233,7 @@ jobs:
           # The smoke installs the verified pure-Python wheel next to the archive.
           mkdir -p build/smoke
           cp build/x86_64-bundle/sil-"$VERSION"-*.whl \
-            "dist/sil-native-dev-${VERSION}-linux-aarch64.tar.gz" build/smoke/
+            "dist/$AARCH64_ARCHIVE" build/smoke/
           python3 tools/release_smoke.py --native-only \
             --bundle build/smoke --version "$VERSION" --source-revision "$REVISION"
           docker run --rm \
@@ -247,8 +248,6 @@ jobs:
             ' sh "$VERSION" "$REVISION"
 
       - name: Install the arm64 release with the install script
-        env:
-          VERSION: ${{ needs.verify.outputs.version }}
         run: |
           set -euo pipefail
           python3 tools/release.py stamp-installer --root . \
@@ -258,7 +257,7 @@ jobs:
           mirror="$RUNNER_TEMP/mirror"
           mkdir -p "$mirror/v$VERSION"
           cp build/x86_64-bundle/sil-"$VERSION"-*.whl \
-            "dist/sil-native-dev-${VERSION}-linux-aarch64.tar.gz" "$mirror/v$VERSION/"
+            "dist/$AARCH64_ARCHIVE" "$mirror/v$VERSION/"
           (cd "$mirror/v$VERSION" && sha256sum -- * > SHA256SUMS)
           SIL_RELEASE_URL="file://$mirror" sh build/install.sh \
             --prefix "$RUNNER_TEMP/sil"
@@ -274,7 +273,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: native-aarch64-${{ needs.verify.outputs.version }}
-          path: dist/sil-native-dev-${{ needs.verify.outputs.version }}-linux-aarch64.tar.gz
+          path: dist/${{ env.AARCH64_ARCHIVE }}
           if-no-files-found: error
 
   image:
