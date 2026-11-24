@@ -488,12 +488,15 @@ jobs:
           python3 tools/release.py validate-image-index --index image-index.json \
             --platform-digest "linux/amd64=${amd64}" \
             --platform-digest "linux/arm64=${arm64}"
-          # A host pulls the index; check that each platform selects its image.
-          # amd64 is last, so the local reference is this runner's image.
-          for platform in linux/arm64 linux/amd64; do
-            docker pull --platform "$platform" "${IMAGE_NAME}@${digest}"
-            test "$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "${IMAGE_NAME}@${digest}")" = "$platform"
+          # The registry resolves each platform of the index to its image
+          # config. This does not depend on the local image store.
+          docker buildx imagetools inspect "${IMAGE_NAME}@${digest}" \
+            --format '{{json .Image}}' > image-configs.json
+          for platform in linux/amd64 linux/arm64; do
+            test "$(jq -r --arg p "$platform" '.[$p] | "\(.os)/\(.architecture)"' image-configs.json)" = "$platform"
           done
+          # This runner is x86-64: with no --platform, it must run the amd64 image.
+          test "$(docker run --rm --entrypoint uname "${IMAGE_NAME}@${digest}" -m)" = x86_64
           python3 tools/release.py validate-image \
             --image "${IMAGE_NAME}@${digest}" --version "$VERSION" \
             --source-revision "$GITHUB_SHA"

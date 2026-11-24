@@ -221,3 +221,9 @@ def test_a_release_asks_for_one_approval_before_any_push():
     assert re.search(r"needs: \[.*\bgate\b.*\]", jobs["image"])
     assert re.search(r"needs: \[.*\bgate\b.*\]", jobs["publish"])
 
+
+def test_the_published_index_is_checked_without_the_local_image_store():
+    publish = release_jobs()["publish"]
+    assert "docker image inspect" not in publish
+    assert "--format '{{json .Image}}'" in publish
+
