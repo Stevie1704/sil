@@ -41,6 +41,12 @@ the fix. Remove an entry when it is no longer true.
   while a proof runs is not in its result. The committed `image-id.txt`
   changes with any source change. Fix: finish and commit the edits, then start
   the proof.
+- **ASan on the ubuntu-26.04 runner.** Symptom: a sanitized binary prints
+  `AddressSanitizer:DEADLYSIGNAL` many times and stops with a segmentation
+  fault before its first output. Cause: the kernel randomizes mmap with
+  32 bits, and the ASan shadow memory can collide with a mapping. A container
+  uses the host kernel. Fix: run `sudo sysctl -w vm.mmap_rnd_bits=28` on the
+  host before the job starts the container, as `can-model.yml` does.
 
 ## Native builds
 
