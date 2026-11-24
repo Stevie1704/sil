@@ -21,6 +21,7 @@ jobs:
       contents: read
     outputs:
       version: ${{ steps.version.outputs.version }}
+      source_revision: ${{ steps.version.outputs.source_revision }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -95,13 +96,14 @@ jobs:
           python3 tools/release.py make-native-archive \
             --prefix build/native \
             --output "dist/sil-native-dev-${VERSION}-linux-x86_64.tar.gz" \
-            --version "$VERSION"
+            --version "$VERSION" --architecture x86_64
           python3 tools/release.py validate-runner \
             --runner build/native/bin/sil-run --version "$VERSION" \
             --source-revision "$REVISION"
           python3 tools/release.py validate-native-archive \
             --archive "dist/sil-native-dev-${VERSION}-linux-x86_64.tar.gz" \
-            --version "$VERSION" --source-revision "$REVISION"
+            --version "$VERSION" --architecture x86_64 \
+            --source-revision "$REVISION"
           python3 tools/release.py validate-distributions \
             --root . --dist dist --version "$VERSION" \
             --source-revision "$REVISION"
@@ -178,10 +180,83 @@ jobs:
           path: dist
           if-no-files-found: error
 
+  verify-aarch64:
+    name: Build and smoke-test the linux-aarch64 native archive
+    runs-on: ubuntu-24.04-arm
+    needs: verify
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.ref }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-bundle-${{ needs.verify.outputs.version }}
+          path: build/x86_64-bundle
+
+      - name: Build, archive and validate the arm64 native prefix
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+          REVISION: ${{ needs.verify.outputs.source_revision }}
+        run: |
+          set -euo pipefail
+          # The same pinned bookworm build stage as x86-64, run natively on arm64.
+          docker build --target build --tag "sil-native-build:${VERSION}-ci" \
+            --build-arg SIL_VERSION="$VERSION" \
+            --build-arg SIL_SOURCE_REPOSITORY="$SOURCE_REPOSITORY" \
+            --build-arg SIL_SOURCE_REVISION="$REVISION" .
+          native_container="$(docker create "sil-native-build:${VERSION}-ci")"
+          trap 'docker rm "$native_container" >/dev/null' EXIT
+          docker cp "$native_container:/opt/sil/native" build/native
+          mkdir -p dist
+          python3 tools/release.py make-native-archive \
+            --prefix build/native \
+            --output "dist/sil-native-dev-${VERSION}-linux-aarch64.tar.gz" \
+            --version "$VERSION" --architecture aarch64
+          python3 tools/release.py validate-runner \
+            --runner build/native/bin/sil-run --version "$VERSION" \
+            --source-revision "$REVISION"
+          python3 tools/release.py validate-native-archive \
+            --archive "dist/sil-native-dev-${VERSION}-linux-aarch64.tar.gz" \
+            --version "$VERSION" --architecture aarch64 \
+            --source-revision "$REVISION"
+
+      - name: Smoke-test the arm64 native archive on the runner and on Debian bookworm
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+          REVISION: ${{ needs.verify.outputs.source_revision }}
+        run: |
+          set -euo pipefail
+          # The smoke installs the verified pure-Python wheel next to the archive.
+          mkdir -p build/smoke
+          cp build/x86_64-bundle/sil-"$VERSION"-*.whl dist/sil-native-dev-"$VERSION"-linux-aarch64.tar.gz build/smoke/
+          python3 tools/release_smoke.py --native-only \
+            --bundle build/smoke --version "$VERSION" --source-revision "$REVISION"
+          docker run --rm \
+            --mount "type=bind,src=$PWD/build/smoke,dst=/bundle,readonly" \
+            --mount "type=bind,src=$PWD/tools,dst=/smoke,readonly" \
+            debian:bookworm-slim sh -ec '
+              apt-get update
+              apt-get install -y --no-install-recommends \
+                python3 python3-venv gcc libc6-dev libstdc++6 ca-certificates binutils
+              python3 /smoke/release_smoke.py --native-only --check-symbols \
+                --bundle /bundle --version "$1" --source-revision "$2"
+            ' sh "$VERSION" "$REVISION"
+
+      - name: Preserve the verified arm64 archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-aarch64-${{ needs.verify.outputs.version }}
+          path: dist/sil-native-dev-${{ needs.verify.outputs.version }}-linux-aarch64.tar.gz
+          if-no-files-found: error
+
   publish:
     name: Publish the immutable release bundle
     if: github.event_name == 'push' && startsWith(github.ref_name, 'v')
-    needs: verify
+    needs: [verify, verify-aarch64]
     runs-on: ubuntu-latest
     environment:
       name: release
@@ -198,6 +273,11 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: release-bundle-${{ needs.verify.outputs.version }}
+          path: dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: native-aarch64-${{ needs.verify.outputs.version }}
           path: dist
 
       - name: Set up Buildx and authenticate to GHCR
@@ -274,7 +354,8 @@ jobs:
           python3 tools/release.py write-release-metadata \
             --output "dist/sil-release-${VERSION}.json" \
             --version "$VERSION" --source-revision "$GITHUB_SHA" \
-            --image-reference "$IMAGE_REFERENCE" --image-digest "$IMAGE_DIGEST"
+            --image-reference "$IMAGE_REFERENCE" --image-digest "$IMAGE_DIGEST" \
+            --bundle dist
           python3 tools/release.py render-notes \
             --template docs/releases/template.md \
             --output release-notes.md --version "$VERSION" \
