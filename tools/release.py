@@ -443,6 +443,11 @@ def native_archive_root(version: str, architecture: str) -> str:
     return f"sil-native-dev-{version}-linux-{architecture}"
 
 
+def native_archive_path(bundle: Path, version: str, architecture: str) -> Path:
+    """Where a release bundle keeps the native archive of one architecture."""
+    return bundle / f"{native_archive_root(version, architecture)}.tar.gz"
+
+
 def make_native_archive(
     prefix: Path, output: Path, version: str, architecture: str
 ) -> Path:
@@ -612,7 +617,7 @@ def native_archive_entries(bundle: Path, version: str) -> list[dict[str, str]]:
     """One entry per machine class; a release must carry every archive."""
     entries = []
     for architecture in NATIVE_ARCHITECTURES:
-        archive = bundle / f"{native_archive_root(version, architecture)}.tar.gz"
+        archive = native_archive_path(bundle, version, architecture)
         if not archive.is_file():
             raise fail(f"release bundle {bundle} has no {archive.name}")
         entries.append({

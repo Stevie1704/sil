@@ -29,7 +29,7 @@ from pathlib import Path
 from release import (
     REPOSITORY,
     ReleaseError,
-    native_archive_root,
+    native_archive_path,
     validate_image,
     validate_native_archive,
     validate_runner,
@@ -325,7 +325,7 @@ def smoke_source_scopes_for(architecture: str, workspace: Path, execute) -> None
 
 def find_native_archive(bundle: Path, version: str, architecture: str) -> Path:
     """The bundle's native archive for one architecture (`uname -m` name)."""
-    archive = bundle / f"{native_archive_root(version, architecture)}.tar.gz"
+    archive = native_archive_path(bundle, version, architecture)
     if not archive.is_file():
         raise SmokeError(f"bundle has no {archive.name} for this {architecture} host")
     return archive
