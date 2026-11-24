@@ -196,7 +196,7 @@ def test_a_missing_release_installs_nothing(tmp_path, host):
 
 @pytest.mark.parametrize("system, machine, message", [
     ("Darwin", "arm64", "runs natively on Apple silicon"),
-    ("Linux", "riscv64", "support Linux x86_64 and Linux aarch64, not Linux riscv64"),
+    ("Linux", "riscv64", "support Linux x86-64 and Linux arm64. This host is Linux riscv64."),
 ])
 def test_an_unsupported_host_is_refused_before_any_download(
         tmp_path, host, system, machine, message):
