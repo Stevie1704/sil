@@ -40,6 +40,10 @@ support and determinism scope lives in [SUPPORT.md](../SUPPORT.md).
   focused C++ tests for internal invariants. `tests/fixtures/` owns native toy
   and benchmark Participants, fixture schemas, the Clock probe, FMU fixtures,
   and other test inputs. `tests/participants/` holds Python test Participants.
+- `verification/scheduler/` is a Lean 4 model of the scheduler with proofs
+  of the scheduling contract. `tests/test_scheduler_trace.py` and
+  `tests/test_scheduler_lean.py` compare the runner with that contract and
+  with the model. See [scheduler verification](scheduler-verification.md).
 - `proofs/` holds acceptance experiments against pinned external artifacts,
   with independent references and retained evidence. These are distinct from
   maintained model products under `models/`.

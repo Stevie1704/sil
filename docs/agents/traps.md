@@ -58,6 +58,14 @@ the fix. Remove an entry when it is no longer true.
   builds and before tests that compile (the staged-install tests call `cc`).
   Do not change the repo to work around it.
 
+## Lean scheduler proofs
+
+- **`lake check` on macOS.** Symptom: `lake check` stops with "sandboxes the
+  code it checks with `bwrap`, which needs Linux namespaces". Cause: the
+  `bubblewrap` sandbox exists only on Linux. Fix: on macOS,
+  use `lake build` in `verification/scheduler` and `#print axioms`; the
+  `scheduler-proof` CI job runs `lake check`.
+
 ## Flaky tests
 
 Run a flaky test again alone before you investigate. If it passes and the

@@ -2,11 +2,17 @@
 
 [Documentation index](README.md) · [Architecture](architecture.md)
 
-Generated trace regressions check the order in which the kernel runs Tasks and
-Steps ([#404](https://github.com/Stevie1704/sil/issues/404)). They run real
-Manifests through `sil-run` and compare the complete ordered Activation trace
-with an independent oracle. They run in `make test` and in the ordinary PR
-job.
+Two kinds of evidence check the order in which the kernel runs Tasks and
+Steps ([#404](https://github.com/Stevie1704/sil/issues/404)):
+
+- **Generated trace regressions** run real Manifests through `sil-run` and
+  compare the complete ordered Activation trace with an independent oracle.
+  They run in `make test` and in the ordinary PR job. They need no Lean.
+- **A Lean 4 model and its proofs** in
+  [`verification/scheduler/`](../verification/scheduler/). The proofs show
+  that a small scheduler model implements the scheduling contract for all
+  valid inputs. A separate PR job checks the proofs and compares the model with
+  `sil-run` on the same cases.
 
 ## The scheduling contract
 
@@ -65,8 +71,58 @@ of the trace), the input schedule, and the command that runs the case again:
 .venv/bin/python -m pytest tests/test_scheduler_trace.py -k 'gen-004'
 ```
 
+## The Lean model and its proofs
+
+The Lake project pins its toolchain in `verification/scheduler/lean-toolchain`.
+
+| Module | Content |
+| --- | --- |
+| `Scheduler/Spec.lean` | The declarative contract `IsSchedule`: a strictly ordered trace that holds exactly the due Activations. `IsSchedule.unique` shows that at most one trace satisfies it. `IsSchedule.count_due` shows that each due Activation occurs exactly once. |
+| `Scheduler/Time.lean` | `checkedAdd`, the model of `virtual_time_after`. `checkedAdd_eq_some`: a representable sum is the exact mathematical sum. `checkedAdd_eq_none`: an unrepresentable sum gives nothing. |
+| `Scheduler/Model.lean` | The executable model. It selects the earliest due Slot, orders the due entries of that Slot, and advances each entry with `checkedAdd`. An entry retires when its next time is unrepresentable or at or after the duration. |
+| `Scheduler/Proof.lean` | `model_isSchedule` and `model_eq_schedule`: for every valid input, the complete ordered trace of the model is the declarative schedule. `Task.advance_unrepresentable`: an unrepresentable next time retires the entry. |
+| `Main.lean` | `scheduler-model`, which runs the model on one input file. |
+
+The theorems have no bound on the number of entries or on the magnitude of
+times. They do not depend on the limits of the generated corpus.
+
+The model reads and writes decimal text, which keeps all values up to
+`UINT64_MAX` exact. `tests/test_scheduler_lean.py` sends each case of the trace
+corpus to the model and compares the result with the oracle and with `sil-run`.
+It uses the same fixtures and the same trace reader. If the executable is not
+built, the test skips.
+
+### Run the checks locally
+
+Install [elan](https://github.com/leanprover/elan). It installs the pinned
+toolchain on first use. Then, from the repository root:
+
+```sh
+cd verification/scheduler
+lake build                  # proofs and the scheduler-model executable
+lake check                  # Linux only: kernel replay, standard axioms only
+cd ../..
+SIL_REQUIRE_LEAN_MODEL=1 .venv/bin/python -m pytest tests/test_scheduler_lean.py
+```
+
+`lake check` builds the default targets, replays them through the Lean kernel,
+and fails if a proof is unfinished or uses an axiom other than the standard
+ones. It runs the build in a `bubblewrap` sandbox, which is available only on
+Linux. On macOS, `lake build` fails on an error, but a `sorry` gives only a
+warning. To see the axioms of a theorem, use
+`lake env lean` on a file that contains
+`import Scheduler` and `#print axioms Scheduler.model_isSchedule`.
+
+The `scheduler-proof` job in `.github/workflows/ci.yml` runs `lake check` and
+the comparison. During the pilot, the job is not a required check.
+
 ## Evidence boundary
 
+- Lean proves properties of the scheduler **model**, for all inputs that the
+  theorem covers: positive periods and distinct registration indices.
+- The registration-index rules (name-sorted setup, declared Task order) are
+  inputs to the model. The trace regressions test them against `sil-run`.
+  The Lean proofs do not.
 - The regressions show that `sil-run` agrees with the contract on the cases
   that they execute. They do not prove that the C++ scheduler is correct for
   other inputs.
