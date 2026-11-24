@@ -26,6 +26,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,6 +36,17 @@
 #include <unistd.h>
 
 #include "sil/clock_region.h"
+
+/* The kernel checks the same layout as the writer. A layout change must fail
+ * the build on every machine class, not change the bytes this shim reads. */
+_Static_assert(sizeof(sil_clock_region) == 32,
+               "sil_clock_region is four uint64_t fields");
+_Static_assert(offsetof(sil_clock_region, t) == 0, "t is at offset 0");
+_Static_assert(offsetof(sil_clock_region, epoch) == 8, "epoch is at offset 8");
+_Static_assert(offsetof(sil_clock_region, sleep_policy) == 16,
+               "sleep_policy is at offset 16");
+_Static_assert(offsetof(sil_clock_region, thread_policy) == 24,
+               "thread_policy is at offset 24");
 
 /* --- region mapping -------------------------------------------------------- */
 

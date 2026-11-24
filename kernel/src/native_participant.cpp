@@ -3,9 +3,25 @@
 #include <dlfcn.h>
 
 #include <algorithm>
+#include <cstddef>
 #include <exception>
 #include <string>
 #include <utility>
+
+// SIL_ABI_VERSION 1 fixes this table's layout for Native participants built
+// apart from the kernel. Both machine classes are LP64, so the offsets are
+// the same on x86-64 and arm64; a change must fail the build, not the load.
+static_assert(SIL_ABI_VERSION == 1);
+static_assert(sizeof(void *) == 8, "the Native participant ABI is LP64");
+static_assert(sizeof(sil_api_v1) == 64);
+static_assert(offsetof(sil_api_v1, abi_version) == 0);
+static_assert(offsetof(sil_api_v1, ctx) == 8);
+static_assert(offsetof(sil_api_v1, register_task) == 16);
+static_assert(offsetof(sil_api_v1, subscribe) == 24);
+static_assert(offsetof(sil_api_v1, publish) == 32);
+static_assert(offsetof(sil_api_v1, take) == 40);
+static_assert(offsetof(sil_api_v1, now_ns) == 48);
+static_assert(offsetof(sil_api_v1, fail) == 56);
 
 namespace sil {
 
