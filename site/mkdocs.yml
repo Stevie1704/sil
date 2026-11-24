@@ -93,6 +93,7 @@ nav:
       - Acceptance proofs: docs/acceptance.md
       - Performance: docs/performance.md
       - Architecture: docs/architecture.md
+      - Scheduler verification: docs/scheduler-verification.md
       - Decisions:
           - FMU groups: docs/adr/0001-connected-fmus-in-one-process-participant.md
           - Replayed terminal timing: docs/adr/0002-a-replayed-terminal-lands-on-its-own-instant.md

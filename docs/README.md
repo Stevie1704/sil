@@ -41,6 +41,9 @@ agent.
   module responsibilities and build ownership.
 - [GLOSSARY.md](../GLOSSARY.md) defines the domain vocabulary used throughout the
   code and documentation.
+- [Scheduler verification](scheduler-verification.md) states the scheduling
+  contract, the generated trace regressions that check `sil-run` against it,
+  and the boundary of that evidence.
 - [Step protocol](step-protocol.md) is the normative Process participant
   protocol. [Public headers](../include/sil/) define the native and shared-memory
   interfaces. [SUPPORT.md](../SUPPORT.md) defines compatibility and support.

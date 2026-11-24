@@ -9,6 +9,11 @@ jobs:
     timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
+      # ASan maps its shadow memory at fixed addresses. With the 32-bit mmap
+      # randomization of the ubuntu-26.04 kernel, it can collide and loop on
+      # AddressSanitizer:DEADLYSIGNAL. The container uses the host kernel.
+      - name: Limit mmap randomization for AddressSanitizer
+        run: sudo sysctl -w vm.mmap_rnd_bits=28
       - name: Build and qualify standalone CAN FMU
         timeout-minutes: 25
         run: models/can/run.sh
