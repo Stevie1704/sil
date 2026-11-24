@@ -2,7 +2,21 @@
 
 Source revision: `@SOURCE_REVISION@`
 
-Runtime image: `@IMAGE_REFERENCE@` (`@IMAGE_DIGEST@`)
+Runtime image: `@IMAGE_REFERENCE@` (OCI index `@IMAGE_DIGEST@`)
+
+The runtime image is a multi-arch OCI index. `docker pull` of the index
+reference selects the image of the host platform, so an arm64 host, such as a
+Mac with Apple silicon, runs the arm64 image natively.
+
+| Platform | Image digest |
+| --- | --- |
+| `linux/amd64` | `@IMAGE_DIGEST_LINUX_AMD64@` |
+| `linux/arm64` | `@IMAGE_DIGEST_LINUX_ARM64@` |
+
+A deterministic Run pins one platform digest, for example
+`ghcr.io/stevie1704/sil@<platform digest>`, not the index digest. The two
+platforms are separate machine classes: SiL does not promise that a Recording
+made with one image equals a Recording made with the other.
 
 The release metadata above identifies the per-release bundle. Each Run emits
 its own provenance side-car with the Manifest hash and the exact artifact
