@@ -246,6 +246,30 @@ jobs:
                 --bundle /bundle --version "$1" --source-revision "$2"
             ' sh "$VERSION" "$REVISION"
 
+      - name: Install the arm64 release with the install script
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          python3 tools/release.py stamp-installer --root . \
+            --output build/install.sh --version "$VERSION"
+          # A local mirror of the release download layout, with the wheel and
+          # the arm64 archive that the publish job attaches.
+          mirror="$RUNNER_TEMP/mirror"
+          mkdir -p "$mirror/v$VERSION"
+          cp build/x86_64-bundle/sil-"$VERSION"-*.whl \
+            "dist/sil-native-dev-${VERSION}-linux-aarch64.tar.gz" "$mirror/v$VERSION/"
+          (cd "$mirror/v$VERSION" && sha256sum -- * > SHA256SUMS)
+          SIL_RELEASE_URL="file://$mirror" sh build/install.sh \
+            --prefix "$RUNNER_TEMP/sil"
+          work="$(mktemp -d)"
+          cd "$work"
+          . "$RUNNER_TEMP/sil/env"
+          test "$(sil-run --version)" = "$VERSION"
+          python3 -m sil.examples.acc.manifest acc.json
+          sil run acc.json -o acc.mcap
+          sil check acc.json
+
       - name: Preserve the verified arm64 archive
         uses: actions/upload-artifact@v4
         with:
