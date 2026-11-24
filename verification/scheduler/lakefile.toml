@@ -1,0 +1,10 @@
+name = "scheduler"
+version = "0.1.0"
+defaultTargets = ["Scheduler", "scheduler-model"]
+
+[[lean_lib]]
+name = "Scheduler"
+
+[[lean_exe]]
+name = "scheduler-model"
+root = "Main"
