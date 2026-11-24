@@ -191,6 +191,8 @@ in 1 MiB blocks: O(file bytes). Queries on the same object reuse that digest.
 Each independent CLI invocation constructs a new object and hashes again;
 there are no pages or persistent hash cache. Device, inode, size, mtime and
 ctime are checked before and after scans, refusing an observed source change.
+Linux takes file times from a coarse clock. Thus, a rewrite in place with the
+same size in one clock tick is not observed.
 Use completed immutable Recordings; these checks are not a snapshot against
 adversarial concurrent filesystem replacement.
 
