@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -201,3 +202,22 @@ def test_image_index_check_refuses_a_digest_that_is_not_sha256(tmp_path: Path, c
 
     assert status == 1
     assert "'short'" in capsys.readouterr().err
+
+
+def release_jobs() -> dict[str, str]:
+    """The text of each job in the release workflow, by job id."""
+    text = (ROOT / ".github" / "workflows" / "release.yml").read_text()
+    body = text.split("\njobs:\n", 1)[1]
+    parts = re.split(r"^  ([a-z0-9-]+):\n", body, flags=re.MULTILINE)
+    return dict(zip(parts[1::2], parts[2::2]))
+
+
+def test_a_release_asks_for_one_approval_before_any_push():
+    jobs = release_jobs()
+    assert [name for name, job in jobs.items() if "environment:" in job] == ["gate"]
+    assert "environment:\n      name: release\n" in jobs["gate"]
+    assert "Refuse to replace a published version" in jobs["gate"]
+    assert "Refuse to replace" not in jobs["publish"]
+    assert re.search(r"needs: \[.*\bgate\b.*\]", jobs["image"])
+    assert re.search(r"needs: \[.*\bgate\b.*\]", jobs["publish"])
+
