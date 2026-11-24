@@ -80,3 +80,47 @@ jobs:
           SIL_CONTAINER_ACCEPTANCE_IMAGE: sil-acceptance:ci
           SIL_NATIVE_RUNNER: build/native/bin/sil-run
         run: .venv/bin/python -m pytest tests/test_container.py -v
+
+  # Lean 4 scheduler proofs and model-to-runner comparisons (#404). During the
+  # pilot this job is not a required check. docs/scheduler-verification.md has
+  # the local commands.
+  scheduler-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install elan, bubblewrap and the kernel build dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends bubblewrap libssl-dev
+          # lake check sandboxes the build with bwrap. Ubuntu blocks the
+          # unprivileged user namespaces that bwrap needs.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/v4.4.0/elan-init.sh |
+            sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Check the scheduler proofs
+        working-directory: verification/scheduler
+        run: lake check
+
+      - name: Build the scheduler model
+        working-directory: verification/scheduler
+        run: lake build
+
+      - name: Set up Python environment
+        run: |
+          uv venv .venv
+          uv pip install -p .venv/bin/python -e "python/[dev]"
+
+      - name: Build the runner and the trace fixture
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j --target sil-run trace_tasks
+
+      - name: Compare the model with the runner
+        env:
+          SIL_REQUIRE_LEAN_MODEL: "1"
+        run: SIL_SKIP_BUILD=1 .venv/bin/python -m pytest tests/test_scheduler_lean.py -v
