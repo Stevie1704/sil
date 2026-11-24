@@ -31,6 +31,9 @@ REPOSITORY = "https://github.com/Stevie1704/sil"
 LICENSE = "Apache-2.0"
 VERSION_PATTERN = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\Z")
 TAG_PATTERN = re.compile(r"v(" + VERSION_PATTERN.pattern[:-2] + r")\Z")
+# The runtime image is one OCI index with one image for each of these.
+IMAGE_PLATFORMS = ("linux/amd64", "linux/arm64")
+DIGEST_PATTERN = re.compile(r"sha256:[0-9a-f]{64}")
 
 
 class ReleaseError(RuntimeError):
@@ -625,18 +628,43 @@ def write_release_metadata(
     revision: str,
     image_reference: str,
     image_digest: str,
+    platform_digests: dict[str, str],
     bundle: Path,
 ) -> Path:
+    for platform, digest in platform_digests.items():
+        if not DIGEST_PATTERN.fullmatch(digest):
+            raise fail(f"image digest {digest!r} of {platform} is not a sha256 digest")
     value = source_metadata(version, revision)
     value.update(
         {
             "image_reference": image_reference,
             "image_digest": image_digest,
+            "image_platforms": platform_digests,
         }
     )
     value["native_archives"] = native_archive_entries(bundle, version)
     write_json(output, value)
     return output
+
+
+def validate_image_index(raw: str, platform_digests: dict[str, str]) -> None:
+    """Check that an OCI index selects exactly the given image for each platform."""
+    try:
+        manifests = json.loads(raw)["manifests"]
+        selected = {
+            f"{entry['platform']['os']}/{entry['platform']['architecture']}": entry["digest"]
+            for entry in manifests
+        }
+    except (ValueError, KeyError, TypeError) as exc:
+        raise fail(f"cannot read the image index: {exc!r}") from exc
+    if len(selected) != len(manifests):
+        raise fail("the image index names a platform more than once")
+    for platform in sorted(set(selected) | set(platform_digests)):
+        if selected.get(platform) != platform_digests.get(platform):
+            raise fail(
+                f"the image index selects {selected.get(platform)} for {platform}, "
+                f"expected {platform_digests.get(platform)}"
+            )
 
 
 def write_checksums(directory: Path) -> Path:
@@ -655,6 +683,34 @@ def write_checksums(directory: Path) -> Path:
     destination = directory / filename
     destination.write_text("\n".join(lines) + "\n")
     return destination
+
+
+def platform_digests(values: list[str]) -> dict[str, str]:
+    """Map each ``PLATFORM=DIGEST`` value to one digest for each image platform."""
+    digests: dict[str, str] = {}
+    for value in values:
+        platform, separator, digest = value.partition("=")
+        if not separator or platform not in IMAGE_PLATFORMS or platform in digests:
+            raise fail(
+                f"platform digest {value!r} must name one of {', '.join(IMAGE_PLATFORMS)} once"
+            )
+        digests[platform] = digest
+    missing = [platform for platform in IMAGE_PLATFORMS if platform not in digests]
+    if missing:
+        raise fail(f"no image digest for platform {', '.join(missing)}")
+    return digests
+
+
+def platform_placeholder(platform: str) -> str:
+    """Name the release-note placeholder of one platform digest."""
+    return "IMAGE_DIGEST_" + platform.replace("/", "_").upper()
+
+
+def platform_digest_arg(parser_: argparse.ArgumentParser) -> None:
+    parser_.add_argument(
+        "--platform-digest", action="append", required=True, metavar="PLATFORM=DIGEST",
+        help="the image digest of one platform of the index; give one for each platform",
+    )
 
 
 def parser() -> argparse.ArgumentParser:
@@ -717,6 +773,7 @@ def parser() -> argparse.ArgumentParser:
     notes.add_argument("--source-revision", required=True)
     notes.add_argument("--image-reference", required=True)
     notes.add_argument("--image-digest", required=True)
+    platform_digest_arg(notes)
 
     title = sub.add_parser("validate-release-title")
     title.add_argument("--title", required=True)
@@ -728,8 +785,14 @@ def parser() -> argparse.ArgumentParser:
     metadata.add_argument("--source-revision", required=True)
     metadata.add_argument("--image-reference", required=True)
     metadata.add_argument("--image-digest", required=True)
+    platform_digest_arg(metadata)
     metadata.add_argument("--bundle", type=Path, required=True,
                           help="directory with the native archives to list")
+
+    index = sub.add_parser("validate-image-index")
+    index.add_argument("--index", type=Path, required=True,
+                       help="the raw OCI index, as `docker buildx imagetools inspect --raw` gives it")
+    platform_digest_arg(index)
 
     checksums = sub.add_parser("checksums")
     checksums.add_argument("--directory", type=Path, required=True)
@@ -782,6 +845,8 @@ def main(argv: list[str] | None = None) -> int:
                 "IMAGE_REFERENCE": args.image_reference,
                 "IMAGE_DIGEST": args.image_digest,
             }
+            for platform, digest in platform_digests(args.platform_digest).items():
+                values[platform_placeholder(platform)] = digest
             print(render_notes(args.template, args.output, values))
         elif args.command == "validate-release-title":
             validate_release_title(args.title, args.version)
@@ -793,8 +858,13 @@ def main(argv: list[str] | None = None) -> int:
                     args.source_revision,
                     args.image_reference,
                     args.image_digest,
+                    platform_digests(args.platform_digest),
                     args.bundle,
                 )
+            )
+        elif args.command == "validate-image-index":
+            validate_image_index(
+                args.index.read_text(), platform_digests(args.platform_digest)
             )
         elif args.command == "checksums":
             print(write_checksums(args.directory))

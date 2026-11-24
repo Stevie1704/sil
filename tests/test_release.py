@@ -366,6 +366,12 @@ def test_smoke_fails_when_the_host_architecture_has_no_archive(
 
 
 
+IMAGE_DIGEST = "sha256:" + "1" * 64
+IMAGE_REFERENCE = f"ghcr.io/stevie1704/sil@{IMAGE_DIGEST}"
+PLATFORM_DIGESTS = {"linux/amd64": "sha256:" + "a" * 64,
+                    "linux/arm64": "sha256:" + "b" * 64}
+
+
 def _bundle_with_archives(tmp_path: Path, architectures: tuple[str, ...]) -> Path:
     bundle = tmp_path / "dist"
     bundle.mkdir()
@@ -381,7 +387,7 @@ def test_release_metadata_lists_the_native_archive_of_each_architecture(tmp_path
     bundle = _bundle_with_archives(tmp_path, ("x86_64", "aarch64"))
     output = write_release_metadata(
         tmp_path / "sil-release.json", VERSION, "test-revision",
-        "ghcr.io/stevie1704/sil@sha256:abc", "sha256:abc", bundle,
+        IMAGE_REFERENCE, IMAGE_DIGEST, PLATFORM_DIGESTS, bundle,
     )
     archives = json.loads(output.read_text())["native_archives"]
     # The SHA-256 of the literal bytes b"x86_64" and b"aarch64" (shasum -a 256).
@@ -402,7 +408,7 @@ def test_release_metadata_requires_every_native_archive(tmp_path: Path):
     with pytest.raises(ReleaseError, match="linux-aarch64.tar.gz"):
         write_release_metadata(
             tmp_path / "sil-release.json", VERSION, "test-revision",
-            "ghcr.io/stevie1704/sil@sha256:abc", "sha256:abc", bundle,
+            IMAGE_REFERENCE, IMAGE_DIGEST, PLATFORM_DIGESTS, bundle,
         )
     assert not (tmp_path / "sil-release.json").exists()
 

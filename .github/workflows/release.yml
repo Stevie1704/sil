@@ -65,7 +65,9 @@ jobs:
             --output build/release-notes.verify.md \
             --version "$VERSION" --source-revision "$REVISION" \
             --image-reference "${IMAGE_NAME}:${VERSION}-ci" \
-            --image-digest pending
+            --image-digest pending \
+            --platform-digest linux/amd64=pending \
+            --platform-digest linux/arm64=pending
           cat "$note" >> build/release-notes.verify.md
 
       - name: Build wheel and source distribution from the checkout
@@ -186,6 +188,9 @@ jobs:
     needs: verify
     permissions:
       contents: read
+    env:
+      VERSION: ${{ needs.verify.outputs.version }}
+      REVISION: ${{ needs.verify.outputs.source_revision }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -198,9 +203,6 @@ jobs:
           path: build/x86_64-bundle
 
       - name: Build, archive and validate the arm64 native prefix
-        env:
-          VERSION: ${{ needs.verify.outputs.version }}
-          REVISION: ${{ needs.verify.outputs.source_revision }}
         run: |
           set -euo pipefail
           # The same pinned bookworm build stage as x86-64, run natively on arm64.
@@ -225,14 +227,12 @@ jobs:
             --source-revision "$REVISION"
 
       - name: Smoke-test the arm64 native archive on the runner and on Debian bookworm
-        env:
-          VERSION: ${{ needs.verify.outputs.version }}
-          REVISION: ${{ needs.verify.outputs.source_revision }}
         run: |
           set -euo pipefail
           # The smoke installs the verified pure-Python wheel next to the archive.
           mkdir -p build/smoke
-          cp build/x86_64-bundle/sil-"$VERSION"-*.whl dist/sil-native-dev-"$VERSION"-linux-aarch64.tar.gz build/smoke/
+          cp build/x86_64-bundle/sil-"$VERSION"-*.whl \
+            "dist/sil-native-dev-${VERSION}-linux-aarch64.tar.gz" build/smoke/
           python3 tools/release_smoke.py --native-only \
             --bundle build/smoke --version "$VERSION" --source-revision "$REVISION"
           docker run --rm \
@@ -253,10 +253,114 @@ jobs:
           path: dist/sil-native-dev-${{ needs.verify.outputs.version }}-linux-aarch64.tar.gz
           if-no-files-found: error
 
+  image:
+    # One native build per architecture, no qemu: each runner builds and
+    # smoke-tests the image that its own architecture runs.
+    name: Build and smoke-test the ${{ matrix.platform }} runtime image
+    # Each leg's smoke takes the native archive of its own architecture.
+    needs: [verify, verify-aarch64]
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+            arch: amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    # A push to the registry waits for the same approval as the release.
+    environment:
+      name: ${{ github.event_name == 'push' && startsWith(github.ref_name, 'v') && 'release' || '' }}
+    permissions:
+      contents: read
+      packages: write
+    env:
+      VERSION: ${{ needs.verify.outputs.version }}
+      REVISION: ${{ needs.verify.outputs.source_revision }}
+      PLATFORM: ${{ matrix.platform }}
+      PUBLISH: ${{ github.event_name == 'push' && startsWith(github.ref_name, 'v') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.ref }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-bundle-${{ needs.verify.outputs.version }}
+          path: dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: native-aarch64-${{ needs.verify.outputs.version }}
+          path: dist
+
+      - name: Build the non-publishing runtime image for this platform
+        if: env.PUBLISH != 'true'
+        run: |
+          set -euo pipefail
+          docker build --platform "$PLATFORM" --target runtime \
+            --tag "sil-runtime:${VERSION}-ci" \
+            --build-arg SIL_VERSION="$VERSION" \
+            --build-arg SIL_SOURCE_REPOSITORY="$SOURCE_REPOSITORY" \
+            --build-arg SIL_SOURCE_REVISION="$REVISION" .
+          echo "IMAGE_UNDER_TEST=sil-runtime:${VERSION}-ci" >> "$GITHUB_ENV"
+
+      - name: Set up Buildx
+        if: env.PUBLISH == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: env.PUBLISH == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push the platform image by digest, without a tag
+        if: env.PUBLISH == 'true'
+        run: |
+          set -euo pipefail
+          # The version tag names the OCI index only; the publish job joins
+          # the platform images after both pass their smoke test.
+          docker buildx build --platform "$PLATFORM" --target runtime \
+            --build-arg SIL_VERSION="$VERSION" \
+            --build-arg SIL_SOURCE_REPOSITORY="$SOURCE_REPOSITORY" \
+            --build-arg SIL_SOURCE_REVISION="$REVISION" \
+            --provenance=false --sbom=false \
+            --output "type=image,name=${IMAGE_NAME},push-by-digest=true,name-canonical=true,push=true" \
+            --metadata-file image-metadata.json .
+          digest="$(jq -r '."containerimage.digest"' image-metadata.json)"
+          test "$digest" != "null" -a "$digest" != ""
+          docker pull "${IMAGE_NAME}@${digest}"
+          test "$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "${IMAGE_NAME}@${digest}")" = "$PLATFORM"
+          mkdir -p image-digest
+          printf '%s\n' "$digest" > "image-digest/${{ matrix.arch }}"
+          echo "IMAGE_UNDER_TEST=${IMAGE_NAME}@${digest}" >> "$GITHUB_ENV"
+
+      - name: Smoke-test the platform image, two Runs give one Recording
+        run: |
+          python3 tools/release.py validate-image \
+            --image "$IMAGE_UNDER_TEST" --version "$VERSION" \
+            --source-revision "$REVISION"
+          python3 tools/release_smoke.py \
+            --bundle dist --image "$IMAGE_UNDER_TEST" \
+            --version "$VERSION" --source-revision "$REVISION"
+
+      - name: Preserve the platform image digest
+        if: env.PUBLISH == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-digest-${{ matrix.arch }}
+          path: image-digest
+          if-no-files-found: error
+
   publish:
     name: Publish the immutable release bundle
     if: github.event_name == 'push' && startsWith(github.ref_name, 'v')
-    needs: [verify, verify-aarch64]
+    needs: [verify, verify-aarch64, image]
     runs-on: ubuntu-latest
     environment:
       name: release
@@ -279,6 +383,12 @@ jobs:
         with:
           name: native-aarch64-${{ needs.verify.outputs.version }}
           path: dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: image-digest-*
+          path: image-digest
+          merge-multiple: true
 
       - name: Set up Buildx and authenticate to GHCR
         uses: docker/setup-buildx-action@v3
@@ -312,27 +422,38 @@ jobs:
             exit 1
           fi
 
-      - name: Publish the version tag and record its content digest
+      - name: Publish the version tag as one OCI index of the platform images
         id: image
         env:
           VERSION: ${{ needs.verify.outputs.version }}
         run: |
           set -euo pipefail
-          docker buildx build --platform linux/amd64 --target runtime \
-            --tag "${IMAGE_NAME}:${VERSION}" \
-            --build-arg SIL_VERSION="$VERSION" \
-            --build-arg SIL_SOURCE_REPOSITORY="$SOURCE_REPOSITORY" \
-            --build-arg SIL_SOURCE_REVISION="$GITHUB_SHA" \
-            --provenance=false --sbom=false --push \
-            --metadata-file image-metadata.json .
-          digest="$(jq -r '."containerimage.digest"' image-metadata.json)"
+          amd64="$(cat image-digest/amd64)"
+          arm64="$(cat image-digest/arm64)"
+          docker buildx imagetools create --tag "${IMAGE_NAME}:${VERSION}" \
+            "${IMAGE_NAME}@${amd64}" "${IMAGE_NAME}@${arm64}"
+          digest="$(docker buildx imagetools inspect "${IMAGE_NAME}:${VERSION}" \
+            --format '{{json .Manifest}}' | jq -r .digest)"
           test "$digest" != "null" -a "$digest" != ""
-          echo "digest=$digest" >> "$GITHUB_OUTPUT"
-          echo "reference=${IMAGE_NAME}@${digest}" >> "$GITHUB_OUTPUT"
-          docker pull "${IMAGE_NAME}@${digest}"
+          docker buildx imagetools inspect --raw "${IMAGE_NAME}@${digest}" > image-index.json
+          python3 tools/release.py validate-image-index --index image-index.json \
+            --platform-digest "linux/amd64=${amd64}" \
+            --platform-digest "linux/arm64=${arm64}"
+          # A host pulls the index; check that each platform selects its image.
+          # amd64 is last, so the local reference is this runner's image.
+          for platform in linux/arm64 linux/amd64; do
+            docker pull --platform "$platform" "${IMAGE_NAME}@${digest}"
+            test "$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "${IMAGE_NAME}@${digest}")" = "$platform"
+          done
           python3 tools/release.py validate-image \
             --image "${IMAGE_NAME}@${digest}" --version "$VERSION" \
             --source-revision "$GITHUB_SHA"
+          {
+            echo "digest=$digest"
+            echo "reference=${IMAGE_NAME}@${digest}"
+            echo "amd64=$amd64"
+            echo "arm64=$arm64"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Smoke-test the image by digest after publication
         env:
@@ -348,6 +469,8 @@ jobs:
           VERSION: ${{ needs.verify.outputs.version }}
           IMAGE_REFERENCE: ${{ steps.image.outputs.reference }}
           IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+          AMD64_DIGEST: ${{ steps.image.outputs.amd64 }}
+          ARM64_DIGEST: ${{ steps.image.outputs.arm64 }}
         run: |
           set -euo pipefail
           printf '%s\n' "$IMAGE_REFERENCE" > "dist/image-digest.txt"
@@ -355,12 +478,16 @@ jobs:
             --output "dist/sil-release-${VERSION}.json" \
             --version "$VERSION" --source-revision "$GITHUB_SHA" \
             --image-reference "$IMAGE_REFERENCE" --image-digest "$IMAGE_DIGEST" \
+            --platform-digest "linux/amd64=$AMD64_DIGEST" \
+            --platform-digest "linux/arm64=$ARM64_DIGEST" \
             --bundle dist
           python3 tools/release.py render-notes \
             --template docs/releases/template.md \
             --output release-notes.md --version "$VERSION" \
             --source-revision "$GITHUB_SHA" \
-            --image-reference "$IMAGE_REFERENCE" --image-digest "$IMAGE_DIGEST"
+            --image-reference "$IMAGE_REFERENCE" --image-digest "$IMAGE_DIGEST" \
+            --platform-digest "linux/amd64=$AMD64_DIGEST" \
+            --platform-digest "linux/arm64=$ARM64_DIGEST"
           cat "docs/releases/v${VERSION}.md" >> release-notes.md
           python3 tools/release.py checksums --directory dist
           (cd dist && sha256sum -c SHA256SUMS)
