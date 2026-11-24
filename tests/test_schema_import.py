@@ -12,6 +12,7 @@ fixture types is the same as the host's.
 from __future__ import annotations
 
 import json
+import platform
 import shutil
 import struct
 import subprocess
@@ -89,12 +90,18 @@ def field(name: str, type_: str, count: int | None = None) -> dict:
     return {"name": name, "type": type_} | ({"count": count} if count else {})
 
 
+# The ELF object's ABI decides the signedness of plain `char`: signed on
+# x86-64 (also the cross-compiled target off Linux), unsigned on AArch64.
+PLAIN_CHAR = ("u8" if sys.platform.startswith("linux")
+              and platform.machine() == "aarch64" else "i8")
+
+
 OBJECT_FIELDS = [
     f
     for i in range(3)
     for f in (
         field(f"objects_{i}_id", "u16"),
-        field(f"objects_{i}_cls", "i8"),
+        field(f"objects_{i}_cls", PLAIN_CHAR),
         field(f"objects_{i}_lateral", "i8"),
         field(f"objects_{i}_lane", "u8"),
         pad(64 + 12 * i + 5, 3),
