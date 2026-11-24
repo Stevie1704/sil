@@ -83,8 +83,8 @@ jobs:
 
   # Linux arm64 is a second machine class (#311). This job runs the suite and
   # the determinism gate there. Tests that need the x86-64 class skip, and
-  # `make test` prints each reason (-rs). Proofs, release artifacts and the
-  # runtime image stay on x86-64 runners.
+  # `make test` prints each reason (-rs). Proofs stay on x86-64 runners. The
+  # release workflow builds the arm64 archive and image on arm64 runners.
   test-arm64:
     runs-on: ubuntu-24.04-arm
     steps:
