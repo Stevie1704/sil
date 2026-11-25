@@ -22,13 +22,16 @@
 extern "C" {
 #endif
 
-/* Fixed POD header, immediately followed by `capacity` payload bytes for this
- * slot. Multi-slot Arenas repeat this header+payload stride. Little-endian, no
- * padding — matching the project's fixed-layout message convention. */
+/* Fixed POD header of one slot. The Schema-sized payload follows it
+ * immediately, then trailing padding up to `shm_capacity` bytes. The kernel
+ * sets `shm_capacity` in the init line to the Schema `byte_size` rounded up to
+ * a multiple of 8. The slot stride is `sizeof(sil_arena) + shm_capacity`, so
+ * every header is 8-byte aligned. The header is little-endian and has no
+ * padding. This matches the project's fixed-layout message convention. */
 typedef struct sil_arena {
     uint64_t seq;       /* incremented on every write (fresh-payload marker)  */
-    uint64_t len;       /* valid payload length in bytes (<= capacity)        */
-    /* uint8_t payload[capacity] follows immediately */
+    uint64_t len;       /* payload length; equals the Schema byte_size        */
+    /* uint8_t payload[byte_size] follows, then padding to shm_capacity */
 } sil_arena;
 
 #ifdef __cplusplus

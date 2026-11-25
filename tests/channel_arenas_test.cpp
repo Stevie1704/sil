@@ -165,6 +165,40 @@ void test_release_unlinks_every_region() {
   check(!arenas.contains("left"), "release kept the channel's arena");
 }
 
+void test_every_slot_header_is_eight_byte_aligned() {
+  ChannelArenas arenas("probe");
+  // A 3-byte schema would put slot 1's header at offset 19 with a plain
+  // `16 + capacity` stride. The advertised capacity is padded instead, so a
+  // child that strides by `16 + capacity` still lands on aligned headers.
+  arenas.map("odd", 3, 3);
+  const ChannelArenas::Layout layout = arenas.layout("odd");
+  check(layout.padded_payload_bytes % alignof(sil_arena) == 0,
+        "the advertised slot capacity is not a multiple of 8: " +
+            std::to_string(layout.padded_payload_bytes));
+  check(layout.padded_payload_bytes >= 3,
+        "the advertised capacity lost payload bytes");
+
+  struct stat st;
+  check(stat(layout.path.c_str(), &st) == 0, "the arena has no region file");
+  check(static_cast<size_t>(st.st_size) ==
+            layout.slots * (sizeof(sil_arena) + layout.padded_payload_bytes),
+        "the region size disagrees with the advertised layout");
+
+  // The padding is layout only: the schema size stays the limit.
+  check(reason_of<RunError>([&] {
+          arenas.write("odd", 0, bytes({1, 2, 3, 4}));
+        }).find("payload exceeds arena capacity") != std::string::npos,
+        "padding let a payload beyond the schema size through");
+  std::vector<uint8_t> out;
+  for (size_t slot = 0; slot < 3; ++slot) {
+    const uint64_t seq =
+        arenas.write("odd", slot, bytes({1, 2, static_cast<uint8_t>(slot)}));
+    arenas.read("odd", slot, seq, out);
+    check(out == bytes({1, 2, static_cast<uint8_t>(slot)}),
+          "slot " + std::to_string(slot) + " did not keep its payload");
+  }
+}
+
 void test_an_overflowing_arena_is_a_manifest_error() {
   ChannelArenas arenas("probe");
   // The stride times the slot count must stay inside size_t: an arena the
@@ -191,6 +225,7 @@ int main() {
     test_max_slots_reports_the_widest_channel();
     test_release_unlinks_every_region();
     test_an_overflowing_arena_is_a_manifest_error();
+    test_every_slot_header_is_eight_byte_aligned();
   } catch (const std::exception &e) {
     std::cerr << "channel arenas test failed: " << e.what() << '\n';
     return 1;

@@ -14,10 +14,10 @@ namespace sil {
 //
 // Each Arena is a Mapped region created before fork, so the child reaches the
 // same region by path at load. Its layout is `slots` repetitions of one
-// `sil_arena` header followed by a `capacity`-byte payload
-// (include/sil/arena.h). The Step protocol is fully sequential, so no slot
-// needs locking: `seq` is what proves a slot was written for the Message
-// naming it.
+// `sil_arena` header followed by a `capacity`-byte payload padded to a
+// multiple of 8, so every header is aligned (include/sil/arena.h). The Step
+// protocol is fully sequential, so no slot needs locking: `seq` is what proves
+// a slot was written for the Message naming it.
 //
 // This type knows the Arena layout and nothing else. It does not read the
 // Manifest, does not know which Step protocol was negotiated, and never
@@ -35,15 +35,17 @@ class ChannelArenas {
   // What a child needs to reach one Arena, handed to it in the init line.
   struct Layout {
     std::string path;
-    size_t capacity;
+    // Payload bytes per slot, padded to a multiple of 8; the init line's
+    // `shm_capacity`. The slot stride is the header plus this.
+    size_t padded_payload_bytes;
     size_t slots;
   };
 
   explicit ChannelArenas(std::string participant)
       : participant_(std::move(participant)) {}
 
-  // Creates one Channel's Arena, sized `slots * (header + capacity)`. Called
-  // exactly once per arena-backed Channel: a Manifest rejects a Channel
+  // Creates one Channel's Arena, sized `slots * (header + padded capacity)`.
+  // Called exactly once per arena-backed Channel: a Manifest rejects a Channel
   // declared twice in one direction, and one declared in both directions over
   // shm transport, so the caller's subscribe and publish passes cannot collide.
   // Throws ManifestError when the size overflows or the region cannot be made.
@@ -87,8 +89,8 @@ class ChannelArenas {
 
  private:
   struct Arena {
-    MappedRegion region;  // slots * (sizeof(sil_arena) + capacity)
-    size_t capacity = 0;  // schema byte_size per slot
+    MappedRegion region;  // slots * (sizeof(sil_arena) + padded capacity)
+    size_t capacity = 0;  // schema byte_size; the payload limit per slot
     size_t slots = 1;
     uint64_t seq = 0;     // last seq stamped across all slots
   };

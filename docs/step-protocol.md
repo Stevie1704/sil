@@ -70,8 +70,8 @@ name a search path, and it knows neither.
 
 `channels` contains the participant's declared inputs and outputs. Every entry
 has `schema` and `direction` (`"in"` or `"out"`). A shared-memory entry also
-has `transport: "shm"`, `shm_path`, `shm_capacity` (bytes per slot), and
-`shm_slots`. The `schemas` object contains the canonical schema declarations
+has `transport: "shm"`, `shm_path`, `shm_capacity` (payload bytes per slot),
+and `shm_slots`. The `schemas` object contains the canonical schema declarations
 referenced by those entries.
 
 `protocol` is 2 when any shared-memory Channel in this participant's contract
@@ -272,9 +272,19 @@ and performs this same group teardown before releasing Run resources.
 
 An Arena contains `shm_slots` fixed-layout slots. Each slot repeats the original
 single-slot layout: a header (`seq`, `len`) followed by `shm_capacity` payload
-bytes. Payload storage is therefore the schema `byte_size * slots`, plus one
-fixed header per slot. Keeping slot zero byte-compatible lets protocol-1
-participants map only the original prefix of a multi-slot Arena.
+bytes. The stride is therefore `16 + shm_capacity` and the file is
+`shm_slots * (16 + shm_capacity)` bytes. `shm_capacity` is the schema
+`byte_size` rounded up to a multiple of 8, so every slot header is 8-byte
+aligned. Use `shm_capacity` as given; do not derive it from the schema. A
+Message's `len` must still equal the schema `byte_size`. Keeping slot zero
+byte-compatible lets protocol-1 participants map only the original prefix of a
+multi-slot Arena.
+
+Releases up to v0.3.2 set `shm_capacity` to the Schema `byte_size` and
+documented the storage as Schema-sized. A protocol-2 child that computes the
+stride from the Schema `byte_size` therefore finds slot 1 and later at the
+wrong offset when the `byte_size` is not a multiple of 8. A child that strides
+by `16 + shm_capacity` reads both layouts correctly.
 
 The kernel owns the arena file. It creates and maps the file before it spawns
 the child, so `shm_path` is valid from the `init` line onward, and it unlinks

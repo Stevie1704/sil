@@ -680,7 +680,7 @@ ProcessParticipant::ProcessParticipant(Engine &engine, const std::string &name,
         const ChannelArenas::Layout layout = arenas_.layout(ch);
         entry["transport"] = "shm";
         entry["shm_path"] = layout.path;
-        entry["shm_capacity"] = layout.capacity;
+        entry["shm_capacity"] = layout.padded_payload_bytes;
         entry["shm_slots"] = layout.slots;
       }
       channels[ch] = entry;

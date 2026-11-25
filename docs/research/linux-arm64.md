@@ -261,8 +261,17 @@ multiple of 8, the header of slot 1 and later is not 8-byte aligned. The
 kernel then reads `seq` and `len` through an unaligned `sil_arena *`. On
 AArch64 Linux, ordinary unaligned loads and stores to normal memory do not
 fault, so this works on both classes. It is undefined behavior in C++, and an
-atomic access there would fault on arm64. Changing the stride changes the
-binary contract, so this ticket does not change it.
+atomic access there would fault on arm64. #415 fixed this. The kernel now
+pads `shm_capacity` to a multiple of 8.
+
+The Native participant table and the Arena header fields do not change, so
+`SIL_ABI_VERSION` stays 1. The Step protocol level also stays 2, but the
+change is not compatible for every client. Releases up to v0.3.2 documented
+Schema-sized slot storage. A protocol-2 client that uses that formula, and not
+`shm_capacity`, looks for slot 1 of a 44-byte Schema at byte 60. The slot is
+now at byte 64. Clients that stride by `16 + shm_capacity`, which includes
+every participant in this repository, still work. The release notes of the
+release that carries #415 must announce this, as SUPPORT.md requires.
 
 **Memory ordering.** No Arena or clock-region field is an atomic. The
 kernel writes the region or the slot, then writes the Step line to the pipe;

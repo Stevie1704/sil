@@ -22,10 +22,18 @@ namespace sil {
 
 namespace {
 
-// One slot is its header followed by the schema-sized payload; a multi-slot
-// Arena repeats that stride, which keeps slot zero compatible with
-// protocol-1 participants.
-size_t stride_of(size_t capacity) { return sizeof(sil_arena) + capacity; }
+// One slot is its header followed by the schema-sized payload, padded to a
+// multiple of the header alignment so that every slot header in a multi-slot
+// Arena is 8-byte aligned. Slot zero keeps its offsets, so protocol-1
+// participants still map only the original prefix. The child is told the
+// padded size as `shm_capacity` and strides by `header + shm_capacity`.
+constexpr size_t kAlign = alignof(sil_arena);
+size_t padded(size_t capacity) {
+  return (capacity + kAlign - 1) / kAlign * kAlign;
+}
+size_t stride_of(size_t capacity) {
+  return sizeof(sil_arena) + padded(capacity);
+}
 
 sil_arena *header_at(void *base, size_t offset) {
   return reinterpret_cast<sil_arena *>(static_cast<uint8_t *>(base) + offset);
@@ -40,7 +48,10 @@ std::string ChannelArenas::describe(const std::string &channel) const {
 void ChannelArenas::map(const std::string &channel, size_t capacity,
                         size_t slots) {
   constexpr size_t kMax = std::numeric_limits<size_t>::max();
-  if (capacity > kMax - sizeof(sil_arena) || slots > kMax / stride_of(capacity))
+  // Leaves room for the header and the padding, so neither `padded` nor
+  // `stride_of` can wrap.
+  if (capacity > kMax - sizeof(sil_arena) - kAlign ||
+      slots > kMax / stride_of(capacity))
     throw ManifestError(describe(channel) +
                         ": arena mapping size overflows size_t");
 
@@ -90,7 +101,7 @@ size_t ChannelArenas::slots(const std::string &channel) const {
 
 ChannelArenas::Layout ChannelArenas::layout(const std::string &channel) const {
   const Arena &arena = at(channel);
-  return Layout{arena.region.path(), arena.capacity, arena.slots};
+  return Layout{arena.region.path(), padded(arena.capacity), arena.slots};
 }
 
 size_t ChannelArenas::max_slots() const {
