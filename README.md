@@ -33,6 +33,9 @@ https://github.com/Stevie1704/sil/releases/latest/download/install.sh
 to install both the Python tools and native runtime. On Windows, use WSL2;
 on macOS, use the runtime image pinned by digest in the latest release notes,
 with no --platform flag, following the guide's platform instructions.
+Release 0.3.2 has no Linux arm64 archive and only a linux/amd64 image: if
+the latest release has no linux-aarch64 archive, on Linux arm64 build from
+source as the guide tells, and on Apple silicon give --platform linux/amd64.
 
 For a native installation, source ~/.local/share/sil/env and add that line
 to my shell profile if missing. Verify sil --help and sil-run --version,
@@ -50,6 +53,16 @@ a new terminal.
 On **Linux, x86-64 or arm64, with glibc 2.36+** (Debian 12 / Ubuntu 24.04 or
 newer), you need `curl`, `tar`, Python 3.11+ with `venv`, and `sha256sum` or
 `shasum`. The same commands install on both machine classes.
+
+> **Linux arm64 and 0.3.2.** Release 0.3.2 ships only the Linux x86-64
+> archive, and its runtime image is only `linux/amd64`. The first release
+> after 0.3.2 adds the `linux-aarch64` archive and the `linux/arm64` image.
+> Until that release, the installer stops on Linux arm64 and installs
+> nothing. On Linux arm64, [build from source](#build-from-source) and
+> [install from a staged prefix](docs/getting-started.md#install-and-run-from-a-staged-prefix).
+> On Apple silicon, run the 0.3.2 image with `--platform linux/amd64`
+> (emulated).
+
 On Debian or Ubuntu, install the prerequisites with:
 
 ```sh
@@ -90,7 +103,8 @@ read the guide yourself.
 
 On **Windows**, use WSL2 with Ubuntu 24.04 and run the Linux commands above
 in its shell. On **macOS**, use the runtime image from the release in Docker.
-On Apple silicon it runs natively, so give no `--platform` flag.
+From the first release after 0.3.2, the image runs natively on Apple silicon,
+so give no `--platform` flag. The 0.3.2 image is only `linux/amd64`.
 See [Windows and macOS](docs/getting-started.md#windows-and-macos) for setup
 and container commands, or [installation details](docs/getting-started.md#install-a-release)
 for a custom prefix or a specific release.
