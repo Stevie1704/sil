@@ -280,10 +280,11 @@ def test_retained_qualification_replays_offline(tmp_path, archive_name):
         members = saved.getmembers()
         assert len(members) < 2000
         assert sum(m.size for m in members) <= 512 << 20
-        # The pinned checksum makes the archive trusted. Use the data filter
-        # where it exists (Python 3.11.4+), because Debian bookworm has 3.11.2.
-        safety = {"filter": "data"} if hasattr(tarfile, "data_filter") else {}
-        saved.extractall(tmp_path, **safety)
+        # Python 3.11.4 and later have the data filter. Debian bookworm has
+        # 3.11.2. The pinned checksum above makes the archive safe without it.
+        extract_options = ({"filter": "data"} if hasattr(tarfile, "data_filter")
+                           else {})
+        saved.extractall(tmp_path, **extract_options)
     root = tmp_path / "scheduler-evidence"
     validator = root / "proof-sources/validate.py"
     environments = {"native-unprivileged": (1, 1), "container-default": (1, 1),
