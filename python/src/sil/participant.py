@@ -37,9 +37,11 @@ class _Arena:
     per-step transport rules are specified in ``docs/step-protocol.md``;
     `seq` marks a fresh write so a stale read is caught.
 
-    `capacity` is the kernel-authoritative arena size (derived from the schema
-    `byte_size`, delivered in the init line); this side does not re-derive it
-    from the schema, so the two ends cannot disagree.
+    `capacity` is the kernel-authoritative payload size of one slot
+    (`shm_capacity` in the init line). The kernel pads the schema `byte_size`
+    to a multiple of 8, so every slot header is aligned. This side does not
+    re-derive it from the schema, so the two ends cannot disagree on the
+    stride. The kernel still requires `len` to equal the schema `byte_size`.
     """
 
     def __init__(self, path: str, capacity: int, slots: int = 1):

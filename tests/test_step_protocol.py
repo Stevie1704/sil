@@ -360,6 +360,10 @@ class TestCppStepCodec:
         assert populated_steps
         shape = steps[0]["arenas"]["left"]
         assert shape["slots"] == 2
+        # big.Payload is 44 bytes; the slot is padded so slot 1's header is
+        # 8-byte aligned, and the Python source strides by the padded size.
+        assert ARRAY_TYPES["big.Payload"].size == 44
+        assert shape["capacity"] == 48
         assert shape["file_size"] == shape["slots"] * (
             struct.calcsize("<QQ") + shape["capacity"]
         )

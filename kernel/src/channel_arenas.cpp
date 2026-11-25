@@ -48,6 +48,8 @@ std::string ChannelArenas::describe(const std::string &channel) const {
 void ChannelArenas::map(const std::string &channel, size_t capacity,
                         size_t slots) {
   constexpr size_t kMax = std::numeric_limits<size_t>::max();
+  // Leaves room for the header and the padding, so neither `padded` nor
+  // `stride_of` can wrap.
   if (capacity > kMax - sizeof(sil_arena) - kAlign ||
       slots > kMax / stride_of(capacity))
     throw ManifestError(describe(channel) +
