@@ -154,7 +154,8 @@ not run, with the reason in the table.
 | CPU profile (`sil profile --collector cpu`, perf) | perf is qualified on x86-64 only (#319). A perf check on arm64 (#407) failed its source-line and inlined-frame tests. | Refuses with `the cpu collector needs Linux x86-64`. |
 | Function tracing (`proofs/function-tracing`) | The proof uses XRay, which is x86-64 only. | The proof refuses a non-x86-64 host. |
 | Source debugging (`proofs/source-debugging`) | The proof packages `x86_64-linux` debug FMUs. | The proof refuses a non-x86-64 host. |
-| Proofs with pinned FMUs or tools (ACC FMI, OSMP, openacc, FMI-LS-BUS) | The pinned third-party FMUs ship only x86-64 binaries. | Not run on arm64; the proofs pin `linux/amd64`. |
+| Proofs with pinned FMUs or tools (ACC FMI, OSMP, openacc) | The pinned third-party FMUs ship only x86-64 binaries. | Not run on arm64; the proofs pin `linux/amd64`. |
+| FMI-LS-BUS proof (`proofs/fmi-ls-bus`) | The pinned upstream FMUs are source-code FMUs, and the proof compiles them. But the proof pins its base image to the `linux/amd64` manifest digest and runs with `--platform linux/amd64`, and its evidence and expected values come from Linux x86-64 only. | Not qualified on arm64; the proof pins `linux/amd64`. |
 
 Heaptrack (the heap collector) is not in this list. It runs on Linux arm64
 with no change; see the table below.
