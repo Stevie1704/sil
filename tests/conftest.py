@@ -79,7 +79,7 @@ def build_dir() -> Path:
                 check=True,
             )
         subprocess.run(
-            ["cmake", "--build", str(BUILD_DIR), "-j"],
+            ["cmake", "--build", str(BUILD_DIR), "-j", str(os.cpu_count() or 1)],
             check=True, capture_output=True, text=True,
         )
     return BUILD_DIR

@@ -10,7 +10,8 @@ PYTHON_BIN   := $(CURDIR)/.venv/bin
 # working directory: a relative entry would be resolved from there, not from
 # the source tree. See docs/step-protocol.md.
 SRC          := $(CURDIR)/python/src
-JOBS         ?=
+# Default to the CPU count: `-j` with no limit runs out of memory on small VMs.
+JOBS         ?= $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 1)
 
 # Args passed through to `make run` / `make check`, e.g.
 #   make run ARGS="manifest.json -o out.mcap"

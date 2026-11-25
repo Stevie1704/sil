@@ -128,7 +128,7 @@ the Schemas and the `(topic, log_time, data)` of each message in order.
 - Without `JOBS`, `make build` runs `cmake --build build -j` with no limit.
   In an 8 GiB VM, `cc1plus` was killed (out of memory). `make build JOBS=4`
   passes. This is not an arm64 defect, but an arm64 runner or a small board
-  shows it first.
+  shows it first. Fixed by #416: `JOBS` now defaults to the CPU count.
 - The 4 `-Waddress-of-packed-member` warnings in `source_scope/observer.c`
   occur on x86-64 too. The counters that they name are at 8-byte aligned
   offsets of a page-aligned mapping, so the atomic operations are aligned at
@@ -155,7 +155,7 @@ and 14 errors on Ubuntu 24.04. Each failure and error, and its cause:
 | `test_schema_import.py::TestFlatSchema::test_each_rule_flattens_the_fixture_in_offset_order` | 1 failed | 1 failed | The fixture member `char cls` is plain `char`. DWARF says `DW_ATE_unsigned_char` on AArch64 and `DW_ATE_signed_char` on x86-64, so the import gives `u8` on arm64. The import is correct; the test expected `i8` on every host. | Yes | Fixed here: the expected type follows the target ABI. |
 | `test_hash_baseline.py` | 9 errors, 1 failed | 9 errors, 1 failed | `git rev-parse HEAD` fails, because the copied worktree has no `.git` directory. The 9 errors are at fixture setup; `test_a_workload_selection_measures_only_that_workload` calls the tool directly and fails. | No | None. In a git checkout on arm64 all of them pass. |
 | `test_profile_cost_measure.py` | 5 errors | 5 errors | `tools/profile_cost_measure.py` exits 1 at fixture setup, because its `git rev-parse HEAD` fails for the same reason. | No | None at the time of this note: in a git checkout on arm64 all of them passed. Later, #311 added the arm64 refusal of the cpu collector, so these 5 tests now skip on arm64 (see the skip list). |
-| `test_host_scheduling_proof.py::test_retained_qualification_replays_offline` (2 parameters) | 2 failed | passed | `TarFile.extractall(filter=...)` needs Python 3.11.4 or later; bookworm has 3.11.2. | No | None for #408, which uses Ubuntu 24.04 (Python 3.12). |
+| `test_host_scheduling_proof.py::test_retained_qualification_replays_offline` (2 parameters) | 2 failed | passed | `TarFile.extractall(filter=...)` needs Python 3.11.4 or later; bookworm has 3.11.2. | No | None for #408, which uses Ubuntu 24.04 (Python 3.12). Fixed by #416: the test uses the filter only where it exists. |
 | Total | 41 failed, 14 errors | 39 failed, 14 errors | | | |
 
 After the schema-import fix and with a git snapshot of `/work`, the rerun of

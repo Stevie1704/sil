@@ -58,7 +58,7 @@ its static library (`libssl-dev` on Debian and Ubuntu, `openssl@3` from Homebrew
 on a macOS development host):
 
 ```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j "$(getconf _NPROCESSORS_ONLN)"
 ctest --test-dir build --output-on-failure
 uv venv .venv && uv pip install -p .venv/bin/python -e "python/[dev]"
 .venv/bin/python -m pytest tests/

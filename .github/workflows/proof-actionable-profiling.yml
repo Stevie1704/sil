@@ -28,7 +28,7 @@ jobs:
         run: |
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
             -DSIL_SOURCE_REVISION="$SIL_SOURCE_REVISION"
-          cmake --build build -j
+          cmake --build build -j "$(getconf _NPROCESSORS_ONLN)"
           cmake --install build --prefix "$RUNNER_TEMP/sil-native"
           version="$(python3 tools/release.py project-version)"
           python3 tools/release.py stamp-python --root "$PWD" \

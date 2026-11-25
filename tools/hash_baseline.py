@@ -183,7 +183,7 @@ def build_revision(revision: str, cache_dir: Path, repository: Path = ROOT,
         ["git", "-C", str(source), "checkout", "--quiet", "--detach", commit],
         ["cmake", "-S", str(source), "-B", str(build),
          "-DCMAKE_BUILD_TYPE=Release", f"-DSIL_SOURCE_REVISION={commit}"],
-        ["cmake", "--build", str(build), "-j"],
+        ["cmake", "--build", str(build), "-j", str(os.cpu_count() or 1)],
     ]
     for step in steps:
         result = subprocess.run(step, capture_output=True, text=True)
