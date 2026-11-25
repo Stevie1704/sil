@@ -14,7 +14,7 @@ evidence, before the CI and release work starts. It is research input for
 | Does the kernel build on arm64? | Yes, with no source change, on Debian bookworm and Ubuntu 24.04. The warnings are the same as on x86-64. |
 | Do the C++ tests pass? | Yes, 12 of 12 on both distributions. |
 | Does the determinism gate pass? | Yes, all 10 references on both distributions. |
-| Does `pytest tests/` pass? | All but two groups. The FMI 2.0 tests fail because Linux aarch64 has no FMI 2.0 platform directory (#409). `test_schema_import.py` failed on plain `char` signedness; this ticket fixes the test. |
+| Does `pytest tests/` pass? | All but two arm64-specific groups. The FMI 2.0 tests fail because Linux aarch64 has no FMI 2.0 platform directory (#409). `test_schema_import.py` failed on plain `char` signedness; this ticket fixes the test. The other failures and errors come from the test environment, not from arm64 (see [Test suite](#test-suite)). |
 | Are two Runs on arm64 bit-identical? | Yes, for each of the 10 references. |
 | Are arm64 and x86-64 Recordings equal? | 8 of 10 references are equal. 2 differ in the last bit of some `f64` values. The cause is fused multiply-add (FMA) contraction in the C example libraries. With `-ffp-contract=off`, all 10 are equal. |
 | Is the Arena, clock-region or Native ABI layout architecture-dependent? | No. Both classes are LP64 little-endian. This ticket adds `static_assert` checks of size and offsets. `SIL_ABI_VERSION` stays 1. |
@@ -46,22 +46,81 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/b
 ```
 
 The container gets the checkout read-only at `/src`, copies it to `/work`
-without `build/` and `.venv/`, and runs as an unprivileged user:
+without `build/` and `.venv/`, and runs as an unprivileged user. The build
+must pass before the other steps. After the build, each step runs and records
+its exit status, also when a step before it fails. Thus the known pytest
+failures do not stop the determinism gate:
 
 ```sh
 docker run --rm --platform linux/arm64 --user 501:20 -e HOME=/tmp/h \
   -v sil-work:/work -v "$PWD:/src:ro" sil-qualify:bookworm-arm64 sh -c '
     rsync -a --exclude build --exclude .venv /src/ /work/ && cd /work &&
-    make venv && make build JOBS=4 &&
-    ctest --test-dir build --output-on-failure &&
-    SIL_SKIP_BUILD=1 .venv/bin/python -m pytest tests/ -q -rs &&
-    PYTHONPATH=/work/python/src .venv/bin/python tools/determinism_gate.py'
+    make venv && make build JOBS=4 || exit 1
+    ctest --test-dir build --output-on-failure; ctest=$?
+    SIL_SKIP_BUILD=1 .venv/bin/python -m pytest tests/ -q -rs; pytest=$?
+    PYTHONPATH=/work/python/src .venv/bin/python tools/determinism_gate.py
+    gate=$?
+    echo "ctest=$ctest pytest=$pytest gate=$gate"'
 ```
 
-For the Recording comparison, a small driver replaces `check` in
-`tools/determinism_gate.py` with `check(..., keep=DIR)`. It keeps both
-Recordings of each reference, so the same reference list gives SHA-256
-digests per class. A message-level diff uses `mcap.reader.make_reader`.
+For the Recording comparison, a small driver keeps both Recordings of each
+reference of the determinism gate and writes their SHA-256 digests. It
+replaces `check` in `tools/determinism_gate.py` with `check(..., keep=DIR)`,
+so the reference list stays the list of the gate. The comparison covers only
+these 10 gate references, not the other Recordings of the test suite. Save
+the driver as `digests.py` outside the checkout:
+
+```python
+"""Keep both Recordings of each gate reference and write their digests."""
+import hashlib
+import importlib.util
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, "tools")
+out = Path(sys.argv[1])
+spec = importlib.util.spec_from_file_location("gate", "tools/determinism_gate.py")
+gate = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(gate)
+real_check = gate.check
+results = {}
+
+
+def sha256(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else None
+
+
+def keeping_check(runner, manifest, **kwargs):
+    keep = out / Path(manifest).stem
+    code = real_check(runner, manifest, keep=keep, **kwargs)
+    results[Path(manifest).stem] = {
+        "code": code,
+        "run1": sha256(keep / "run1.mcap"),
+        "run2": sha256(keep / "run2.mcap"),
+    }
+    return code
+
+
+gate.check = keeping_check
+code = gate.main()
+(out / "digests.json").write_text(json.dumps(results, indent=2) + "\n")
+raise SystemExit(code)
+```
+
+Run it in each container after `make build JOBS=4`, from `/work`, with the
+directory of the driver mounted read-only at `/env` and a log directory at
+`/logs`:
+
+```sh
+PYTHONPATH=/work/python/src .venv/bin/python /env/digests.py \
+  /logs/<class>/recordings
+```
+
+Then compare `run1` and `run2` of each reference in the `digests.json` files
+of the two classes. A message-level diff of one reference reads both
+`run1.mcap` files with `mcap.reader.make_reader` and compares the metadata,
+the Schemas and the `(topic, log_time, data)` of each message in order.
 
 ## Build
 
@@ -86,14 +145,18 @@ digests per class. A message-level diff uses `mcap.reader.make_reader`.
 | bookworm arm64 | 4004 passed, 41 failed, 14 errors, 233 skipped (8 min) |
 | Ubuntu 24.04 arm64 | 4006 passed, 39 failed, 14 errors, 233 skipped (9.5 min) |
 
-Each failure and its cause:
+The raw logs give 41 failures and 14 errors on bookworm, and 39 failures
+and 14 errors on Ubuntu 24.04. Each failure and error, and its cause:
 
-| Tests | Cause | arm64-specific | Action |
-| --- | --- | --- | --- |
-| `test_fmi2.py` `TestLifecycle`, `TestExtraction`, `TestRunBoundary`; `test_fmi2_osmp.py` `TestMapping`, `TestStep`, `TestRunBoundary` (31 tests) | The fixtures build a host FMI 2.0 FMU into `binaries/<fmi2_platform_directory()>/`. On Linux aarch64 that function returns `None`, and the Importer refuses: `FMU 'Fmi2Ok' is FMI 2.0, whose profile loads binaries/linux64 on Linux x86-64; this host (Linux aarch64) has no FMI 2.0 platform directory`. | Yes | Skip in #408 while `fmi2_platform_directory()` is `None`; #409 decides the FMI 2.0 answer. |
-| `test_schema_import.py::TestFlatSchema::test_each_rule_flattens_the_fixture_in_offset_order` | The fixture member `char cls` is plain `char`. DWARF says `DW_ATE_unsigned_char` on AArch64 and `DW_ATE_signed_char` on x86-64, so the import gives `u8` on arm64. The import is correct; the test expected `i8` on every host. | Yes | Fixed here: the expected type follows the target ABI. |
-| `test_hash_baseline.py` (9), `test_profile_cost_measure.py` (5) | `git rev-parse HEAD` fails, because the copied worktree has no `.git` directory. | No | None. In a git checkout on arm64 all of them pass. |
-| `test_host_scheduling_proof.py::test_retained_qualification_replays_offline` (2, bookworm only) | `TarFile.extractall(filter=...)` needs Python 3.11.4 or later; bookworm has 3.11.2. | No | None for #408, which uses Ubuntu 24.04 (Python 3.12). |
+| Tests | bookworm | Ubuntu 24.04 | Cause | arm64-specific | Action |
+| --- | --- | --- | --- | --- | --- |
+| `test_fmi2.py` `TestLifecycle` (16), `TestExtraction` (2), `TestRunBoundary` (6) | 24 failed | 24 failed | The fixtures build a host FMI 2.0 FMU into `binaries/<fmi2_platform_directory()>/`. On Linux aarch64 that function returns `None`, and the Importer refuses: `FMU 'Fmi2Ok' is FMI 2.0, whose profile loads binaries/linux64 on Linux x86-64; this host (Linux aarch64) has no FMI 2.0 platform directory`. | Yes | Skip in #408 while `fmi2_platform_directory()` is `None`; #409 decides the FMI 2.0 answer. |
+| `test_fmi2_osmp.py` `TestMapping` (3), `TestStep` (7), `TestRunBoundary` (3) | 13 failed | 13 failed | The same refusal, for the OSMP fixture FMUs (`OsmpOk` and others). | Yes | The same. |
+| `test_schema_import.py::TestFlatSchema::test_each_rule_flattens_the_fixture_in_offset_order` | 1 failed | 1 failed | The fixture member `char cls` is plain `char`. DWARF says `DW_ATE_unsigned_char` on AArch64 and `DW_ATE_signed_char` on x86-64, so the import gives `u8` on arm64. The import is correct; the test expected `i8` on every host. | Yes | Fixed here: the expected type follows the target ABI. |
+| `test_hash_baseline.py` | 9 errors, 1 failed | 9 errors, 1 failed | `git rev-parse HEAD` fails, because the copied worktree has no `.git` directory. The 9 errors are at fixture setup; `test_a_workload_selection_measures_only_that_workload` calls the tool directly and fails. | No | None. In a git checkout on arm64 all of them pass. |
+| `test_profile_cost_measure.py` | 5 errors | 5 errors | `tools/profile_cost_measure.py` exits 1 at fixture setup, because its `git rev-parse HEAD` fails for the same reason. | No | None. In a git checkout on arm64 all of them pass. |
+| `test_host_scheduling_proof.py::test_retained_qualification_replays_offline` (2 parameters) | 2 failed | passed | `TarFile.extractall(filter=...)` needs Python 3.11.4 or later; bookworm has 3.11.2. | No | None for #408, which uses Ubuntu 24.04 (Python 3.12). |
+| Total | 41 failed, 14 errors | 39 failed, 14 errors | | | |
 
 After the schema-import fix and with a git snapshot of `/work`, the rerun of
 `test_hash_baseline.py`, `test_profile_cost_measure.py`,
@@ -116,6 +179,9 @@ the machine class, so this is an observation, not a claim.
 
 Both classes use the same Manifest paths (`/work/...`), the same toolchain
 release (bookworm GCC 12.2) and the same Python dependency versions.
+
+This comparison covers only the 10 references of the determinism gate.
+Other Recordings were not compared across the classes.
 
 | Reference | arm64 = x86-64 | Participants |
 | --- | --- | --- |
@@ -253,8 +319,8 @@ with the reason given.
 
 | Tests | Skip reason |
 | --- | --- |
-| `tests/test_fmi2.py`: `TestLifecycle`, `TestExtraction`, `TestRunBoundary` | `this host has no FMI 2.0 platform directory` (condition: `fmi2_platform_directory() is None`), until #409. |
-| `tests/test_fmi2_osmp.py`: `TestMapping`, `TestStep`, `TestRunBoundary` | The same. |
+| `tests/test_fmi2.py`: `TestLifecycle`, `TestExtraction`, `TestRunBoundary` (24 tests) | `this host has no FMI 2.0 platform directory` (condition: `fmi2_platform_directory() is None`), until #409. |
+| `tests/test_fmi2_osmp.py`: `TestMapping`, `TestStep`, `TestRunBoundary` (13 tests) | The same. |
 
 **Already skip on arm64, no change:**
 
