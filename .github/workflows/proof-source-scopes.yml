@@ -57,7 +57,7 @@ jobs:
         run: |
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12
-          cmake --build build -j
+          cmake --build build -j "$(getconf _NPROCESSORS_ONLN)"
           { sha256sum build/sil-run build/sil-run-diagnostics \
               build/sil-diagnostics-launcher build/libsil_source_scope.so.1 \
               build/scope_scenarios.silp build/scope_exception.silp;

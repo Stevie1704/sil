@@ -201,7 +201,7 @@ uv pip install -p .venv-staged/bin/python "$wheel"
 
 # The kernel build needs libssl-dev (OpenSSL 3.0 or newer, static library).
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
+cmake --build build -j "$(getconf _NPROCESSORS_ONLN)"
 prefix=$(mktemp -d)
 cmake --install build --prefix "$prefix"
 ```
