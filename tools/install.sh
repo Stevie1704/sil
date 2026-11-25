@@ -142,6 +142,12 @@ EOF
 
 mkdir -p "$prefix"
 if [ -e "$complete" ]; then
+    # The marker names the platform of the installed archive. Installers up
+    # to 0.3.2 wrote an empty marker, and they installed only linux-x86_64.
+    installed_platform="$(cat "$complete")"
+    installed_platform="${installed_platform:-linux-x86_64}"
+    [ "$installed_platform" = "$platform" ] ||
+        fail "$target holds the $installed_platform installation of SiL $version, and this host needs $platform. Give another --prefix, or remove $target and run install.sh again"
     echo "SiL $version is already installed in $target; nothing was downloaded."
     finish
     exit 0
@@ -187,6 +193,6 @@ runner_version="$("$target/native/bin/sil-run" --version)" ||
     fail "the installed sil-run reports version '$runner_version', not $version"
 "$target/venv/bin/sil" --help >/dev/null || fail "the installed sil command does not start"
 
-touch "$complete"
+echo "$platform" >"$complete"
 installed=true
 finish

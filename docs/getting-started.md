@@ -28,6 +28,9 @@ curl -fsSL https://github.com/Stevie1704/sil/releases/download/v<VERSION>/instal
   another directory): a virtual environment, `venv/`, and the native archive,
   `native/`. Versions stay side by side, and an installed version is never
   changed. `current` points at the version installed last.
+- An installed version records its machine class. If the prefix holds the
+  version for another machine class, for example a shared home directory,
+  the script stops and names both classes. Give another `--prefix`.
 - `~/.local/share/sil/env` puts `current/venv/bin` and `current/native/bin`
   first on `PATH`. Source it in your shell profile. Then `python3` is the
   Python of the virtual environment, which Python Participants need

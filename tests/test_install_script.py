@@ -244,6 +244,41 @@ def test_versions_stay_side_by_side_and_the_last_installed_is_current(tmp_path, 
     assert in_env(prefix, "sil-run --version", host) == "0.3.0"
 
 
+@needs_venv
+def test_an_install_of_another_machine_class_is_not_activated(tmp_path, host):
+    publish(tmp_path / "mirror", "0.2.0")
+    prefix = tmp_path / "sil"
+    assert install(host, "--version", "0.2.0", "--prefix", str(prefix)).returncode == 0
+    (prefix / "current").unlink()
+    set_host(host, "Linux", "aarch64")
+
+    proc = install(host, "--version", "0.2.0", "--prefix", str(prefix))
+
+    assert proc.returncode == 1
+    assert "linux-x86_64" in proc.stderr
+    assert "linux-aarch64" in proc.stderr
+    assert not (prefix / "current").exists()
+
+
+def test_an_older_install_without_a_machine_class_is_x86_64(tmp_path, host):
+    # Installers up to 0.3.2 wrote an empty marker and installed x86-64 only.
+    prefix = tmp_path / "sil"
+    (prefix / "0.2.0").mkdir(parents=True)
+    (prefix / "0.2.0" / ".complete").write_text("")
+    set_host(host, "Linux", "aarch64")
+
+    proc = install(host, "--version", "0.2.0", "--prefix", str(prefix))
+
+    assert proc.returncode == 1
+    assert "linux-x86_64" in proc.stderr
+    assert not (prefix / "current").exists()
+
+    set_host(host, "Linux", "x86_64")
+    proc = install(host, "--version", "0.2.0", "--prefix", str(prefix))
+    assert proc.returncode == 0, proc.stderr
+    assert "already installed" in proc.stdout
+
+
 def test_an_incomplete_installation_is_not_used(tmp_path, host):
     publish(tmp_path / "mirror", "0.2.0")
     prefix = tmp_path / "sil"
