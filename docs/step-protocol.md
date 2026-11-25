@@ -280,6 +280,12 @@ Message's `len` must still equal the schema `byte_size`. Keeping slot zero
 byte-compatible lets protocol-1 participants map only the original prefix of a
 multi-slot Arena.
 
+Releases up to v0.3.2 set `shm_capacity` to the Schema `byte_size` and
+documented the storage as Schema-sized. A protocol-2 child that computes the
+stride from the Schema `byte_size` therefore finds slot 1 and later at the
+wrong offset when the `byte_size` is not a multiple of 8. A child that strides
+by `16 + shm_capacity` reads both layouts correctly.
+
 The kernel owns the arena file. It creates and maps the file before it spawns
 the child, so `shm_path` is valid from the `init` line onward, and it unlinks
 the file when the run ends. A child maps the path during initialization and

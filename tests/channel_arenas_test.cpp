@@ -172,15 +172,16 @@ void test_every_slot_header_is_eight_byte_aligned() {
   // child that strides by `16 + capacity` still lands on aligned headers.
   arenas.map("odd", 3, 3);
   const ChannelArenas::Layout layout = arenas.layout("odd");
-  check(layout.slot_bytes % alignof(sil_arena) == 0,
+  check(layout.padded_payload_bytes % alignof(sil_arena) == 0,
         "the advertised slot capacity is not a multiple of 8: " +
-            std::to_string(layout.slot_bytes));
-  check(layout.slot_bytes >= 3, "the advertised capacity lost payload bytes");
+            std::to_string(layout.padded_payload_bytes));
+  check(layout.padded_payload_bytes >= 3,
+        "the advertised capacity lost payload bytes");
 
   struct stat st;
   check(stat(layout.path.c_str(), &st) == 0, "the arena has no region file");
   check(static_cast<size_t>(st.st_size) ==
-            layout.slots * (sizeof(sil_arena) + layout.slot_bytes),
+            layout.slots * (sizeof(sil_arena) + layout.padded_payload_bytes),
         "the region size disagrees with the advertised layout");
 
   // The padding is layout only: the schema size stays the limit.

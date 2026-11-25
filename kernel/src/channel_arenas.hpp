@@ -35,7 +35,9 @@ class ChannelArenas {
   // What a child needs to reach one Arena, handed to it in the init line.
   struct Layout {
     std::string path;
-    size_t slot_bytes;  // padded payload bytes per slot; stride is header + this
+    // Payload bytes per slot, padded to a multiple of 8; the init line's
+    // `shm_capacity`. The slot stride is the header plus this.
+    size_t padded_payload_bytes;
     size_t slots;
   };
 
