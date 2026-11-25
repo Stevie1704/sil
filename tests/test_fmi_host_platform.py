@@ -73,6 +73,19 @@ class TestLinuxArm64Refusals:
         assert "binaries/darwin64 (Darwin x86_64 or Darwin arm64)" in message
         assert "binaries/aarch64-linux" in message
 
+    def test_fmi2_on_an_unsupported_system_is_a_manifest_error(
+        self, monkeypatch, tmp_path
+    ):
+        files = extracted(tmp_path, FMI2_DAHLQUIST)
+        host(monkeypatch, "Windows", "AMD64")
+
+        with pytest.raises(ManifestError) as refused:
+            ModelDescription.read(files).binary(files)
+
+        message = str(refused.value)
+        assert "(Windows AMD64)" in message
+        assert "binaries/linux64 (Linux x86_64)" in message
+
     def test_fmi2_inspection_names_no_directory_the_host_cannot_load(
         self, monkeypatch
     ):

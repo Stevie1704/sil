@@ -553,13 +553,17 @@ class ModelDescription:
         """The shared library this platform loads out of the FMU."""
         directory = self.platform_directory()
         if directory is None:
+            # An FMI 3.0 FMU is the way out only on a system FMI 3.0 names.
+            fmi3_hint = (
+                f". On this host, use an FMI {FMI3} FMU with "
+                f"binaries/{platform_directory()}"
+                if platform.system() in _SYSTEMS else ""
+            )
             raise ManifestError(
                 f"FMU {self.model_identifier!r} is FMI {FMI2}, and this host "
                 f"({platform.system()} {platform.machine()}) has no FMI "
                 f"{FMI2} platform directory. The Importer loads FMI {FMI2} "
-                f"binaries from {_fmi2_accepted_directories()}. On this "
-                f"host, use an FMI {FMI3} FMU with "
-                f"binaries/{platform_directory()}"
+                f"binaries from {_fmi2_accepted_directories()}{fmi3_hint}"
             )
         binary = (
             extracted / "binaries" / directory
