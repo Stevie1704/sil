@@ -95,25 +95,70 @@ Step, and the last lines of its stderr
 ([docs/running.md](docs/running.md#failure-report)). A successful Run writes
 none.
 
-## Supported machine class
+## Supported machine classes
 
-| Property | Supported |
-| --- | --- |
-| Operating system | Linux |
-| CPU architecture | x86-64 |
-| libc | glibc, Debian bookworm level or newer |
-| Python | 3.11 or newer, as the distribution metadata declares; the image pins 3.13 |
-| Reference environment | the pinned `runtime` container image in [Dockerfile](Dockerfile) |
-| Build from source | OpenSSL 3.0 or newer with its static library. A built runner has no OpenSSL runtime dependency ([decision](docs/adr/0006-sha256-backend-static-openssl.md)) |
+SiL supports two machine classes: Linux x86-64 and Linux arm64. Each class is
+one CPU architecture on Linux with glibc. On Linux x86-64, `uname -m` reports
+`x86_64`. On Linux arm64, it reports `aarch64`. A Recording is bit-identical
+within a class. It is not bit-identical across the two classes in general, as
+described below.
 
-Continuous integration runs on x86-64 Linux with one interpreter, and that is
-the only machine class this project verifies. An older supported Python is
-declared, not exercised. The pinned base image also resolves an arm64
-layer, so an arm64 build may succeed; it is untested, and no determinism claim
-covers it. macOS and Windows are not supported; the Clock shim is a
-`LD_PRELOAD` library and has no counterpart there. On them, run the Linux
-x86-64 release in WSL2 or the runtime image in Docker
+| Property | Linux x86-64 class | Linux arm64 class |
+| --- | --- | --- |
+| Operating system | Linux | Linux |
+| CPU architecture | x86-64 | arm64, 64-bit |
+| libc | glibc, Debian bookworm level or newer | glibc, Debian bookworm level or newer |
+| Python | 3.11 or newer, as the distribution metadata declares; the image pins 3.13 | the same |
+| Native archive | `sil-native-dev-<VERSION>-linux-x86_64.tar.gz` | `sil-native-dev-<VERSION>-linux-aarch64.tar.gz` |
+| Runtime image platform | `linux/amd64` | `linux/arm64` |
+| Reference environment | the pinned `runtime` container image in [Dockerfile](Dockerfile), `linux/amd64` | the same pinned image, `linux/arm64` |
+
+The build from source needs OpenSSL 3.0 or newer with its static library, on
+either class. A built runner has no OpenSSL runtime dependency
+([decision](docs/adr/0006-sha256-backend-static-openssl.md)).
+
+Continuous integration runs the test suite and the determinism gate on both
+classes, with one interpreter. A test that needs an x86-64 artifact skips on
+Linux arm64 and names its reason. An older supported Python is declared, not
+exercised. The proof workflows run on Linux x86-64 only. The release workflow builds
+and smoke-tests the native archive of each class on a runner of that class.
+
+macOS and Windows are not supported as native hosts. The Clock shim is a
+`LD_PRELOAD` library and has no counterpart there. On Windows, run the Linux
+release in WSL2. On macOS, run the runtime image in Docker; on Apple silicon,
+the `linux/arm64` image runs natively
 ([docs/getting-started.md](docs/getting-started.md#windows-and-macos)).
+
+### Across machine classes
+
+A Recording from Linux x86-64 and a Recording from Linux arm64 are not
+bit-identical in general. The two known causes are:
+
+| Cause | Effect | Action |
+| --- | --- | --- |
+| Fused multiply-add (FMA). On Linux arm64, GCC computes `a + b * c` with one rounding. On Linux x86-64, it rounds two times. | Some `f64` values differ by one unit in the last place. In the determinism gate, 2 of 10 references differ: `fmu-replay` and `library-window`. | Build the Participant with `-ffp-contract=off`. Then all 10 references are bit-identical on the two classes. |
+| Plain `char` signedness. `sil schema import` reads the compiled type: `i8` on x86-64, `u8` on arm64. | An import on each class gives a different Schema, so the Manifest hash differs. A Schema imported on one class is valid on the other. | Import the Schema once, and use that Schema on both classes. |
+
+Python Participants gave equal Recordings on both classes for the inputs of
+the qualification runs. This is an observation for those inputs, not a
+guarantee: a `libm` function need not round the same way on each class.
+
+### Features that need Linux x86-64
+
+These features stay on Linux x86-64. On Linux arm64 each one refuses or does
+not run, with the reason in the table.
+
+| Feature | Reason | On Linux arm64 |
+| --- | --- | --- |
+| Source scopes (`sil/profile_scopes.py`) | The scope code is qualified on x86-64/glibc only (#320). | Refuses with `source scopes need Linux x86-64/glibc`. |
+| CPU profile (`sil profile --collector cpu`, perf) | perf is qualified on x86-64 only (#319). A perf check on arm64 (#407) failed its source-line and inlined-frame tests. | Refuses with `the cpu collector needs Linux x86-64`. |
+| Function tracing (`proofs/function-tracing`) | The proof uses XRay, which is x86-64 only. | The proof refuses a non-x86-64 host. |
+| Source debugging (`proofs/source-debugging`) | The proof packages `x86_64-linux` debug FMUs. | The proof refuses a non-x86-64 host. |
+| Proofs with pinned FMUs or tools (ACC FMI, OSMP, openacc) | The pinned third-party FMUs ship only x86-64 binaries. | Not run on arm64; the proofs pin `linux/amd64`. |
+| FMI-LS-BUS proof (`proofs/fmi-ls-bus`) | The pinned upstream FMUs are source-code FMUs, and the proof compiles them. But the proof pins its base image to the `linux/amd64` manifest digest and runs with `--platform linux/amd64`, and its evidence and expected values come from Linux x86-64 only. | Not qualified on arm64; the proof pins `linux/amd64`. |
+
+Heaptrack (the heap collector) is not in this list. It runs on Linux arm64
+with no change; see the table below.
 
 ### Optional profiling backends
 
@@ -123,12 +168,13 @@ x86-64 release in WSL2 or the runtime image in Docker
 | Backend | Qualified | Needs |
 | --- | --- | --- |
 | Linux perf, CPU collector | perf 6.17.13 (Ubuntu 24.04, the `linux-tools` of the runner kernel, natively) and 6.1.176 (Debian bookworm, in the documented profiling image) on Linux x86-64/glibc, software event `cpu-clock:u`; no hardware counter. Inlined frames with perf 6.17.13 only: with perf 6.1.176 the report gives `inlined_frames_failed` | `kernel.perf_event_paranoid` 2 or less for an unprivileged user, or `CAP_PERFMON` (`docker run --cap-add PERFMON`, [docs/container.md](docs/container.md#profile-in-a-container)) |
-| Heaptrack, heap collector | Heaptrack 1.5.0 (Ubuntu 24.04) and 1.4.0 (Debian bookworm), runner scope and unshimmed Process participants | no privilege |
+| Heaptrack, heap collector | Heaptrack 1.5.0 (Ubuntu 24.04) and 1.4.0 (Debian bookworm), runner scope and unshimmed Process participants, on Linux x86-64/glibc. On Linux arm64/glibc, Heaptrack 1.4.0 passes the heap integration tests; it is not qualified there by #319. | no privilege |
 
 Qualified means the [#319 qualification](proofs/profiling-qualification/README.md)
-passed with that version on that host. Other versions, arm64, macOS, perf
-outside the Run's PID namespace, kernel samples, hardware events and Heaptrack
-in a shimmed Process participant are not supported.
+passed with that version on that host. Other versions, macOS, perf outside the
+Run's PID namespace, kernel samples, hardware events and Heaptrack in a
+shimmed Process participant are not supported. The CPU collector is x86-64
+only; see [Features that need Linux x86-64](#features-that-need-linux-x86-64).
 
 ## Covered by the compatibility policy
 
@@ -154,7 +200,7 @@ carries it.
 | Benchmark report | the members, metrics, statistics policy and null reasons of `sil_benchmark_report` in `DIR/summary.json` ([docs/diagnostics-report.md](docs/diagnostics-report.md#benchmark-report-sil_benchmark_report-v1)). Measured values are not covered. | `sil_benchmark_report` 1 |
 | Failure report | `<recording>.failure.json` of a failed Run: its fields and `category` values ([docs/running.md](docs/running.md#failure-report)). The `message` and `stderr_tail` text is not covered. | `schema_version` 1 |
 | Bounded Recording queries | `sil recording query` and `sil.recording_query` (`RecordingQuery`, `Predicate`, `QueryError`, `render`): field projection, numeric summaries, scalar predicates, source and query identity, evidence locators and completion reports ([contract](docs/recording-queries.md)); exit codes `0` complete, `2` refused, `3` incomplete, `4` limited output after a complete scan. No continuation in v1. Error text and measured resource costs are not covered. | `sil_recording_query` 1, Python API at package version |
-| FMI import profiles | [docs/fmi.md](docs/fmi.md): FMI 3.0 co-simulation, and the FMI 2.0 co-simulation profile (scalar `Real`, `Integer` and `Boolean`, OSMP binary variables as bounded byte payloads, `binaries/linux64`) | as shipped |
+| FMI import profiles | [docs/fmi.md](docs/fmi.md): FMI 3.0 co-simulation, and the FMI 2.0 co-simulation profile (scalar `Real`, `Integer` and `Boolean`, OSMP binary variables as bounded byte payloads, `binaries/linux64`). The Importer selects the `binaries/` directory of the host: [per machine class](docs/fmi.md#binary-directories-per-machine-class) | as shipped |
 | Native schema-generation tool | installed `silschema` command (`bin/silschema`, shipped together with `bin/_sil_schema_types.py`) and its generated-header contract | as shipped |
 | Python API | `sil.manifest`, `sil.participant`, `sil.testing`, `sil.footprint`, `sil.check` with its report (`sil_check_report` 1) and exit codes `0` deterministic, `2` usage error, `3` violation, `sil manifest validate` (`sil.manifest_validate`: `validate`, `Problem`) with its report (`sil_manifest_validation` 1) and exit codes `0` valid, `2` not valid, `sil new participant` (`sil.scaffold`) and exit codes `0` written, `2` refused, `sil.compare` (`read_contract`, `compare`, `render`, `ContractError`, `RecordingError`) with its contract (`sil_comparison` 1), report (`sil_comparison_report` 1) and exit codes `0` pass, `1` fail, `2` usage error, `sil.recording`, `sil recording channels` and `sil recording show` (`sil.recording_view`) with the channels report (`sil_recording_channels` 1), the one-object-per-Message lines of `show --json` (`sil_recording_show` 1) and exit codes `0` ok, `2` usage error or unreadable Recording, `sil.schema`, `sil.fmi` with the `sil fmi inspect` report (`sil_fmi_inspection` 3), proposed mapping (`sil_fmi_mapping` 1) and exit codes `0` compatible, `1` unusable, `2` usage error, `3` mapping rejected, `sil.csv_recording` with its mapping document (`sil_csv_mapping` 1) and receipt (`sil_csv_receipt` 1), `sil fmi replay` (`sil.fmi.authoring`: `author`, `AuthoringError`) with its authoring document (`sil_fmu_replay` 1), receipt (`sil_fmu_replay_receipt` 1) and exit codes `0` written, `2` rejected, `sil fmi couple` (`sil.fmi.coupling`: `couple`, `render_plan`, `AuthoringError`) with its coupling document (`sil_fmu_coupling` 1), receipt (`sil_fmu_coupling_receipt` 1) and exit codes `0` written, `2` rejected, `sil fmi substitute` (`sil.fmi.substitution`: `substitute`, `render`, `AuthoringError`) with its receipt (`sil_fmu_substitution_receipt` 1), the comparison contract it writes (`sil_comparison` 1) and exit codes `0` written, `2` rejected, `sil schema import` (`sil.schema_import`, needs the `sil[dwarf]` extra) with the flat Schema and layout-check header it writes ([docs/library.md](docs/library.md#large-interfaces)) and exit codes `0` written, `2` rejected, and the `sil` console command with its subcommands (`sil --help`) | package version |
 | Packaged docs | `sil docs`, `sil docs <topic>` and `sil docs --path`: the command, its options and its exit codes `0` ok, `1` no docs installed, `2` unknown topic. The set of topics, their text and the directory layout are not covered: they describe the installed version and change with it. | package version |

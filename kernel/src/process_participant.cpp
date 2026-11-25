@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -26,6 +27,16 @@
 #include "owned_directory.hpp"
 #include "run_diagnostics.hpp"
 #include "run_signal.hpp"
+
+// The clock region is a binary contract with the preloaded shim, which the
+// shim checks the same way. A layout change must fail the build on every
+// machine class, not change the bytes the shim reads.
+static_assert(sizeof(sil_clock_region) == 32,
+              "sil_clock_region is four uint64_t fields");
+static_assert(offsetof(sil_clock_region, t) == 0);
+static_assert(offsetof(sil_clock_region, epoch) == 8);
+static_assert(offsetof(sil_clock_region, sleep_policy) == 16);
+static_assert(offsetof(sil_clock_region, thread_policy) == 24);
 
 namespace sil {
 

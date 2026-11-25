@@ -1,5 +1,6 @@
 #include "channel_arenas.hpp"
 
+#include <cstddef>
 #include <cstring>
 #include <limits>
 #include <utility>
@@ -9,6 +10,13 @@
 #include "copy_counters.hpp"
 #include "engine.hpp"    // RunError
 #include "manifest.hpp"  // ManifestError
+
+// The Arena header is a binary contract with Process participants
+// (participant.py packs it as "<QQ"). A layout change must fail the build on
+// every machine class, not change the bytes a child reads.
+static_assert(sizeof(sil_arena) == 16, "sil_arena is two uint64_t fields");
+static_assert(offsetof(sil_arena, seq) == 0, "sil_arena.seq is at offset 0");
+static_assert(offsetof(sil_arena, len) == 8, "sil_arena.len is at offset 8");
 
 namespace sil {
 

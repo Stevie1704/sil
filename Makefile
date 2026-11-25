@@ -48,7 +48,7 @@ build: configure ## Build the kernel (sil-run)
 .PHONY: test
 test: venv build ## Run the full pytest suite (incl. determinism exit criterion)
 	ctest --test-dir $(BUILD_DIR) --output-on-failure
-	SIL_SKIP_BUILD=1 $(PYTHON) -m pytest tests/ -v
+	SIL_SKIP_BUILD=1 $(PYTHON) -m pytest tests/ -v -rs
 
 .PHONY: test-fast
 test-fast: venv ## Run tests, letting pytest build the kernel on demand

@@ -620,17 +620,22 @@ def numbers(entries):
 
 
 def test_a_stalled_client_buffers_and_then_receives_every_message(
-        serve, blobs):
-    bridge = serve(blobs, backlog=16, queue_limits=QueueLimits(max_messages=32))
+        serve, tmp_path):
+    # The controller buffers only when more Messages wait than the sockets,
+    # the backlog and the queue hold. Linux grows the loopback socket buffers
+    # to about 10 MB, near 125 of these Messages, so `blobs` (150 Messages in
+    # 1.5 s) is not enough there. A 3 s stall of this source plays 300.
+    source = write_blobs(tmp_path / "long.mcap", 60_000, 400, 10 * MS)
+    bridge = serve(source, backlog=16, queue_limits=QueueLimits(max_messages=32))
     client = connect_subscribed(bridge)
     initial_state(client)
     client.request("play", PLAY, speed=1.0)
     client.wait_for(lambda f: f["op"] == "message")
     client.reading.clear()
-    time.sleep(1.5)  # the source plays on; the client accepts nothing
+    time.sleep(3.0)  # the source plays on; the client accepts nothing
     client.reading.set()
     client.wait_for(lambda f: f.get("status") == ENDED, timeout=30)
-    assert numbers(received(client)) == list(range(200))
+    assert numbers(received(client)) == list(range(400))
     assert any(f.get("status") == BUFFERING for f in client.frames)
     client.close()
 

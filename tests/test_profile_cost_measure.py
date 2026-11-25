@@ -13,7 +13,7 @@ import sys
 
 import pytest
 
-from conftest import ROOT
+from conftest import ROOT, cpu_collector
 
 TOOL = ROOT / "tools" / "profile_cost_measure.py"
 sys.path.insert(0, str(ROOT / "tools"))
@@ -59,6 +59,7 @@ def measured(build_dir, tmp_path_factory):
 
 
 @pytest.mark.parametrize("case", ["cpu", "cpu-activations"])
+@cpu_collector
 def test_each_policy_hashes_each_profile_artifact_once(measured, case):
     for mode in ("full", "external"):
         run = measured["cases"][case][mode]["runs"][0]
@@ -68,6 +69,7 @@ def test_each_policy_hashes_each_profile_artifact_once(measured, case):
             row["path"] for row in rows}
 
 
+@cpu_collector
 def test_the_runner_state_stays_apart_from_the_profile_hash(measured):
     cases = measured["cases"]["cpu"]
     full = cases["full"]["runs"][0]
@@ -84,6 +86,7 @@ def test_the_runner_state_stays_apart_from_the_profile_hash(measured):
     assert recording[0]["bytes"] == external["recording_bytes"] > 0
 
 
+@cpu_collector
 def test_the_policies_write_equal_recordings(measured):
     digests = {run["recording_sha256"]
                for case in measured["cases"].values()
@@ -93,6 +96,7 @@ def test_the_policies_write_equal_recordings(measured):
                for digest in digests)
 
 
+@cpu_collector
 def test_the_evidence_states_the_collector_and_its_limits(measured):
     assert measured["conditions"]["tools"] == "fake perf"
     assert "does not sample" in measured["conditions"]["tools_statement"]

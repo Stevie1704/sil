@@ -748,7 +748,8 @@ sil profile manifest.json --out heap-fmu --collector heap --participant fmu
 sil profile render prof/profile.json --html prof.html
 ```
 
-- **Host.** Linux x86-64/glibc only. SiL does not ship perf or Heaptrack:
+- **Host.** Linux x86-64/glibc for the CPU collector (perf). The heap collector
+  (Heaptrack) also runs on Linux arm64/glibc. SiL does not ship perf or Heaptrack:
   install them on the host or in the image (see [Profiling tools](#profiling-tools)).
   Without a tool or a permission, the command stops before any Participant
   starts (exit `1`) and says what is missing. It never changes a host

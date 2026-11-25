@@ -466,6 +466,30 @@ The boundary decisions and the evidence behind them are in
 [docs/adr/0001-connected-fmus-in-one-process-participant.md](adr/0001-connected-fmus-in-one-process-participant.md)
 and [docs/adr/0002-a-replayed-terminal-lands-on-its-own-instant.md](adr/0002-a-replayed-terminal-lands-on-its-own-instant.md).
 
+### Binary directories per machine class
+
+The Importer loads the FMU's shared library from one `binaries/`
+subdirectory. It selects the directory from the host and from the
+`fmiVersion` of the FMU. It does not try other directories.
+
+| Host | FMI 3.0 | FMI 2.0 |
+| --- | --- | --- |
+| Linux x86-64 | `binaries/x86_64-linux/` | `binaries/linux64/` |
+| Linux arm64 (`aarch64`) | `binaries/aarch64-linux/` | refused |
+| macOS, Apple silicon (development only) | `binaries/aarch64-darwin/` | `binaries/darwin64/` |
+| macOS, Intel (development only) | `binaries/x86_64-darwin/` | `binaries/darwin64/` |
+
+FMI 2.0 names a platform by its system and word size only. `linux64` is
+Linux x86-64, and FMI 2.0 has no standard name for Linux arm64. The Importer
+does not guess a non-standard name. On Linux arm64 it refuses an FMI 2.0 FMU
+with a Manifest error that names the host and the FMI 2.0 directories it
+accepts. Use an FMI 3.0 FMU with `binaries/aarch64-linux/` on that host.
+
+An FMU without the directory of the host is refused with a Manifest error
+that names the missing file, for example
+`binaries/aarch64-linux/Model.so is not in the archive`. An FMU that carries
+only `binaries/x86_64-linux/` does not run on Linux arm64.
+
 ### Inspecting an FMU before a Run
 
 `sil fmi inspect` reports whether this importer can drive an archive, before
@@ -500,7 +524,8 @@ the archive declares. The JSON report states that version in
 `facts.fmi_version`. For FMI 2.0, `facts.instantiation_token` holds the
 `guid`, and `platform` is the FMI 2.0 directory (`linux64`, or `darwin64` on
 a development Mac), also when the archive is refused. On a host that FMI 2.0
-has no directory for, `platform` is `null`.
+has no directory for, `platform` is `null`, and `unverified` names no
+binary.
 
 `--mapping` checks a proposed single-FMU mapping. The document is the init
 line's `schemas` and `channels` and the importer's `--bind` and `--start`
@@ -555,7 +580,7 @@ This is the whole profile. It is not general FMI 2.0 conformance.
 | Item | Profile |
 | --- | --- |
 | Interface | Co-Simulation. Model Exchange is refused |
-| Platform | Linux x86-64, `binaries/linux64/`. `darwin64` is loaded on a Mac for development only |
+| Platform | Linux x86-64, `binaries/linux64/`. `darwin64` is loaded on a Mac for development only. Linux arm64 is refused, because FMI 2.0 has no platform name for it; see [Binary directories per machine class](#binary-directories-per-machine-class) |
 | Variable types | scalar `Real`, `Integer` and `Boolean`. An archive with a `String` or `Enumeration` variable is refused, and the reason names each one |
 | Parameters | `--start` sets a `parameter` (`fixed` or `tunable`) or an input in the instantiated state, before `fmi2SetupExperiment`. A `calculatedParameter` takes no start value: the FMU computes it in initialization. It is read after initialization: `--bind` it to a field of an output-direction Channel, and each Step publishes its value |
 | Lifecycle | `fmi2Instantiate` → start values → `fmi2SetupExperiment` (start 0, no tolerance, no stop time) → `fmi2EnterInitializationMode` → `fmi2ExitInitializationMode` → one `fmi2DoStep` per Step → `fmi2Terminate` → `fmi2FreeInstance` |

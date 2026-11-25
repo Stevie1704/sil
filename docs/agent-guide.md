@@ -278,8 +278,8 @@ a Participant is expensive, after "Measure a Run" named the Task or Step.
 Read `sil docs running`, section "Profile a Run", and the contract in
 `sil docs profile-report`.
 
-1. **Check the host.** Linux x86-64/glibc with perf (CPU) or Heaptrack
-   (heap) installed. If `sil profile` stops in preflight (exit `1`), report
+1. **Check the host.** Linux glibc with perf (CPU, x86-64 only) or Heaptrack
+   (heap, x86-64 or arm64) installed. If `sil profile` stops in preflight (exit `1`), report
    the missing tool or permission that stderr names. The host owner decides
    a host change; `sil profile` makes none.
 2. **Select one collector and one scope.**

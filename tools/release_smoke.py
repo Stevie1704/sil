@@ -17,6 +17,7 @@ import argparse
 import hashlib
 import json
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -28,6 +29,7 @@ from pathlib import Path
 from release import (
     REPOSITORY,
     ReleaseError,
+    native_archive_path,
     validate_image,
     validate_native_archive,
     validate_runner,
@@ -301,20 +303,47 @@ def smoke_source_scopes(workspace: Path, execute) -> None:
     assert_offline_html(workspace / "offline/report.html")
 
 
+def smoke_source_scope_refusal(workspace: Path, execute) -> None:
+    """Source scopes are x86-64 only; other hosts must refuse them clearly."""
+    result = execute(["profile", "scopes-manifest.json", "--collector", "scopes",
+                      "--participant", "scoped", "--out", "capture",
+                      "-o", "captured.mcap"])
+    if result.returncode == 0 or "source scopes need Linux x86-64" not in result.stderr:
+        raise SmokeError(
+            "installed source-scope capture did not refuse this host:\n"
+            f"{result.stdout}\n{result.stderr}"
+        )
+
+
+def smoke_source_scopes_for(architecture: str, workspace: Path, execute) -> None:
+    """Source scopes are x86-64 only, so other hosts check the refusal."""
+    if architecture == "x86_64":
+        smoke_source_scopes(workspace, execute)
+    else:
+        smoke_source_scope_refusal(workspace, execute)
+
+
+def find_native_archive(bundle: Path, version: str, architecture: str) -> Path:
+    """The bundle's native archive for one architecture (`uname -m` name)."""
+    archive = native_archive_path(bundle, version, architecture)
+    if not archive.is_file():
+        raise SmokeError(f"bundle has no {archive.name} for this {architecture} host")
+    return archive
+
+
 def smoke_native(
     bundle: Path, version: str, revision: str, workdir: Path,
     *, check_symbols: bool,
 ) -> tuple[Path, str]:
     bundle = bundle.resolve()
     wheels = sorted(bundle.glob(f"sil-{version}-*.whl"))
-    archives = sorted(
-        bundle.glob(f"sil-native-dev-{version}-linux-x86_64.tar.gz")
-    )
-    if len(wheels) != 1 or len(archives) != 1:
-        raise SmokeError("bundle must contain exactly one wheel and native archive")
+    if len(wheels) != 1:
+        raise SmokeError("bundle must contain exactly one wheel")
+    architecture = platform.machine()
+    archive = find_native_archive(bundle, version, architecture)
 
-    archive_root = validate_native_archive(archives[0], version, revision)
-    native_root = extract_archive(archives[0], workdir / "native", archive_root)
+    archive_root = validate_native_archive(archive, version, architecture, revision)
+    native_root = extract_archive(archive, workdir / "native", archive_root)
     if check_symbols:
         validate_native_symbols(native_root)
     venv_dir = workdir / "python"
@@ -417,11 +446,12 @@ def smoke_native(
     )
     scope_workspace = workdir / "native-scopes"
     prepare_scope_consumer(native_root, scope_workspace, environment)
-    smoke_source_scopes(
-        scope_workspace,
-        lambda args: run([str(python_bin / "sil"), *args],
-                         cwd=scope_workspace, env=environment),
-    )
+
+    def execute(args: list[str]) -> subprocess.CompletedProcess[str]:
+        return run([str(python_bin / "sil"), *args],
+                   cwd=scope_workspace, env=environment)
+
+    smoke_source_scopes_for(architecture, scope_workspace, execute)
     return acc_manifest, manifest_hash
 
 
@@ -515,7 +545,9 @@ def smoke_container(
     for name in ("consumer.so", "scopes-manifest.json"):
         shutil.copyfile(manifest.parent / "native-scopes" / name,
                         scope_workspace / name)
-    smoke_source_scopes(
+    # The image runs for the host platform, like the consumer built above.
+    smoke_source_scopes_for(
+        platform.machine(),
         scope_workspace,
         lambda args: docker_run(image, scope_workspace, args, "sil"),
     )

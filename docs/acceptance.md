@@ -140,7 +140,7 @@ covers the case list and the cleanup of timed-out cases.
 ## FMI-LS-BUS CAN acceptance fixture
 
 [proofs/fmi-ls-bus/](../proofs/fmi-ls-bus/) pins the Modelica Association's
-FMI-LS-BUS CAN demo FMUs, builds them for the supported machine class from
+FMI-LS-BUS CAN demo FMUs, builds them for Linux x86-64 from
 sources upstream ships no binary for, and publishes the profile an importer
 has to meet to drive them: Event Mode, a triggered output Clock, and a Binary
 buffer of CAN operations. A reference exchange drives the node through an

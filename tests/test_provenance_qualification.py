@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import file_sha256
+from conftest import file_sha256, cpu_collector
 from test_profile_heap_run import heap, heaptrack, needs_linux  # noqa: F401
 from test_profile_heap_run import sil as heap_sil
 from test_profile_run import exports, sil as profile_sil, tools  # noqa: F401
@@ -117,6 +117,7 @@ def test_the_benchmark_writes_the_reference_bytes_in_each_run(
 @pytest.mark.parametrize("mode", MODES)
 @pytest.mark.parametrize("activations", [[], ["--activations"]],
                          ids=["plain", "activations"])
+@cpu_collector
 def test_a_cpu_capture_writes_the_reference_bytes(
         stable_input, tools, exports, tmp_path, mode,  # noqa: F811
         activations):
@@ -169,6 +170,7 @@ def test_a_process_heap_capture_writes_the_reference_bytes(
 
 
 @pytest.mark.parametrize("mode", MODES)
+@cpu_collector
 def test_a_replay_writes_the_reference_bytes_in_each_command(
         replay_input, native_path, tools, exports, tmp_path,  # noqa: F811
         mode):
@@ -238,6 +240,7 @@ def test_the_run_command_rejects_a_malformed_replay(
 
 
 @pytest.mark.parametrize("mode", MODES)
+@cpu_collector
 def test_a_cpu_capture_rejects_a_malformed_replay(
         malformed_replay, tools, exports, tmp_path, mode):  # noqa: F811
     proc = profile_sil([str(malformed_replay), "--out", "prof", "--collector",

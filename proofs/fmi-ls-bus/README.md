@@ -69,7 +69,7 @@ fixture build compiles it as well.
 | Base image | `python:3.13.7-slim-bookworm`, pinned to its **linux/amd64** manifest digest `sha256:78144946…6db7` |
 | Compiler | Debian bookworm `build-essential` and `cmake`, as installed in that image |
 | FMU compiler and FMI bindings | [FMPy](https://github.com/CATIA-Systems/FMPy) `0.3.32` |
-| Machine class | `linux/amd64`, the one the SiL release supports |
+| Machine class | `linux/amd64` only. The SiL release also supports `linux/arm64`, but this proof pins `linux/amd64`, and its evidence comes from that class |
 
 The platform is part of the base image pin rather than taken from the host: a
 fixture built for a developer's own architecture would not be the fixture CI

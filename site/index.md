@@ -35,9 +35,10 @@ The [Glossary](../GLOSSARY.md) defines each term.
 
 Read the [support statement](../SUPPORT.md) before you build a process on SiL:
 
-- **Platforms:** releases support Linux x86-64 with glibc 2.36 or newer.
-  Windows uses WSL2, and macOS uses the Linux amd64 container image
-  ([supported machine class](../SUPPORT.md#supported-machine-class),
+- **Platforms:** releases support Linux x86-64 and Linux arm64, with glibc
+  2.36 or newer. Windows uses WSL2, and macOS uses the Linux container image
+  with no `--platform` flag
+  ([supported machine classes](../SUPPORT.md#supported-machine-classes),
   [Windows and macOS](../docs/getting-started.md#windows-and-macos)).
 - **Determinism:** same artifacts + same machine class ⇒ bit-identical
   Recordings. The guarantee does not extend across machine classes

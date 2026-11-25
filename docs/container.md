@@ -4,12 +4,20 @@
 
 ## Run one Manifest in a Linux container
 
-Use the published runtime image from the release notes, pinned by its digest.
-Give it a local name for the commands below; no source checkout is needed:
+Use the published runtime image from the release notes. The image is an OCI
+index with one image for each platform. For a deterministic Run, pin the
+platform digest of your machine class: `linux/amd64` on an x86-64 host,
+`linux/arm64` on an arm64 host such as a Mac with Apple silicon. The release
+note table "Runtime image" and `image_platforms` in `sil-release-<VERSION>.json`
+give these digests. Do not pin the index digest for a deterministic Run: it
+selects the platform of the host. For a quick try, the version tag or the
+index digest is sufficient. Give the image a local name for the commands
+below; no source checkout is needed:
 
 ```sh
-docker pull ghcr.io/stevie1704/sil@sha256:<release-image-digest>
-docker tag ghcr.io/stevie1704/sil@sha256:<release-image-digest> sil:local
+image=ghcr.io/stevie1704/sil@sha256:<platform-digest-of-your-machine-class>
+docker pull "$image"
+docker tag "$image" sil:local
 ```
 
 Mount a workspace at `/workspace` and use the host user's numeric identity so

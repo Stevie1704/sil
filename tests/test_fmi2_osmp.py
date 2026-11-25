@@ -36,6 +36,13 @@ from sil.testing import run_simulation
 STEP_PERIOD_NS = 10_000_000
 CAPACITY = 16
 
+# The fixtures build a host FMI 2.0 FMU into binaries/<platform directory>/.
+# FMI 2.0 names no Linux arm64 directory, so the Importer refuses it (#409).
+# macOS has `darwin64`, so the mark lets these tests run there.
+host_fmu = pytest.mark.x86_64_only(
+    "FMI 2.0 names no platform directory for another Linux machine class"
+)
+
 SCHEMAS = {
     "osmp.Payload": {"fields": [
         {"name": "payload", "type": "u8", "count": CAPACITY},
@@ -237,6 +244,7 @@ class TestDescription:
             read(fake(rewrite=rewrite), tmp_path)
 
 
+@host_fmu
 class TestMapping:
     """A Channel binds the binary variable, never one of its integers."""
 
@@ -299,6 +307,7 @@ class TestMapping:
             participant(fake(), init=init)
 
 
+@host_fmu
 class TestStep:
     """The bytes cross by address, in both directions."""
 
@@ -477,6 +486,7 @@ def run_manifest(archive: Path, duration_ns: int = 100_000_000,
     return m
 
 
+@host_fmu
 class TestRunBoundary:
     """The OSMP mapping in a complete Run."""
 

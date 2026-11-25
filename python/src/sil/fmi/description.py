@@ -211,6 +211,17 @@ def fmi2_platform_directory() -> str | None:
     return _FMI2_PLATFORMS.get((platform.system(), platform.machine()))
 
 
+def _fmi2_accepted_directories() -> str:
+    """Each FMI 2.0 directory the Importer loads, and the hosts it loads on."""
+    hosts: dict[str, list[str]] = {}
+    for (system, machine), directory in _FMI2_PLATFORMS.items():
+        hosts.setdefault(directory, []).append(f"{system} {machine}")
+    return ", ".join(
+        f"binaries/{directory} ({' or '.join(names)})"
+        for directory, names in hosts.items()
+    )
+
+
 def library_suffix() -> str:
     """The shared-library suffix this platform's FMU binary carries."""
     _, suffix = _SYSTEMS[platform.system()]
@@ -542,11 +553,17 @@ class ModelDescription:
         """The shared library this platform loads out of the FMU."""
         directory = self.platform_directory()
         if directory is None:
+            # An FMI 3.0 FMU is the way out only on a system FMI 3.0 names.
+            fmi3_hint = (
+                f". On this host, use an FMI {FMI3} FMU with "
+                f"binaries/{platform_directory()}"
+                if platform.system() in _SYSTEMS else ""
+            )
             raise ManifestError(
-                f"FMU {self.model_identifier!r} is FMI {FMI2}, whose profile "
-                f"loads binaries/linux64 on Linux x86-64; this host "
+                f"FMU {self.model_identifier!r} is FMI {FMI2}, and this host "
                 f"({platform.system()} {platform.machine()}) has no FMI "
-                f"{FMI2} platform directory"
+                f"{FMI2} platform directory. The Importer loads FMI {FMI2} "
+                f"binaries from {_fmi2_accepted_directories()}{fmi3_hint}"
             )
         binary = (
             extracted / "binaries" / directory

@@ -19,8 +19,9 @@ from pathlib import Path
 
 import pytest
 
-from conftest import ROOT
+from conftest import ROOT, cpu_collector
 from sil.profile_report import validate_profile_report
+from sil.profile_run import main as profile_main
 from test_process_descendants import (
     _wait_for_observer, assert_cleanup, descendant_manifest,
 )
@@ -86,6 +87,7 @@ def perf_log(exports) -> list[dict]:
     return [json.loads(line) for line in path.read_text().splitlines()]
 
 
+@cpu_collector
 def test_a_successful_capture_writes_the_profile_directory(
         tools, exports, tmp_path, sil_run):
     manifest = mixed_period_manifest(tmp_path)
@@ -123,6 +125,7 @@ def test_a_successful_capture_writes_the_profile_directory(
         (tmp_path / "ordinary.mcap").read_bytes()
 
 
+@cpu_collector
 def test_a_copied_portable_set_renders_without_the_tools(tools, exports,
                                                          tmp_path):
     """#318: profile.json and cpu/samples.json alone render offline, with
@@ -151,6 +154,7 @@ def test_a_copied_portable_set_renders_without_the_tools(tools, exports,
     assert 'id="profile-data"' in html  # the filters have their data
 
 
+@cpu_collector
 def test_the_run_keeps_its_command_and_environment(tools, exports,
                                                    tmp_path):
     manifest = mixed_period_manifest(tmp_path)
@@ -181,6 +185,7 @@ def test_the_run_keeps_its_command_and_environment(tools, exports,
 ENV_MARKER = ROOT / "tests" / "participants" / "env_marker.py"
 
 
+@cpu_collector
 def test_participants_get_the_environment_of_an_ordinary_run(
         tools, exports, tmp_path, sil_run):
     # perf changes the environment of the command it starts (fake_perf.py
@@ -270,6 +275,7 @@ def test_a_provenance_record_that_aliases_an_input_is_a_usage_error(
     assert manifest.read_bytes() == before
 
 
+@cpu_collector
 def test_missing_perf_is_an_actionable_preflight_error(tools, exports,
                                                        tmp_path):
     manifest = mixed_period_manifest(tmp_path)
@@ -284,6 +290,24 @@ def test_missing_perf_is_an_actionable_preflight_error(tools, exports,
     assert not (tmp_path / "prof").exists()
 
 
+def test_another_linux_machine_class_is_refused_before_any_tool(
+        tmp_path, monkeypatch, capsys):
+    # The CPU collector is qualified on Linux x86-64 only (#311): on arm64
+    # perf loses source lines and inlined frames.
+    monkeypatch.setattr("platform.system", lambda: "Linux")
+    monkeypatch.setattr("platform.machine", lambda: "aarch64")
+    manifest = mixed_period_manifest(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    code = profile_main([str(manifest), "--out", "prof", "--collector", "cpu"])
+
+    assert code == 1
+    assert ("the cpu collector needs Linux x86-64; this host is Linux "
+            "aarch64") in capsys.readouterr().err
+    assert not (tmp_path / "prof").exists()
+
+
+@cpu_collector
 def test_a_perf_permission_failure_stops_before_any_participant(
         tools, exports, tmp_path):
     observer = tmp_path / "observer.json"
@@ -301,6 +325,7 @@ def test_a_perf_permission_failure_stops_before_any_participant(
     assert not (tmp_path / "prof").exists()
 
 
+@cpu_collector
 def test_a_missing_runner_is_not_found(tools, exports, tmp_path):
     manifest = mixed_period_manifest(tmp_path)
     (tools / "sil-run-diagnostics").unlink()
@@ -312,6 +337,7 @@ def test_a_missing_runner_is_not_found(tools, exports, tmp_path):
     assert "sil-run-diagnostics" in proc.stderr
 
 
+@cpu_collector
 def test_a_launcher_failure_is_reported_on_stderr(tools, exports, tmp_path):
     # A runner that the launcher cannot execute: no Run takes place.
     manifest = mixed_period_manifest(tmp_path)
@@ -329,6 +355,7 @@ def test_a_launcher_failure_is_reported_on_stderr(tools, exports, tmp_path):
     assert profile(tmp_path / "prof")["run"]["status"] == "not_started"
 
 
+@cpu_collector
 def test_a_failed_run_keeps_its_exit_code_and_first_diagnostic(
         tools, exports, tmp_path):
     manifest = failing_step_manifest(tmp_path)
@@ -345,6 +372,7 @@ def test_a_failed_run_keeps_its_exit_code_and_first_diagnostic(
     assert report["capture"]["status"] == "complete"
 
 
+@cpu_collector
 def test_a_configuration_error_keeps_exit_code_2_with_a_profile(
         tools, exports, tmp_path):
     m = toy_manifest(duration_ns=10 * MS)
@@ -360,6 +388,7 @@ def test_a_configuration_error_keeps_exit_code_2_with_a_profile(
     assert report["run"]["status"] == "configuration_error"
 
 
+@cpu_collector
 def test_a_perf_failure_after_a_successful_run_exits_1(tools, exports,
                                                        tmp_path):
     manifest = mixed_period_manifest(tmp_path)
@@ -376,6 +405,7 @@ def test_a_perf_failure_after_a_successful_run_exits_1(tools, exports,
     assert "capture: cpu, failed (backend_failed)" in proc.stdout
 
 
+@cpu_collector
 def test_an_export_failure_keeps_the_raw_capture(tools, exports, tmp_path):
     manifest = mixed_period_manifest(tmp_path)
 
@@ -391,6 +421,7 @@ def test_an_export_failure_keeps_the_raw_capture(tools, exports, tmp_path):
         tmp_path / "prof" / "cpu" / "perf-script.stderr.txt").read_text()
 
 
+@cpu_collector
 def test_a_samples_file_that_cannot_be_written_fails_the_capture(
         tools, exports, tmp_path):
     manifest = mixed_period_manifest(tmp_path)
@@ -420,6 +451,7 @@ def test_a_samples_file_that_cannot_be_written_fails_the_capture(
     assert capture["unavailable"]["samples_file"] == "export_failed"
 
 
+@cpu_collector
 def test_a_failed_inline_export_is_repeated_without_inlined_frames(
         tools, exports, tmp_path):
     manifest = mixed_period_manifest(tmp_path)
@@ -437,6 +469,7 @@ def test_a_failed_inline_export_is_repeated_without_inlined_frames(
                         "inlined_frames_failed"}}
 
 
+@cpu_collector
 def test_an_export_above_its_limit_fails_the_capture_not_the_run(
         tools, exports, tmp_path):
     # docs/profile-report.md: each perf script pass may write at most twice
@@ -459,6 +492,7 @@ def test_an_export_above_its_limit_fails_the_capture_not_the_run(
         tmp_path / "prof" / "cpu" / "perf-script.stderr.txt").read_text()
 
 
+@cpu_collector
 def test_lost_samples_make_a_partial_capture(tools, exports, tmp_path):
     manifest = mixed_period_manifest(tmp_path)
     stats = tmp_path / "stats.txt"
@@ -475,6 +509,7 @@ def test_lost_samples_make_a_partial_capture(tools, exports, tmp_path):
     assert capture["totals"]["lost_records"] == 1
 
 
+@cpu_collector
 def test_the_capture_limit_stops_sampling_not_the_run(tools, exports,
                                                       tmp_path):
     manifest = mixed_period_manifest(tmp_path)
@@ -507,6 +542,7 @@ def without_free_space(argv, tools: Path, cwd: Path, env: dict):
                           env=environment)
 
 
+@cpu_collector
 def test_low_free_space_stops_sampling_not_the_run(tools, exports, tmp_path,
                                                    sil_run):
     manifest = mixed_period_manifest(tmp_path)
@@ -532,6 +568,7 @@ def test_low_free_space_stops_sampling_not_the_run(tools, exports, tmp_path,
         (tmp_path / "ordinary.mcap").read_bytes()
 
 
+@cpu_collector
 def test_a_symbolization_timeout_degrades_source_lines_only(
         tools, exports, tmp_path):
     manifest = mixed_period_manifest(tmp_path)
@@ -565,6 +602,7 @@ def writer_manifest(tmp_path: Path, library: Path, *, remove: bool) -> Path:
     return m.write(tmp_path / "writer.json").path
 
 
+@cpu_collector
 def test_a_removed_module_is_captured_from_a_named_archive(
         tools, exports, tmp_path):
     library = elf(tmp_path / "built" / "fmu.so", build_id=BUILD_ID,
@@ -621,6 +659,7 @@ def test_a_missing_modules_from_source_is_a_usage_error(tools, exports,
     assert "--modules-from 'absent.fmu' does not exist" in proc.stderr
 
 
+@cpu_collector
 def test_a_module_from_the_run_directory_is_retained_for_symbolization(
         tools, exports, tmp_path):
     """A participant that leaves a library in its working directory: the
@@ -658,6 +697,7 @@ def test_a_module_from_the_run_directory_is_retained_for_symbolization(
 
 
 @pytest.mark.parametrize("termination_signal", [signal.SIGINT, signal.SIGHUP])
+@cpu_collector
 def test_a_signal_interrupts_the_run_and_the_capture(
         tools, exports, tmp_path, termination_signal):
     regions = tmp_path / "regions"
@@ -686,6 +726,7 @@ def test_a_signal_interrupts_the_run_and_the_capture(
 # --- Activation correlation (#316) -------------------------------------------
 
 
+@cpu_collector
 def test_activations_stream_observations_beside_the_capture(
         tools, exports, tmp_path, sil_run):
     manifest = mixed_period_manifest(tmp_path)

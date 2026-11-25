@@ -367,6 +367,12 @@ recording, or both — the same property, measured on the live Run or on its
 artifact.
 _Avoid_: metric, score
 
+**Machine class**:
+One CPU architecture on Linux with glibc, the scope of Determinism. SiL
+supports two: Linux x86-64 and Linux arm64. On them, `uname -m` reports
+`x86_64` and `aarch64`. macOS is a development host, not a machine class.
+_Avoid_: platform, target, host (for the class), aarch64 or amd64 (in prose)
+
 **Determinism**:
 The guarantee that the same artifacts on the same machine class produce a
 bit-identical recording. Scoped deliberately: cross-platform bit-exactness is

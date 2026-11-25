@@ -3,7 +3,8 @@
 The tests serve a fake release over file:// through SIL_RELEASE_URL: a wheel
 without dependencies and shell scripts in place of the native runners, so pip
 needs no index. A fake `uname` first on PATH makes any host look like Linux
-x86-64. The release workflow installs the real artifacts with the same script.
+x86-64, unless a test calls `set_host`. The release workflow installs the real
+artifacts with the same script.
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ from release import ReleaseError, project_version, stamp_installer  # noqa: E402
 
 SCRIPT = ROOT / "tools" / "install.sh"
 NATIVE = ("sil-run", "sil-run-diagnostics", "sil-diagnostics-launcher", "silschema")
+MACHINES = ("x86_64", "aarch64")
 
 
 def _record_hash(data: bytes) -> str:
@@ -55,13 +57,13 @@ def _wheel(version: str) -> bytes:
     return buffer.getvalue()
 
 
-def _native_archive(version: str) -> bytes:
-    """A native archive whose runners report `version`."""
-    top = f"sil-native-dev-{version}-linux-x86_64"
+def _native_archive(version: str, machine: str) -> bytes:
+    """A native archive for `machine` whose runners report `version`."""
+    top = f"sil-native-dev-{version}-linux-{machine}"
     buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
         for name in NATIVE:
-            data = f"#!/bin/sh\necho {version}\n".encode()
+            data = f"#!/bin/sh\necho {version}\n# built for {machine}\n".encode()
             member = tarfile.TarInfo(f"{top}/bin/{name}")
             member.size, member.mode = len(data), 0o755
             archive.addfile(member, io.BytesIO(data))
@@ -73,8 +75,9 @@ def publish(mirror: Path, version: str) -> Path:
     release = mirror / f"v{version}"
     release.mkdir(parents=True)
     (release / f"sil-{version}-py3-none-any.whl").write_bytes(_wheel(version))
-    (release / f"sil-native-dev-{version}-linux-x86_64.tar.gz").write_bytes(
-        _native_archive(version))
+    for machine in MACHINES:
+        (release / f"sil-native-dev-{version}-linux-{machine}.tar.gz").write_bytes(
+            _native_archive(version, machine))
     (release / "SHA256SUMS").write_text("".join(
         f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n"
         for path in sorted(release.iterdir())))
@@ -92,22 +95,30 @@ needs_venv = pytest.mark.skipif(
     reason="the test Python has no ensurepip (Debian and Ubuntu: python3-venv)")
 
 
+def set_host(env: dict[str, str], system: str, machine: str) -> None:
+    """Make the fake `uname` on PATH of `env` report `system` and `machine`."""
+    uname = Path(env["PATH"].split(os.pathsep)[0]) / "uname"
+    uname.write_text(f'#!/bin/sh\ncase "$1" in -s) echo {system} ;; -m) echo {machine} ;; esac\n')
+
+
 @pytest.fixture
 def host(tmp_path: Path) -> dict[str, str]:
     """The environment of a Linux x86-64 host without network access for pip."""
     fake = tmp_path / "fake-bin"
     fake.mkdir()
     uname = fake / "uname"
-    uname.write_text('#!/bin/sh\ncase "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac\n')
+    uname.write_text("")
     uname.chmod(0o755)
     python = Path(sys.executable).parent
-    return {
+    env = {
         "PATH": os.pathsep.join([str(fake), str(python), os.environ["PATH"]]),
         "HOME": str(tmp_path / "home"),
         "SIL_RELEASE_URL": (tmp_path / "mirror").as_uri(),
         "PIP_NO_INDEX": "1",
         "PIP_DISABLE_PIP_VERSION_CHECK": "1",
     }
+    set_host(env, "Linux", "x86_64")
+    return env
 
 
 def install(env: dict[str, str], *argv: str, script: Path = SCRIPT
@@ -134,6 +145,7 @@ def test_install_puts_the_release_on_path(tmp_path, host):
     assert f'. "{prefix}/env"' in proc.stdout
     assert os.readlink(prefix / "current") == "0.2.0"
     assert in_env(prefix, "sil-run --version", host) == "0.2.0"
+    assert "built for x86_64" in (prefix / "0.2.0" / "native" / "bin" / "sil-run").read_text()
     assert in_env(prefix, "sil", host) == "sil 0.2.0"
     for name in NATIVE:
         assert in_env(prefix, f"command -v {name}", host) == \
@@ -142,6 +154,19 @@ def test_install_puts_the_release_on_path(tmp_path, host):
     package = Path(in_env(prefix, "python3 -c 'import sil; print(sil.__file__)'", host))
     assert package.resolve().is_relative_to((prefix / "0.2.0" / "venv").resolve())
     assert sorted(path.name for path in prefix.iterdir()) == ["0.2.0", "current", "env"]
+
+
+@needs_venv
+def test_aarch64_installs_the_linux_aarch64_archive(tmp_path, host):
+    set_host(host, "Linux", "aarch64")
+    publish(tmp_path / "mirror", "0.2.0")
+    prefix = tmp_path / "sil"
+
+    proc = install(host, "--version", "0.2.0", "--prefix", str(prefix))
+
+    assert proc.returncode == 0, proc.stderr
+    assert in_env(prefix, "sil-run --version", host) == "0.2.0"
+    assert "built for aarch64" in (prefix / "0.2.0" / "native" / "bin" / "sil-run").read_text()
 
 
 def test_a_download_that_does_not_match_its_checksum_installs_nothing(tmp_path, host):
@@ -169,19 +194,21 @@ def test_a_missing_release_installs_nothing(tmp_path, host):
     assert list(prefix.iterdir()) == []
 
 
-@pytest.mark.parametrize("system, machine", [("Darwin", "arm64"), ("Linux", "aarch64")])
-def test_an_unsupported_host_is_refused_before_any_download(tmp_path, host, system, machine):
-    (Path(host["PATH"].split(os.pathsep)[0]) / "uname").write_text(
-        f'#!/bin/sh\ncase "$1" in -s) echo {system} ;; -m) echo {machine} ;; esac\n')
+@pytest.mark.parametrize("system, machine, message", [
+    ("Darwin", "arm64", "runs natively on Apple silicon"),
+    ("Linux", "riscv64", "support Linux x86-64 and Linux arm64. This host is Linux riscv64."),
+])
+def test_an_unsupported_host_is_refused_before_any_download(
+        tmp_path, host, system, machine, message):
+    set_host(host, system, machine)
     prefix = tmp_path / "sil"
 
     proc = install(host, "--version", "0.2.0", "--prefix", str(prefix))
 
     assert proc.returncode == 1
-    assert f"Linux x86-64 only, not {system} {machine}" in proc.stderr
-    assert "WSL2" in proc.stderr
+    assert message in proc.stderr
     assert "runtime image" in proc.stderr
-    assert "--platform linux/amd64" in proc.stderr
+    assert "--platform linux/amd64" not in proc.stderr
     assert not prefix.exists()
 
 
@@ -217,6 +244,41 @@ def test_versions_stay_side_by_side_and_the_last_installed_is_current(tmp_path, 
     assert in_env(prefix, "sil-run --version", host) == "0.3.0"
 
 
+@needs_venv
+def test_an_install_of_another_machine_class_is_not_activated(tmp_path, host):
+    publish(tmp_path / "mirror", "0.2.0")
+    prefix = tmp_path / "sil"
+    assert install(host, "--version", "0.2.0", "--prefix", str(prefix)).returncode == 0
+    (prefix / "current").unlink()
+    set_host(host, "Linux", "aarch64")
+
+    proc = install(host, "--version", "0.2.0", "--prefix", str(prefix))
+
+    assert proc.returncode == 1
+    assert "linux-x86_64" in proc.stderr
+    assert "linux-aarch64" in proc.stderr
+    assert not (prefix / "current").exists()
+
+
+def test_an_older_install_without_a_machine_class_is_x86_64(tmp_path, host):
+    # Installers up to 0.3.2 wrote an empty marker and installed x86-64 only.
+    prefix = tmp_path / "sil"
+    (prefix / "0.2.0").mkdir(parents=True)
+    (prefix / "0.2.0" / ".complete").write_text("")
+    set_host(host, "Linux", "aarch64")
+
+    proc = install(host, "--version", "0.2.0", "--prefix", str(prefix))
+
+    assert proc.returncode == 1
+    assert "linux-x86_64" in proc.stderr
+    assert not (prefix / "current").exists()
+
+    set_host(host, "Linux", "x86_64")
+    proc = install(host, "--version", "0.2.0", "--prefix", str(prefix))
+    assert proc.returncode == 0, proc.stderr
+    assert "already installed" in proc.stdout
+
+
 def test_an_incomplete_installation_is_not_used(tmp_path, host):
     publish(tmp_path / "mirror", "0.2.0")
     prefix = tmp_path / "sil"
@@ -233,7 +295,7 @@ def test_an_incomplete_installation_is_not_used(tmp_path, host):
 def test_a_runner_of_another_version_fails_the_installation(tmp_path, host):
     release = publish(tmp_path / "mirror", "0.2.0")
     (release / "sil-native-dev-0.2.0-linux-x86_64.tar.gz").write_bytes(
-        _native_archive("0.1.0"))
+        _native_archive("0.1.0", "x86_64"))
     (release / "SHA256SUMS").write_text("".join(
         f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n"
         for path in sorted(release.iterdir()) if path.name != "SHA256SUMS"))

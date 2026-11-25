@@ -144,13 +144,35 @@ def native_prefix(tmp_path: Path) -> Path:
     return prefix
 
 
-def test_native_archive_is_complete_and_deterministic(tmp_path: Path, native_prefix: Path):
+@pytest.mark.parametrize("architecture", ["x86_64", "aarch64"])
+def test_native_archive_is_complete_and_deterministic(
+    tmp_path: Path, native_prefix: Path, architecture: str,
+):
     first = tmp_path / "first.tar.gz"
     second = tmp_path / "second.tar.gz"
-    make_native_archive(native_prefix, first, VERSION)
-    make_native_archive(native_prefix, second, VERSION)
+    make_native_archive(native_prefix, first, VERSION, architecture)
+    make_native_archive(native_prefix, second, VERSION, architecture)
     assert first.read_bytes() == second.read_bytes()
-    validate_native_archive(first, VERSION, "test-revision")
+    root = validate_native_archive(first, VERSION, architecture, "test-revision")
+    assert root == f"sil-native-dev-{VERSION}-linux-{architecture}"
+
+
+def test_native_archive_of_another_architecture_is_rejected(
+    tmp_path: Path, native_prefix: Path,
+):
+    archive = tmp_path / "x86.tar.gz"
+    make_native_archive(native_prefix, archive, VERSION, "x86_64")
+    with pytest.raises(ReleaseError, match="linux-aarch64"):
+        validate_native_archive(archive, VERSION, "aarch64")
+
+
+@pytest.mark.parametrize("architecture", ["arm64", "amd64", "armv7l"])
+def test_native_archive_refuses_an_unknown_architecture(
+    tmp_path: Path, native_prefix: Path, architecture: str,
+):
+    with pytest.raises(ReleaseError, match="unknown native architecture"):
+        make_native_archive(native_prefix, tmp_path / "a.tar.gz", VERSION, architecture)
+    assert not (tmp_path / "a.tar.gz").exists()
 
 
 @pytest.mark.parametrize("missing", [
@@ -162,7 +184,7 @@ def test_native_release_rejects_missing_source_scope_artifacts(
     tmp_path: Path, native_prefix: Path, missing: str,
 ):
     complete = tmp_path / "complete.tar.gz"
-    make_native_archive(native_prefix, complete, VERSION)
+    make_native_archive(native_prefix, complete, VERSION, "x86_64")
     (native_prefix / missing).unlink(missing_ok=True)
     with pytest.raises(ReleaseError, match=missing):
         validate_native_prefix(native_prefix, VERSION)
@@ -175,7 +197,7 @@ def test_native_release_rejects_missing_source_scope_artifacts(
                     continue
                 target.addfile(member, source.extractfile(member) if member.isfile() else None)
     with pytest.raises(ReleaseError, match=missing):
-        validate_native_archive(incomplete, VERSION)
+        validate_native_archive(incomplete, VERSION, "x86_64")
 
 
 def test_runner_reports_the_project_version(sil_run):
@@ -315,3 +337,99 @@ def test_every_doc_command_in_a_packaged_guide_has_a_topic(docs: Path):
     for doc in docs.glob("*.md"):
         for topic in re.findall(r"sil\s+docs\s+([a-z][a-z-]*)", doc.read_text()):
             assert topic in topics, f"{doc.name}: sil docs {topic}"
+
+
+@pytest.mark.parametrize("architecture", ["x86_64", "aarch64"])
+def test_smoke_selects_the_archive_of_the_host_architecture(
+    tmp_path: Path, native_prefix: Path, architecture: str,
+):
+    from release_smoke import find_native_archive
+
+    for name in ("x86_64", "aarch64"):
+        make_native_archive(native_prefix,
+                            tmp_path / f"sil-native-dev-{VERSION}-linux-{name}.tar.gz",
+                            VERSION, name)
+    archive = find_native_archive(tmp_path, VERSION, architecture)
+    assert archive.name == f"sil-native-dev-{VERSION}-linux-{architecture}.tar.gz"
+
+
+def test_smoke_fails_when_the_host_architecture_has_no_archive(
+    tmp_path: Path, native_prefix: Path,
+):
+    from release_smoke import SmokeError, find_native_archive
+
+    make_native_archive(native_prefix,
+                        tmp_path / f"sil-native-dev-{VERSION}-linux-x86_64.tar.gz",
+                        VERSION, "x86_64")
+    with pytest.raises(SmokeError, match=f"sil-native-dev-{VERSION}-linux-aarch64.tar.gz"):
+        find_native_archive(tmp_path, VERSION, "aarch64")
+
+
+
+IMAGE_DIGEST = "sha256:" + "1" * 64
+IMAGE_REFERENCE = f"ghcr.io/stevie1704/sil@{IMAGE_DIGEST}"
+PLATFORM_DIGESTS = {"linux/amd64": "sha256:" + "a" * 64,
+                    "linux/arm64": "sha256:" + "b" * 64}
+
+
+def _bundle_with_archives(tmp_path: Path, architectures: tuple[str, ...]) -> Path:
+    bundle = tmp_path / "dist"
+    bundle.mkdir()
+    for architecture in architectures:
+        name = f"sil-native-dev-{VERSION}-linux-{architecture}.tar.gz"
+        (bundle / name).write_bytes(architecture.encode())
+    return bundle
+
+
+def test_release_metadata_lists_the_native_archive_of_each_architecture(tmp_path: Path):
+    from release import write_release_metadata
+
+    bundle = _bundle_with_archives(tmp_path, ("x86_64", "aarch64"))
+    output = write_release_metadata(
+        tmp_path / "sil-release.json", VERSION, "test-revision",
+        IMAGE_REFERENCE, IMAGE_DIGEST, PLATFORM_DIGESTS, bundle,
+    )
+    archives = json.loads(output.read_text())["native_archives"]
+    # The SHA-256 of the literal bytes b"x86_64" and b"aarch64" (shasum -a 256).
+    assert archives == [
+        {"architecture": "x86_64",
+         "file": f"sil-native-dev-{VERSION}-linux-x86_64.tar.gz",
+         "sha256": "7520b5a1b312efde4fd7e2793ef4bc0cf8f1c235f778d203ab7216a0e31b3880"},
+        {"architecture": "aarch64",
+         "file": f"sil-native-dev-{VERSION}-linux-aarch64.tar.gz",
+         "sha256": "ac257dd72ce8d4d5e988d4a1c823e6c19b848de2dd211c5c0c0d1147c55dba45"},
+    ]
+
+
+def test_release_metadata_requires_every_native_archive(tmp_path: Path):
+    from release import write_release_metadata
+
+    bundle = _bundle_with_archives(tmp_path, ("x86_64",))
+    with pytest.raises(ReleaseError, match="linux-aarch64.tar.gz"):
+        write_release_metadata(
+            tmp_path / "sil-release.json", VERSION, "test-revision",
+            IMAGE_REFERENCE, IMAGE_DIGEST, PLATFORM_DIGESTS, bundle,
+        )
+    assert not (tmp_path / "sil-release.json").exists()
+
+
+def test_smoke_fails_when_source_scopes_do_not_refuse_an_arm64_host(tmp_path: Path):
+    from release_smoke import SmokeError, smoke_source_scopes_for
+
+    def captures(args):
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    with pytest.raises(SmokeError, match="did not refuse"):
+        smoke_source_scopes_for("aarch64", tmp_path, captures)
+
+
+def test_smoke_accepts_the_source_scope_refusal_on_an_arm64_host(tmp_path: Path):
+    from release_smoke import smoke_source_scopes_for
+
+    def refuses(args):
+        return subprocess.CompletedProcess(
+            args, 1, stdout="",
+            stderr="sil profile: source scopes need Linux x86-64/glibc; "
+                   "this host is Linux aarch64 glibc\n")
+
+    smoke_source_scopes_for("aarch64", tmp_path, refuses)

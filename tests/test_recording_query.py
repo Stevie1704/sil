@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 import struct
 
 import pytest
@@ -193,7 +194,11 @@ def test_query_object_rejects_a_changed_file_even_when_size_is_unchanged(tmp_pat
     source = RecordingQuery(path)
     first = source.query("signal", ["value"])
     assert source.query("signal", ["samples[0]"])["source"] == first["source"]
+    before = path.stat()
     recording(path, [(0, payload(2))])
+    # Linux takes file times from a coarse clock, so a rewrite can keep the
+    # same mtime. Move it on, as a rewrite one tick later does.
+    os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns + 1_000_000_000))
     assert path.stat().st_size == first["source"]["size_bytes"]
     with pytest.raises(QueryError, match="source changed"):
         source.query("signal", ["value"])
