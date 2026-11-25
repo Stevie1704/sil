@@ -110,28 +110,15 @@ jobs:
             --root . --dist dist --version "$VERSION" \
             --source-revision "$REVISION"
 
-      - name: Build the non-publishing runtime image
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-          REVISION: ${{ steps.version.outputs.source_revision }}
-        run: |
-          docker build --target runtime \
-            --tag "sil-runtime:${VERSION}-ci" \
-            --build-arg SIL_VERSION="$VERSION" \
-            --build-arg SIL_SOURCE_REPOSITORY="$SOURCE_REPOSITORY" \
-            --build-arg SIL_SOURCE_REVISION="$REVISION" .
-          python3 tools/release.py validate-image \
-            --image "sil-runtime:${VERSION}-ci" --version "$VERSION" \
-            --source-revision "$REVISION"
-
-      - name: Smoke-test only the new wheel, native archive, and image
+      # The runtime image is built and smoke-tested once per architecture,
+      # in the image job. Here, the native archive is smoke-tested alone.
+      - name: Smoke-test only the new wheel and native archive
         env:
           VERSION: ${{ steps.version.outputs.version }}
           REVISION: ${{ steps.version.outputs.source_revision }}
         run: |
           python3 tools/release_smoke.py \
-            --bundle dist \
-            --image "sil-runtime:${VERSION}-ci" \
+            --bundle dist --native-only \
             --version "$VERSION" \
             --source-revision "$REVISION"
 
@@ -403,7 +390,7 @@ jobs:
             --build-arg SIL_SOURCE_REPOSITORY="$SOURCE_REPOSITORY" \
             --build-arg SIL_SOURCE_REVISION="$REVISION" \
             --provenance=false --sbom=false \
-            --output "type=image,name=${IMAGE_NAME},push-by-digest=true,name-canonical=true,push=true" \
+            --output "type=image,name=${IMAGE_NAME},push-by-digest=true,name-canonical=true,push=true,oci-mediatypes=true" \
             --metadata-file image-metadata.json .
           digest="$(jq -r '."containerimage.digest"' image-metadata.json)"
           test "$digest" != "null" -a "$digest" != ""

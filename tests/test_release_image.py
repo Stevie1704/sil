@@ -235,3 +235,30 @@ def test_an_arm64_host_runs_the_arm64_image_of_the_version_tag():
     runs = [line for line in job.splitlines() if "docker run" in line]
     assert runs and not any("--platform" in line for line in runs)
     assert '"${IMAGE_NAME}:${VERSION}" -m)" = aarch64' in job
+
+
+def test_image_index_with_docker_media_types_is_refused(tmp_path: Path, capsys):
+    manifest_list = oci_index(("linux/amd64", AMD64), ("linux/arm64", ARM64))
+    manifest_list["mediaType"] = (
+        "application/vnd.docker.distribution.manifest.list.v2+json")
+    assert validate_index(tmp_path, json.dumps(manifest_list)) == 1
+    assert "manifest.list.v2" in capsys.readouterr().err
+
+    docker_image = oci_index(("linux/amd64", AMD64), ("linux/arm64", ARM64))
+    docker_image["manifests"][1]["mediaType"] = (
+        "application/vnd.docker.distribution.manifest.v2+json")
+    assert validate_index(tmp_path, json.dumps(docker_image)) == 1
+    assert "linux/arm64" in capsys.readouterr().err
+
+
+def test_the_platform_images_are_pushed_with_oci_media_types():
+    image = release_jobs()["image"]
+    push = [line for line in image.splitlines() if "push-by-digest=true" in line]
+    assert push and all("oci-mediatypes=true" in line for line in push)
+
+
+def test_each_architecture_builds_its_runtime_image_once():
+    jobs = release_jobs()
+    builders = [name for name, job in jobs.items() if "--target runtime" in job]
+    # The image matrix has one leg per architecture; verify builds no image.
+    assert builders == ["image"]

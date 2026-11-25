@@ -650,16 +650,37 @@ def write_release_metadata(
     return output
 
 
+OCI_INDEX_MEDIA_TYPE = "application/vnd.oci.image.index.v1+json"
+OCI_MANIFEST_MEDIA_TYPE = "application/vnd.oci.image.manifest.v1+json"
+
+
 def validate_image_index(raw: str, platform_digests: dict[str, str]) -> None:
     """Check that an OCI index selects exactly the given image for each platform."""
     try:
-        manifests = json.loads(raw)["manifests"]
+        index = json.loads(raw)
+        manifests = index["manifests"]
         selected = {
             f"{entry['platform']['os']}/{entry['platform']['architecture']}": entry["digest"]
             for entry in manifests
         }
+        media_types = {
+            f"{entry['platform']['os']}/{entry['platform']['architecture']}":
+                entry.get("mediaType")
+            for entry in manifests
+        }
     except (ValueError, KeyError, TypeError) as exc:
         raise fail(f"cannot read the image index: {exc!r}") from exc
+    if index.get("mediaType") != OCI_INDEX_MEDIA_TYPE:
+        raise fail(
+            f"the image index has media type {index.get('mediaType')!r}, "
+            f"expected {OCI_INDEX_MEDIA_TYPE!r}"
+        )
+    for platform, media_type in sorted(media_types.items()):
+        if media_type != OCI_MANIFEST_MEDIA_TYPE:
+            raise fail(
+                f"the image of {platform} has media type {media_type!r}, "
+                f"expected {OCI_MANIFEST_MEDIA_TYPE!r}"
+            )
     if len(selected) != len(manifests):
         raise fail("the image index names a platform more than once")
     for platform in sorted(set(selected) | set(platform_digests)):
