@@ -262,3 +262,18 @@ def test_each_architecture_builds_its_runtime_image_once():
     builders = [name for name, job in jobs.items() if "--target runtime" in job]
     # The image matrix has one leg per architecture; verify builds no image.
     assert builders == ["image"]
+
+
+def test_release_note_links_support_at_its_tag(tmp_path: Path):
+    output = tmp_path / "release-notes.md"
+    assert main([
+        "render-notes", "--template", str(ROOT / "docs" / "releases" / "template.md"),
+        "--output", str(output), "--version", "1.2.3", "--source-revision", REVISION,
+        *image_args(f"linux/amd64={AMD64}", f"linux/arm64={ARM64}"),
+    ]) == 0
+
+    text = output.read_text()
+    # A published release note has no file beside it: a relative link 404s.
+    assert "](../" not in text
+    assert ("https://github.com/Stevie1704/sil/blob/v1.2.3/SUPPORT.md"
+            "#across-machine-classes") in text

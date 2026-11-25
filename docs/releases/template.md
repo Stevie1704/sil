@@ -14,9 +14,12 @@ bookworm level or newer.
 | Linux x86-64 | `sil-native-dev-@VERSION@-linux-x86_64.tar.gz` | `linux/amd64` |
 | Linux arm64 | `sil-native-dev-@VERSION@-linux-aarch64.tar.gz` | `linux/arm64` |
 
-A Recording is bit-identical within a machine class. It is not bit-identical
+Within one machine class, two Runs give bit-identical Recordings when they
+use the same compiled artifacts, the same Manifest bytes and the same
+dependency versions, on Linux with glibc. Recordings are not bit-identical
 across the two classes in general. See
-[SUPPORT.md](../../SUPPORT.md#across-machine-classes) for the causes.
+[SUPPORT.md](https://github.com/Stevie1704/sil/blob/v@VERSION@/SUPPORT.md#across-machine-classes)
+for the causes.
 
 ## Runtime image
 
