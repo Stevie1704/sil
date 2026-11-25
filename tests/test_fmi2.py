@@ -47,9 +47,9 @@ reference_binaries = pytest.mark.skipif(
 
 # The fixtures build a host FMI 2.0 FMU into binaries/<platform directory>/.
 # FMI 2.0 names no Linux arm64 directory, so the Importer refuses it (#409).
-host_fmu = pytest.mark.skipif(
-    fmi2_platform_directory() is None,
-    reason="this host has no FMI 2.0 platform directory",
+# macOS has `darwin64`, so the mark lets these tests run there.
+host_fmu = pytest.mark.x86_64_only(
+    "FMI 2.0 names no platform directory for another Linux machine class"
 )
 
 FAKE_SCHEMAS = {
