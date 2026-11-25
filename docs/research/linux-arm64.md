@@ -154,7 +154,7 @@ and 14 errors on Ubuntu 24.04. Each failure and error, and its cause:
 | `test_fmi2_osmp.py` `TestMapping` (3), `TestStep` (7), `TestRunBoundary` (3) | 13 failed | 13 failed | The same refusal, for the OSMP fixture FMUs (`OsmpOk` and others). | Yes | The same. |
 | `test_schema_import.py::TestFlatSchema::test_each_rule_flattens_the_fixture_in_offset_order` | 1 failed | 1 failed | The fixture member `char cls` is plain `char`. DWARF says `DW_ATE_unsigned_char` on AArch64 and `DW_ATE_signed_char` on x86-64, so the import gives `u8` on arm64. The import is correct; the test expected `i8` on every host. | Yes | Fixed here: the expected type follows the target ABI. |
 | `test_hash_baseline.py` | 9 errors, 1 failed | 9 errors, 1 failed | `git rev-parse HEAD` fails, because the copied worktree has no `.git` directory. The 9 errors are at fixture setup; `test_a_workload_selection_measures_only_that_workload` calls the tool directly and fails. | No | None. In a git checkout on arm64 all of them pass. |
-| `test_profile_cost_measure.py` | 5 errors | 5 errors | `tools/profile_cost_measure.py` exits 1 at fixture setup, because its `git rev-parse HEAD` fails for the same reason. | No | None. In a git checkout on arm64 all of them pass. |
+| `test_profile_cost_measure.py` | 5 errors | 5 errors | `tools/profile_cost_measure.py` exits 1 at fixture setup, because its `git rev-parse HEAD` fails for the same reason. | No | None at the time of this note: in a git checkout on arm64 all of them passed. Later, #311 added the arm64 refusal of the cpu collector, so these 5 tests now skip on arm64 (see the skip list). |
 | `test_host_scheduling_proof.py::test_retained_qualification_replays_offline` (2 parameters) | 2 failed | passed | `TarFile.extractall(filter=...)` needs Python 3.11.4 or later; bookworm has 3.11.2. | No | None for #408, which uses Ubuntu 24.04 (Python 3.12). |
 | Total | 41 failed, 14 errors | 39 failed, 14 errors | | | |
 
@@ -334,9 +334,15 @@ with the reason given.
 | `tests/test_schema_import.py::...big_endian...` | needs clang |
 
 **Must not be skipped:** `test_schema_import.py` (fixed here),
-`test_hash_baseline.py` and `test_profile_cost_measure.py` (they need only a
-git checkout), `test_clock_shim.py` and `TestClockShimRunBoundary` (the spec
-requires them on arm64).
+`test_hash_baseline.py` (it needs only a git checkout), `test_clock_shim.py`
+and `TestClockShimRunBoundary` (the spec requires them on arm64).
+
+**Skip after the cpu collector refusal:** the 5 tests of
+`test_profile_cost_measure.py` that read the `cpu` and `cpu-activations`
+cases. They use the fake perf, but `sil profile --collector cpu` refuses on
+another Linux machine class before it looks for perf, so the fake perf
+cannot pass the refusal. They carry the `x86_64_only` marker. The other
+tests of that file need no collector and run on arm64.
 
 **Browser tests.** `ci.yml` sets `SIL_TEST_CHROME=google-chrome`, which makes
 the HTML report browser tests fail, not skip, when Chrome is missing. Google
