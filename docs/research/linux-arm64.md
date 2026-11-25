@@ -261,8 +261,9 @@ multiple of 8, the header of slot 1 and later is not 8-byte aligned. The
 kernel then reads `seq` and `len` through an unaligned `sil_arena *`. On
 AArch64 Linux, ordinary unaligned loads and stores to normal memory do not
 fault, so this works on both classes. It is undefined behavior in C++, and an
-atomic access there would fault on arm64. Changing the stride changes the
-binary contract, so this ticket does not change it.
+atomic access there would fault on arm64. #415 fixed this: the kernel pads
+`shm_capacity` to a multiple of 8. Children already stride by
+`16 + shm_capacity`, so the fix needs no protocol or `SIL_ABI_VERSION` change.
 
 **Memory ordering.** No Arena or clock-region field is an atomic. The
 kernel writes the region or the slot, then writes the Step line to the pipe;
