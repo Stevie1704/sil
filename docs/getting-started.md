@@ -43,13 +43,9 @@ curl -fsSL https://github.com/Stevie1704/sil/releases/download/v<VERSION>/instal
   newer. The published 0.1.0 and 0.2.0 archives need glibc 2.38 and
   `GLIBCXX_3.4.32`, for example Ubuntu 24.04. For 0.2.0 on bookworm, use
   its runtime image. The published archives are not replaced.
-- A release without a `linux-aarch64` archive does not install on Linux
-  arm64. The script stops at the download, and installs nothing. The release
-  notes name the machine classes of each release. Release 0.3.2 and all
-  earlier releases have only the `linux-x86_64` archive. The first release
-  after 0.3.2 adds `linux-aarch64`. Until then, on Linux arm64, build from
-  the repository and
-  [install from a staged prefix](#install-and-run-from-a-staged-prefix).
+- Linux arm64 installation requires SiL 0.4.0 or later. Earlier releases
+  ship only the `linux-x86_64` native archive. The release notes list the
+  archives for each version.
 - On Windows and macOS, the script stops before any download. See
   [Windows and macOS](#windows-and-macos).
 
@@ -81,8 +77,8 @@ under `~`, not under `/mnt/c`: the Windows drives are slower and do not keep
 Linux file modes.
 
 **Windows and macOS: Docker.** The runtime image is the reference environment.
-Run it as `sil docs container` describes. From the first release after
-0.3.2, the image index holds `linux/amd64` and `linux/arm64`. The release
+Run it as `sil docs container` describes. Starting with SiL 0.4.0, the image
+index holds `linux/amd64` and `linux/arm64`. The release
 notes give the index digest and one digest for each platform. The image of
 0.3.2 and earlier releases is only `linux/amd64`: on Apple silicon, run it
 emulated, as the item about the x86-64 image below tells.
